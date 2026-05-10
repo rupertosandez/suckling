@@ -1,0 +1,23 @@
+﻿# Secrets — NEVER commit these
+.env
+
+# Persistent state and logs (machine-specific)
+data/
+
+# Virtual environment (regenerate per machine)
+venv/
+
+# Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS junk
+.DS_Store
+Thumbs.db
