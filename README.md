@@ -39,7 +39,7 @@ for change history, see [changelog.md](CHANGELOG.md).
 ### quick start
 
 ```bash
-git clone https://github.com/YourUsername/sucklingbot.git
+git clone https://github.com/rupertosandez/sucklingbot.git
 cd sucklingbot
 python -m venv venv
 venv\Scripts\Activate.ps1   # windows; use source venv/bin/activate on macos/linux
