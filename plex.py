@@ -221,13 +221,20 @@ async def get_decade_breakdown() -> list[tuple[str, int]]:
 
 
 async def get_genre_breakdown(top_n: int = 10) -> list[tuple[str, int]]:
-    """Returns the top N genres by count."""
+    """
+    Returns the top N primary genres by count.
+    Each film is counted exactly once, using its first listed genre tag
+    (Plex's "primary" genre).
+    """
     movies = await _get_movies()
     genres: dict[str, int] = {}
     for m in movies:
-        for g in (m.genres or []):
-            name = g.tag
-            genres[name] = genres.get(name, 0) + 1
+        movie_genres = m.genres or []
+        if not movie_genres:
+            continue
+        # Use only the first genre tag — treat it as the primary genre
+        primary = movie_genres[0].tag
+        genres[primary] = genres.get(primary, 0) + 1
 
     sorted_genres = sorted(genres.items(), key=lambda x: x[1], reverse=True)
     return sorted_genres[:top_n]
