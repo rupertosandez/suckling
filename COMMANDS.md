@@ -1,112 +1,112 @@
-# Bot Commands
+# bot commands
 
-A reference for everything the bot can do. All commands are slash commands — type `/` in any channel where the bot has access to see them in the autocomplete.
+a reference for everything the bot can do. all commands are slash commands — type `/` in any channel where the bot has access to see them in the autocomplete.
 
-This bot is for the **Return by 9** movie community.
+this bot is for the **return by 9** movie community.
 
 ---
 
-## Lookup & Discovery
+## lookup & discovery
 
 ### `/watch <title> [year]`
-Look up a movie. Returns a card with the synopsis, director, runtime, and where to watch it (theaters, streaming).
+look up a movie. returns a card with the synopsis, director, runtime, and where to watch it (theaters, streaming).
 
-- **`title`** (required): the movie title to search for
-- **`year`** (optional): filter by release year if multiple matches exist
+- `title` (required): the movie title to search for
+- `year` (optional): filter by release year if multiple matches exist
 
-If multiple films share a title (e.g. "Halloween"), a dropdown will appear so you can pick the right one. You can also pre-filter with `year` to skip the dropdown.
+if multiple films share a title (e.g. "halloween"), a dropdown will appear so you can pick the right one. you can also pre-filter with `year` to skip the dropdown.
 
-**Examples:**
+examples:
 - `/watch The Substance`
 - `/watch Halloween year:1978`
 
 ---
 
 ### `/roll [decade] [runtime]`
-Get a random movie recommendation. Filters are optional — leave blank for a fully random pick.
+get a random movie recommendation. filters are optional — leave blank for a fully random pick.
 
-- **`decade`** (optional): e.g. `1980s`, `2010s`
-- **`runtime`** (optional): `short` (under 90 min), `medium` (90–120 min), or `long` (over 120 min)
+- `decade` (optional): e.g. `1980s`, `2010s`
+- `runtime` (optional): `short` (under 90 min), `medium` (90-120 min), or `long` (over 120 min)
 
-**Examples:**
+examples:
 - `/roll`
 - `/roll decade:1980s`
 - `/roll decade:2020s runtime:short`
 
 ---
 
-## Return by 9 Library
+## return by 9 library
 
-Commands that pull from the Return by 9 Plex library.
+commands that pull from the return by 9 plex library.
 
 ### `/rb9`
-Picks a random movie from the library. Returns title, summary, runtime, and poster.
+picks a random movie from the library. returns title, summary, runtime, and poster.
 
 ### `/rb9stats`
-Overall library summary: total movie count, total runtime, year range, oldest film, newest film, most recently added, average rating.
+overall library summary: total movie count, total runtime, year range, oldest film, newest film, most recently added, average rating.
 
 ### `/rb9biggest`
-The longest film in the library by runtime.
+the longest film in the library by runtime.
 
 ### `/rb9shortest`
-The shortest film in the library by runtime (excludes very short entries under 30 minutes).
+the shortest film in the library by runtime (excludes very short entries under 30 minutes).
 
 ### `/rb9oldest`
-The oldest film in the library by release year.
+the oldest film in the library by release year.
 
 ### `/rb9newest`
-The most recently added film in the library.
+the most recently added film in the library.
 
 ### `/rb9totalruntime`
-Fun stats on how long it'd take to watch the entire library back-to-back, including a "8 hours per day" estimate.
+fun stats on how long it'd take to watch the entire library back-to-back, including a "8 hours per day" estimate.
 
 ### `/rb9decade`
-Bar chart breakdown of films per decade in the library.
+bar chart breakdown of films per decade in the library.
 
 ### `/rb9genre`
-Top 10 genres in the library by count.
+top 10 genres in the library by count.
 
 ### `/rb9randomscene`
-A random film + a random backdrop image from it.
+a random film + a random backdrop image from it.
 
 ---
 
-## Tracking
+## tracking
 
 ### `/track <title> [year]`
-Add a movie to the watchlist. The bot will announce it in the streaming-alerts channel when it becomes available digitally for the first time. If the film is *already* streaming, the bot will tell you immediately and link to where.
+add a movie to the watchlist. the bot will announce it in the streaming-alerts channel when it becomes available digitally for the first time. if the film is *already* streaming, the bot will tell you immediately and link to where.
 
-- **`title`** (required): the movie title to track
-- **`year`** (optional): filter by year if there are multiple matches
+- `title` (required): the movie title to track
+- `year` (optional): filter by year if there are multiple matches
 
-**Example:** `/track The Conjuring Last Rites`
+example: `/track The Conjuring Last Rites`
 
 ---
 
 ### `/untrack <title>`
-Remove a movie from the watchlist.
+remove a movie from the watchlist.
 
-- **`title`** (required): the title or part of the title to remove
+- `title` (required): the title or part of the title to remove
 
-**Example:** `/untrack conjuring`
+example: `/untrack conjuring`
 
 ---
 
 ### `/tracked`
-Show every movie currently being tracked, plus who added each one.
+show every movie currently being tracked, plus who added each one.
 
 ---
 
-## Games
+## games
 
 ### `/guess [difficulty]`
-Start a guessing round. The bot posts an image and the first person to guess correctly in chat wins. 60-second time limit per round.
+start a guessing round. the bot posts an image and the first person to guess correctly in chat wins. 60-second time limit per round.
 
-- **`difficulty`** (optional): `easy` (full movie still, 1 point) or `hard` (cropped poster, 2 points). Default: random.
+- `difficulty` (optional): `easy` (full movie still, 1 point) or `hard` (cropped poster, 2 points). default: random.
 
-Only one round can be active in a channel at a time.
+only one round can be active in a channel at a time.
 
-**Examples:**
+examples:
 - `/guess`
 - `/guess difficulty:easy`
 - `/guess difficulty:hard`
@@ -114,16 +114,16 @@ Only one round can be active in a channel at a time.
 ---
 
 ### `/six`
-Start a Six Degrees of Separation round. The bot picks two random popular actors and challenges players to connect them through shared films.
+start a six degrees of separation round. the bot picks two random popular actors and challenges players to connect them through shared films.
 
-Submit chains in chat using this format:
+submit chains in chat using this format:
 ```
 Actor -> Film -> Actor -> Film -> Actor
 ```
 
-First valid chain wins. Shorter chains earn more points:
+first valid chain wins. shorter chains earn more points:
 
-| Films in chain | Points |
+| films in chain | points |
 | -------------- | ------ |
 | 1              | 5      |
 | 2              | 4      |
@@ -131,74 +131,74 @@ First valid chain wins. Shorter chains earn more points:
 | 4              | 2      |
 | 5+             | 1      |
 
-Maximum chain length is 6 films. Round duration is 4 minutes.
+maximum chain length is 6 films. round duration is 4 minutes.
 
 ---
 
 ### `/giveup`
-End the current round (works for both `/guess` and `/six`). Anyone in the channel can call it.
+end the current round (works for both `/guess` and `/six`). anyone in the channel can call it.
 
 ---
 
 ### `/leaderboard`
-Show the top scorers for `/guess`.
+show the top scorers for `/guess`.
 
 ### `/sixleaderboard`
-Show the top scorers for `/six`.
+show the top scorers for `/six`.
 
 ---
 
-## Auto-Posting Features
+## auto-posting features
 
-The bot automatically posts in two ways (admins configure the channels):
+the bot automatically posts in two ways (admins configure the channels):
 
-**🩸 Daily recommendation** — every day at noon, the bot drops a random pick in the configured channel.
+🩸 **daily recommendation** - every day at noon, the bot drops a random pick in the configured channel.
 
-**📺 Streaming announcements** — when a movie becomes available digitally for the first time (Shudder, Netflix, Max, etc.), the bot announces it in the configured channel. Shudder additions get a special highlight.
+📺 **streaming announcements** - when a movie becomes available digitally for the first time (shudder, netflix, max, etc.), the bot announces it in the configured channel. shudder additions get a special highlight.
 
-The streaming feature only announces films hitting digital for the first time — not when they move between services or get added to additional ones.
-
----
-
-## Quick Tips
-
-- **Movie titles in `/watch` and `/track`** support fuzzy matching, so you don't need exact punctuation or capitalization.
-- **The dropdown menu** that appears for ambiguous titles times out after 60 seconds — just run the command again if it expires.
-- **Both games and tracking are server-wide** — anyone can add to the tracked list and play.
-- **Leaderboards are separate** for `/guess` and `/six` — winning at one doesn't affect the other.
+the streaming feature only announces films hitting digital for the first time — not when they move between services or get added to additional ones.
 
 ---
 
-# Admin Commands
+## quick tips
 
-> These commands require the **Manage Server** permission and are hidden from regular members.
+- movie titles in `/watch` and `/track` support fuzzy matching, so you don't need exact punctuation or capitalization
+- the dropdown menu that appears for ambiguous titles times out after 60 seconds — just run the command again if it expires
+- both games and tracking are server-wide — anyone can add to the tracked list and play
+- leaderboards are separate for `/guess` and `/six` — winning at one doesn't affect the other
+
+---
+
+# admin commands
+
+> these commands require the **manage server** permission and are hidden from regular members.
 
 ### `/setannouncements <channel>`
-Set the channel where streaming announcements post. The bot needs send-message and embed-link permissions in the chosen channel.
+set the channel where streaming announcements post. the bot needs send-message and embed-link permissions in the chosen channel.
 
 ### `/setdaily <channel>`
-Set the channel where the daily recommendation posts (at noon).
+set the channel where the daily recommendation posts (at noon).
 
 ### `/toggle <feature> <enabled>`
-Enable or disable an auto-posting feature without removing the channel setting.
+enable or disable an auto-posting feature without removing the channel setting.
 
-- **`feature`**: `streaming announcements` or `daily recommendation`
-- **`enabled`**: `True` or `False`
+- `feature`: `streaming announcements` or `daily recommendation`
+- `enabled`: `True` or `False`
 
 ### `/checknow`
-Manually trigger the streaming check in dry-run mode. Doesn't post to Discord — just returns a summary of what *would* be announced. Useful for verifying detection.
+manually trigger the streaming check in dry-run mode. doesn't post to discord — just returns a summary of what *would* be announced. useful for verifying detection.
 
 ### `/checknowlive`
-Manually trigger the streaming check **and post** announcements live. Use sparingly.
+manually trigger the streaming check **and post** announcements live. use sparingly.
 
 ### `/dailynow`
-Manually trigger today's daily recommendation post.
+manually trigger today's daily recommendation post.
 
 ### `/cachestats [clear]`
-Show the size of the in-memory cache. Pass `clear:True` to wipe both the TMDB cache and the random-pick pool (useful if data feels stale).
+show the size of the in-memory cache. pass `clear:True` to wipe both the tmdb cache and the random-pick pool (useful if data feels stale).
 
 ### `/version`
-Show the bot's current version.
+show the bot's current version.
 
 ### `/ping`
-Quick health check — replies with the bot's latency. Available to everyone, but mostly used for debugging.
+quick health check — replies with the bot's latency. available to everyone, but mostly used for debugging.
