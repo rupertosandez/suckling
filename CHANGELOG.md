@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+
+## [1.2.3] — 2026-05-10
+
+### Changed
+- TMDB calls now reuse a single shared `aiohttp.ClientSession` instead of opening a new one per request. Improves connection pooling, DNS caching, and keepalive — biggest impact on `/checknow` and the daily streaming scan, which previously opened hundreds of sessions per run. `picker._fetch_pool` and `imageops.download_image` also use the shared session.
+- Internal: `tmdb._get` no longer takes a `session` parameter. Callers in `picker.py`, `tracker.py`, and `imageops.py` updated accordingly.
+- Replaced deprecated `datetime.utcnow()` with `datetime.now(timezone.utc)` throughout. Forward-compatible with Python 3.12+ (which warns on `utcnow`). Stored ISO timestamps now include a `+00:00` suffix; reads via `datetime.fromisoformat` handle both old and new formats.
+
+### Fixed
+- `/roll` with a runtime filter would silently return a film that violated the filter when no candidates matched (e.g. `runtime:short` could hand back a 3-hour movie). Now caps the search at 30 candidates and returns "couldn't find anything matching those filters" honestly when nothing matches.
+
+### Notes
+- No database migration needed. Existing rows with naive ISO timestamps continue to read correctly.
+- Bot subclass `SucklingBot` now closes the shared TMDB session on shutdown to avoid "Unclosed client session" warnings.
+
+---
+
 ## [1.2.2] — 2026-05-10
 
 ### Added
