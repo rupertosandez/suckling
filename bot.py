@@ -192,12 +192,6 @@ async def post_daily_recommendation(bot: discord.Client) -> bool:
 
 # ---------- core commands ----------
 
-@bot.tree.command(name="ping", description="Check that the bot is alive")
-async def ping(interaction: discord.Interaction):
-    latency_ms = round(bot.latency * 1000)
-    await interaction.response.send_message(f"Pong! 🏓 ({latency_ms}ms)")
-
-
 @bot.tree.command(name="watch", description="Look up a movie")
 @app_commands.describe(
     title="The movie title to search for",
@@ -229,7 +223,13 @@ async def watch(interaction: discord.Interaction, title: str, year: int | None =
             await interaction.followup.send(f"Sorry, couldn't load details: {e}")
             return
 
-        embed = embeds.movie_embed(details, providers, in_theaters=False)
+        release_date = details.get("release_date") or ""
+        plex_year = int(release_date[:4]) if release_date[:4].isdigit() else None
+        plex_available = await plex.check_availability(details.get("title"), year=plex_year)
+
+        embed = embeds.movie_embed(
+            details, providers, in_theaters=False, plex_available=plex_available
+        )
         await interaction.followup.send(embed=embed)
     else:
         view = views.MovieSelectView(results)

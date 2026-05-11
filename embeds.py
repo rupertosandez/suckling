@@ -6,6 +6,7 @@ import tmdb
 
 
 SHUDDER_PROVIDER_NAME = "Shudder"
+SEERR_BASE_URL = "https://seerr.cajou.enyo.bysh.me"
 
 
 def _format_date(d: datetime) -> str:
@@ -58,7 +59,12 @@ def _streaming_status(details: dict, providers: dict) -> str:
     return "💻 **Streaming:** TBA"
 
 
-def movie_embed(details: dict, providers: dict, in_theaters: bool) -> discord.Embed:
+def movie_embed(
+    details: dict,
+    providers: dict,
+    in_theaters: bool,
+    plex_available: bool | None = None,
+) -> discord.Embed:
     title = details.get("title", "Unknown")
     release_date = details.get("release_date", "")
     year = release_date[:4] if release_date else "TBA"
@@ -77,11 +83,22 @@ def movie_embed(details: dict, providers: dict, in_theaters: bool) -> discord.Em
     embed.add_field(name="Director", value=director, inline=True)
     embed.add_field(name="Runtime", value=runtime_str, inline=True)
 
-    availability = "\n".join([
+    availability_lines = [
         _theaters_status(details),
         _streaming_status(details, providers),
-    ])
-    embed.add_field(name="Availability", value=availability, inline=False)
+    ]
+    if plex_available is True:
+        availability_lines.append("📀 **Return by 9:** In the library")
+    elif plex_available is False:
+        tmdb_id = details.get("id")
+        if tmdb_id:
+            seerr_url = f"{SEERR_BASE_URL}/movie/{tmdb_id}"
+            availability_lines.append(
+                f"📀 **Return by 9:** Not in the library · [request it]({seerr_url})"
+            )
+        else:
+            availability_lines.append("📀 **Return by 9:** Not in the library")
+    embed.add_field(name="Availability", value="\n".join(availability_lines), inline=False)
 
     poster = tmdb.poster_url(details.get("poster_path"))
     if poster:

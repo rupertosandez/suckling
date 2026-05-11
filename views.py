@@ -3,6 +3,7 @@ import discord
 import tmdb
 import embeds
 import db
+import plex
 
 
 def _record_existing_providers(movie_id: int, providers: dict) -> list[str]:
@@ -89,7 +90,13 @@ class MovieSelect(discord.ui.Select):
             await interaction.followup.send(f"Sorry, couldn't load details: {e}")
             return
 
-        embed = embeds.movie_embed(details, providers, in_theaters=False)
+        release_date = details.get("release_date") or ""
+        plex_year = int(release_date[:4]) if release_date[:4].isdigit() else None
+        plex_available = await plex.check_availability(details.get("title"), year=plex_year)
+
+        embed = embeds.movie_embed(
+            details, providers, in_theaters=False, plex_available=plex_available
+        )
         await interaction.edit_original_response(content=None, embed=embed, view=None)
 
 

@@ -115,6 +115,61 @@ async def pick_random_movie() -> dict | None:
     return _movie_to_dict(random.choice(movies))
 
 
+# ---------- title lookup ----------
+
+def _normalize_title(s: str) -> str:
+    """Normalize a title for fuzzy matching: lowercase, strip articles & punctuation."""
+    s = (s or "").lower().strip()
+    for article in ("the ", "a ", "an "):
+        if s.startswith(article):
+            s = s[len(article):]
+    return "".join(c for c in s if c.isalnum())
+
+
+async def find_movie_by_title(title: str, year: int | None = None) -> dict | None:
+    """
+    Look up a movie in the Plex library by title and optional year.
+    Title matching is fuzzy (case + article + punctuation insensitive).
+    Prefers a title+year match; falls back to title-only.
+    Returns the movie dict if found, None otherwise.
+    """
+    movies = await _get_movies()
+    needle = _normalize_title(title)
+    if not needle:
+        return None
+
+    if year is not None:
+        for m in movies:
+            if m.year == year and _normalize_title(m.title) == needle:
+                return _movie_to_dict(m)
+
+    for m in movies:
+        if _normalize_title(m.title) == needle:
+            return _movie_to_dict(m)
+
+    return None
+
+
+async def check_availability(title: str | None, year: int | None = None) -> bool | None:
+    """
+    Safe wrapper for orchestration code.
+    Returns:
+        True  - found in library
+        False - not in library
+        None  - Plex not configured, or the check failed
+    Never raises.
+    """
+    if not config.PLEX_TOKEN or not title:
+        return None
+    try:
+        match = await find_movie_by_title(title, year=year)
+        return match is not None
+    except PlexError:
+        return None
+    except Exception:
+        return None
+
+
 # ---------- stats commands ----------
 
 async def get_library_summary() -> dict:
@@ -221,20 +276,13 @@ async def get_decade_breakdown() -> list[tuple[str, int]]:
 
 
 async def get_genre_breakdown(top_n: int = 10) -> list[tuple[str, int]]:
-    """
-    Returns the top N primary genres by count.
-    Each film is counted exactly once, using its first listed genre tag
-    (Plex's "primary" genre).
-    """
+    """Returns the top N genres by count."""
     movies = await _get_movies()
     genres: dict[str, int] = {}
     for m in movies:
-        movie_genres = m.genres or []
-        if not movie_genres:
-            continue
-        # Use only the first genre tag — treat it as the primary genre
-        primary = movie_genres[0].tag
-        genres[primary] = genres.get(primary, 0) + 1
+        for g in (m.genres or []):
+            name = g.tag
+            genres[name] = genres.get(name, 0) + 1
 
     sorted_genres = sorted(genres.items(), key=lambda x: x[1], reverse=True)
     return sorted_genres[:top_n]

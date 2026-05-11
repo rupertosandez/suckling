@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.2] — 2026-05-10
+
+### Added
+- `/watch` now indicates whether the film is in the Return by 9 plex library
+- When a film isn't in the library, the embed includes a small "request it" link that deep-links to the seerr instance for that film
+
+### Notes
+- Plex check is graceful: if `PLEX_TOKEN` isn't configured or the lookup fails, the rb9 line is omitted rather than risk a false "not in the library"
+- Title matching strips articles, punctuation, and case. Prefers a title+year match before falling back to title-only
+
+---
 
 ## [1.2.1] — 2026-05-03
 
