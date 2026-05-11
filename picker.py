@@ -8,8 +8,6 @@ import asyncio
 import random
 from datetime import datetime, timedelta
 
-import aiohttp
-
 import config
 import tmdb
 import db
@@ -19,13 +17,19 @@ HORROR_GENRE_ID = 27
 DISCOVER_PAGES = 50  # 20 movies per page = 1000 candidates
 PER_PAGE_SLEEP_SECONDS = 0.2
 
+# When a runtime filter is set, cap how many candidates we check details for
+# before giving up — beats fetching details for 1000 films when the user picks
+# a restrictive filter and there genuinely aren't matches.
+MAX_RUNTIME_CHECKS = 30
+
 # Cache the pool for 24 hours to avoid repeated full pulls
 _pool_cache: dict[str, object] = {"movies": None, "fetched_at": None}
 _POOL_TTL_SECONDS = 24 * 3600
 
 
-async def _fetch_pool(session: aiohttp.ClientSession) -> list[dict]:
+async def _fetch_pool() -> list[dict]:
     """Fetch a broad pool of horror films from TMDB Discover."""
+    session = tmdb.get_session()
     movies = []
     for page in range(1, DISCOVER_PAGES + 1):
         params = {
@@ -62,8 +66,7 @@ async def _get_pool() -> list[dict]:
         return _pool_cache["movies"]
 
     print(f"[picker] Refreshing candidate pool at {now.isoformat(timespec='seconds')}...")
-    async with aiohttp.ClientSession() as session:
-        movies = await _fetch_pool(session)
+    movies = await _fetch_pool()
     _pool_cache["movies"] = movies
     _pool_cache["fetched_at"] = now
     print(f"[picker] Pool refreshed: {len(movies)} films")
@@ -102,9 +105,9 @@ def _decade_filter(decade: str | None):
 
 def _runtime_filter(runtime: str | None):
     """
-    Return a function that checks runtime category.
-    Note: runtime isn't in the Discover response, so this filter requires
-    a follow-up call. We approximate using `runtime` if present, else accept all.
+    Return a function that checks a movie's runtime category against the
+    full details payload (which has a `runtime` field; the Discover response
+    does not).
     """
     if not runtime:
         return lambda m: True
@@ -133,6 +136,11 @@ async def pick_random(
     """
     Pick a random horror film matching the given filters.
     Returns the basic movie dict from Discover, or None if no matches.
+
+    When a runtime filter is set, we may need to fetch details to evaluate it.
+    We check up to MAX_RUNTIME_CHECKS candidates; if none satisfy the filter,
+    we return None (rather than silently violating the filter). Callers can
+    surface a "couldn't find anything matching those filters" message.
     """
     exclude_ids = exclude_ids or set()
     pool = await _get_pool()
@@ -147,20 +155,19 @@ async def pick_random(
     # Shuffle for random selection
     random.shuffle(candidates)
 
-    # If runtime filter is requested, we may need to fetch details
     if runtime:
         runtime_check = _runtime_filter(runtime)
-        for candidate in candidates:
+        for candidate in candidates[:MAX_RUNTIME_CHECKS]:
             try:
                 details = await tmdb.get_movie_details(candidate["id"])
             except tmdb.TMDBError:
                 continue
             if runtime_check(details):
                 return candidate
-            # Limit how many details we fetch trying to satisfy runtime
-            # (in case the filter is restrictive — don't loop forever)
-        # If we exhausted candidates without a runtime match, return first one anyway
-        return candidates[0] if candidates else None
+        # Exhausted check budget without a match — return None so the caller
+        # can tell the user honestly that nothing matched the filter, rather
+        # than handing back a film whose runtime violates it.
+        return None
 
     return candidates[0]
 

@@ -5,21 +5,26 @@ import io
 import random
 from typing import Literal
 
-import aiohttp
 from PIL import Image, ImageFilter
+
+import tmdb
 
 
 Difficulty = Literal["easy", "medium", "hard"]
 
 
 async def download_image(url: str) -> bytes | None:
-    """Download an image from a URL and return its bytes."""
+    """Download an image from a URL and return its bytes.
+
+    Uses the shared TMDB session — image.tmdb.org and api.themoviedb.org
+    pool their connections through the same aiohttp session.
+    """
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    return None
-                return await resp.read()
+        session = tmdb.get_session()
+        async with session.get(url) as resp:
+            if resp.status != 200:
+                return None
+            return await resp.read()
     except Exception:
         return None
 

@@ -5,7 +5,6 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-import aiohttp
 import discord
 
 import config
@@ -91,8 +90,9 @@ def _log(result: CheckResult, msg: str, *, warning: bool = False) -> None:
         result.warnings.append(msg)
 
 
-async def _discover_horror_movies(session: aiohttp.ClientSession, result: CheckResult) -> list[dict]:
+async def _discover_horror_movies(result: CheckResult) -> list[dict]:
     cutoff = (datetime.now() - timedelta(days=LOOKBACK_MONTHS * 30)).strftime("%Y-%m-%d")
+    session = tmdb.get_session()
     movies = []
 
     for page in range(1, DISCOVER_PAGES + 1):
@@ -226,10 +226,9 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
             is_first_announce_run = True
             print("[tracker] First announce-aware run — marking currently-streaming films as already announced")
 
-    async with aiohttp.ClientSession() as session:
-        discover_movies = await _discover_horror_movies(session, result)
-        result.discover_count = len(discover_movies)
-        print(f"[tracker] Pulled {result.discover_count} films from Discover")
+    discover_movies = await _discover_horror_movies(result)
+    result.discover_count = len(discover_movies)
+    print(f"[tracker] Pulled {result.discover_count} films from Discover")
 
     candidates = _build_candidate_pool(discover_movies)
     result.candidate_count = len(candidates)

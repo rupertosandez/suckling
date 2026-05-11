@@ -20,36 +20,68 @@ class TMDBError(Exception):
     pass
 
 
-async def _get(session: aiohttp.ClientSession, path: str, params: dict | None = None) -> dict:
+# ---------- shared HTTP session ----------
+
+_session: aiohttp.ClientSession | None = None
+
+
+def get_session() -> aiohttp.ClientSession:
+    """
+    Return a module-level aiohttp session, creating it lazily on first call.
+
+    Shared across all TMDB calls (and reused by picker/tracker/imageops) so
+    connection pooling, DNS caching, and keepalive work properly. The session
+    is closed on bot shutdown via close_session().
+    """
+    global _session
+    if _session is None or _session.closed:
+        # 30s total timeout per request is generous for TMDB
+        timeout = aiohttp.ClientTimeout(total=30)
+        _session = aiohttp.ClientSession(timeout=timeout)
+    return _session
+
+
+async def close_session() -> None:
+    """Close the shared session. Called on bot shutdown."""
+    global _session
+    if _session is not None and not _session.closed:
+        await _session.close()
+    _session = None
+
+
+# ---------- core request helper ----------
+
+async def _get(path: str, params: dict | None = None) -> dict:
     """Make a GET request to TMDB and return the JSON."""
     params = params or {}
     params["api_key"] = config.TMDB_API_KEY
     url = f"{BASE_URL}{path}"
+    session = get_session()
     async with session.get(url, params=params) as resp:
         if resp.status != 200:
             raise TMDBError(f"TMDB returned {resp.status} for {path}")
         return await resp.json()
 
 
+# ---------- public API ----------
+
 async def search_movie(query: str, year: int | None = None) -> list[dict]:
     """Search for movies by title, sorted by popularity (descending)."""
-    async with aiohttp.ClientSession() as session:
-        params = {"query": query}
-        if year is not None:
-            params["year"] = year
-        data = await _get(session, "/search/movie", params)
-        results = data.get("results", [])
-        results.sort(key=lambda r: r.get("popularity", 0), reverse=True)
-        return results
+    params = {"query": query}
+    if year is not None:
+        params["year"] = year
+    data = await _get("/search/movie", params)
+    results = data.get("results", [])
+    results.sort(key=lambda r: r.get("popularity", 0), reverse=True)
+    return results
 
 
 async def search_person(query: str) -> list[dict]:
     """Search for people (actors, directors, etc) by name, sorted by popularity."""
-    async with aiohttp.ClientSession() as session:
-        data = await _get(session, "/search/person", {"query": query})
-        results = data.get("results", [])
-        results.sort(key=lambda r: r.get("popularity", 0), reverse=True)
-        return results
+    data = await _get("/search/person", {"query": query})
+    results = data.get("results", [])
+    results.sort(key=lambda r: r.get("popularity", 0), reverse=True)
+    return results
 
 
 async def get_movie_details(movie_id: int, force: bool = False) -> dict:
@@ -60,12 +92,10 @@ async def get_movie_details(movie_id: int, force: bool = False) -> dict:
         if cached is not None:
             return cached
 
-    async with aiohttp.ClientSession() as session:
-        data = await _get(
-            session,
-            f"/movie/{movie_id}",
-            {"append_to_response": "credits,release_dates"},
-        )
+    data = await _get(
+        f"/movie/{movie_id}",
+        {"append_to_response": "credits,release_dates"},
+    )
     cache.set(cache_key, data)
     return data
 
@@ -81,18 +111,16 @@ async def get_movie_cast(movie_id: int, force: bool = False) -> list[dict]:
         if cached is not None:
             return cached
 
-    async with aiohttp.ClientSession() as session:
-        data = await _get(session, f"/movie/{movie_id}/credits")
-        cast = data.get("cast", [])
+    data = await _get(f"/movie/{movie_id}/credits")
+    cast = data.get("cast", [])
     cache.set(cache_key, cast)
     return cast
 
 
 async def get_popular_people(page: int = 1) -> list[dict]:
     """Get a page of popular people (~20 per page)."""
-    async with aiohttp.ClientSession() as session:
-        data = await _get(session, "/person/popular", {"page": page})
-        return data.get("results", [])
+    data = await _get("/person/popular", {"page": page})
+    return data.get("results", [])
 
 
 async def get_watch_providers(movie_id: int, region: str = "US", force: bool = False) -> dict:
@@ -103,10 +131,9 @@ async def get_watch_providers(movie_id: int, region: str = "US", force: bool = F
         if cached is not None:
             return cached
 
-    async with aiohttp.ClientSession() as session:
-        data = await _get(session, f"/movie/{movie_id}/watch/providers")
-        results = data.get("results", {})
-        region_data = results.get(region, {})
+    data = await _get(f"/movie/{movie_id}/watch/providers")
+    results = data.get("results", {})
+    region_data = results.get(region, {})
     cache.set(cache_key, region_data)
     return region_data
 
@@ -119,9 +146,8 @@ async def get_movie_keywords(movie_id: int, force: bool = False) -> list[str]:
         if cached is not None:
             return cached
 
-    async with aiohttp.ClientSession() as session:
-        data = await _get(session, f"/movie/{movie_id}/keywords")
-        keywords = [kw["name"].lower() for kw in data.get("keywords", [])]
+    data = await _get(f"/movie/{movie_id}/keywords")
+    keywords = [kw["name"].lower() for kw in data.get("keywords", [])]
     cache.set(cache_key, keywords)
     return keywords
 
@@ -134,8 +160,7 @@ async def get_movie_images(movie_id: int, force: bool = False) -> dict:
         if cached is not None:
             return cached
 
-    async with aiohttp.ClientSession() as session:
-        data = await _get(session, f"/movie/{movie_id}/images")
+    data = await _get(f"/movie/{movie_id}/images")
     cache.set(cache_key, data)
     return data
 
