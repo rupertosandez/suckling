@@ -1,7 +1,7 @@
 import asyncio
 import io
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 import discord
 from discord import app_commands
@@ -25,7 +25,19 @@ import sixdegrees
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+
+class SucklingBot(commands.Bot):
+    """Bot subclass that closes the shared TMDB aiohttp session on shutdown."""
+
+    async def close(self) -> None:
+        try:
+            await tmdb.close_session()
+        except Exception as e:
+            logger.log_exception("bot_close", e)
+        await super().close()
+
+
+bot = SucklingBot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
 
 
@@ -504,7 +516,7 @@ async def guess(
         channel_id=channel_id,
         movie_id=movie["id"],
         title=title,
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
         started_by=str(interaction.user),
         end_event=asyncio.Event(),
         difficulty=diff_val,
@@ -635,7 +647,7 @@ async def six_command(interaction: discord.Interaction):
         actor_a_name=actor_a["name"],
         actor_b_id=actor_b["id"],
         actor_b_name=actor_b["name"],
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
         end_event=asyncio.Event(),
     )
     if not sixdegrees.start_round(round_obj):
