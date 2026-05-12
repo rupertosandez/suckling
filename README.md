@@ -8,7 +8,7 @@ built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 
 ## what it does
 
-- `/watch` - film lookup with full availability info (theatrical + streaming, per-region)
+- `/suck` - film lookup with full availability info (theatrical + streaming, per-region)
 - `/roll` - random film pick with decade and runtime filters
 - `/rb9` + 9 stat commands - pick from the return by 9 library, plus stats (longest, shortest, oldest, decade breakdown, genres, etc.)
 - `/track` - community watchlist with first-time streaming alerts
@@ -39,7 +39,7 @@ for change history, see [changelog.md](CHANGELOG.md).
 ### quick start
 
 ```bash
-git clone https://github.com/rupertosandez/suckling.git
+git clone https://github.com/YourUsername/sucklingbot.git
 cd sucklingbot
 python -m venv venv
 venv\Scripts\Activate.ps1   # windows; use source venv/bin/activate on macos/linux

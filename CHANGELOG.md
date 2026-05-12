@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.4] — 2026-05-11
 
+   ### Changed
+   - Renamed `/watch` to `/suck` to better suit the bot's vibe. Functionality is unchanged - same search, same disambiguation dropdown, same availability info (theatrical, streaming, Plex library). Command description also updated to "suck up a movie and see where to watch it".
+
+   ---
+   
 ## [1.2.3] — 2026-05-10
 
 ### Changed

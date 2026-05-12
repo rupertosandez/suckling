@@ -204,12 +204,12 @@ async def post_daily_recommendation(bot: discord.Client) -> bool:
 
 # ---------- core commands ----------
 
-@bot.tree.command(name="watch", description="Look up a movie")
+@bot.tree.command(name="suck", description="suck up a movie and see where to watch it")
 @app_commands.describe(
     title="The movie title to search for",
     year="Optional: filter by release year if there are multiple matches",
 )
-async def watch(interaction: discord.Interaction, title: str, year: int | None = None):
+async def suck(interaction: discord.Interaction, title: str, year: int | None = None):
     await interaction.response.defer()
 
     try:

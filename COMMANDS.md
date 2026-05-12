@@ -8,7 +8,7 @@ this bot is for the **return by 9** movie community.
 
 ## lookup & discovery
 
-### `/watch <title> [year]`
+### `/suck <title> [year]`
 look up a movie. returns a card with the synopsis, director, runtime, and where to watch it (theaters, streaming).
 
 - `title` (required): the movie title to search for
@@ -17,8 +17,8 @@ look up a movie. returns a card with the synopsis, director, runtime, and where 
 if multiple films share a title (e.g. "halloween"), a dropdown will appear so you can pick the right one. you can also pre-filter with `year` to skip the dropdown.
 
 examples:
-- `/watch The Substance`
-- `/watch Halloween year:1978`
+- `/suck The Substance`
+- `/suck Halloween year:1978`
 
 ---
 
@@ -162,7 +162,7 @@ the streaming feature only announces films hitting digital for the first time �
 
 ## quick tips
 
-- movie titles in `/watch` and `/track` support fuzzy matching, so you don't need exact punctuation or capitalization
+- movie titles in `/suck` and `/track` support fuzzy matching, so you don't need exact punctuation or capitalization
 - the dropdown menu that appears for ambiguous titles times out after 60 seconds — just run the command again if it expires
 - both games and tracking are server-wide — anyone can add to the tracked list and play
 - leaderboards are separate for `/guess` and `/six` — winning at one doesn't affect the other
