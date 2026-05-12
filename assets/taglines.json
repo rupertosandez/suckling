@@ -1,0 +1,222 @@
+[
+  {
+    "answer": "Alien",
+    "year": 1979,
+    "prompt": "In space, no one can hear you scream."
+  },
+  {
+    "answer": "Jaws 2",
+    "year": 1978,
+    "prompt": "Just when you thought it was safe to go back in the water."
+  },
+  {
+    "answer": "The Fly",
+    "year": 1986,
+    "prompt": "Be afraid. Be very afraid."
+  },
+  {
+    "answer": "The Social Network",
+    "year": 2010,
+    "prompt": "You don't get to 500 million friends without making a few enemies."
+  },
+  {
+    "answer": "Jurassic Park",
+    "year": 1993,
+    "prompt": "An adventure 65 million years in the making."
+  },
+  {
+    "answer": "Casablanca",
+    "year": 1942,
+    "prompt": "They had a date with fate in Casablanca."
+  },
+  {
+    "answer": "Double Indemnity",
+    "year": 1944,
+    "prompt": "From the Moment they met it was Murder!"
+  },
+  {
+    "answer": "Gilda",
+    "year": 1946,
+    "prompt": "There NEVER was a woman like Gilda!"
+  },
+  {
+    "answer": "Psycho",
+    "year": 1960,
+    "prompt": "Check in. Relax. Take a shower."
+  },
+  {
+    "answer": "The Graduate",
+    "year": 1967,
+    "prompt": "This is Benjamin. He's a little worried about his future."
+  },
+  {
+    "answer": "Rosemary's Baby",
+    "year": 1968,
+    "prompt": "Pray for Rosemary's Baby."
+  },
+  {
+    "answer": "American Graffiti",
+    "year": 1973,
+    "prompt": "Where were you in '62?"
+  },
+  {
+    "answer": "The Exorcist",
+    "year": 1973,
+    "prompt": "Something beyond comprehension is happening to a little girl on this street, in this house."
+  },
+  {
+    "answer": "The Thing",
+    "year": 1982,
+    "prompt": "Man is the warmest place to hide."
+  },
+  {
+    "answer": "Blade Runner",
+    "year": 1982,
+    "prompt": "Man has made his match ... now it's his problem."
+  },
+  {
+    "answer": "Poltergeist",
+    "year": 1982,
+    "prompt": "They're here..."
+  },
+  {
+    "answer": "E.T. the Extra-Terrestrial",
+    "year": 1982,
+    "prompt": "He is afraid. He is alone. He is three million light years from home.",
+    "aliases": [
+      "E.T.",
+      "ET",
+      "E T"
+    ]
+  },
+  {
+    "answer": "Back to the Future",
+    "year": 1985,
+    "prompt": "He's the only kid ever to get into trouble before he was born."
+  },
+  {
+    "answer": "RoboCop",
+    "year": 1987,
+    "prompt": "Part man. Part machine. All cop."
+  },
+  {
+    "answer": "Die Hard",
+    "year": 1988,
+    "prompt": "Twelve terrorists. One cop. The odds are against John McClane... That's just the way he likes it."
+  },
+  {
+    "answer": "Edward Scissorhands",
+    "year": 1990,
+    "prompt": "His story will touch you, even though he can't."
+  },
+  {
+    "answer": "Terminator 2: Judgment Day",
+    "year": 1991,
+    "prompt": "It's nothing personal.",
+    "aliases": [
+      "T2",
+      "Terminator 2"
+    ]
+  },
+  {
+    "answer": "Pulp Fiction",
+    "year": 1994,
+    "prompt": "You won't know the facts until you've seen the fiction."
+  },
+  {
+    "answer": "The Shawshank Redemption",
+    "year": 1994,
+    "prompt": "Fear can hold you prisoner. Hope can set you free."
+  },
+  {
+    "answer": "Speed",
+    "year": 1994,
+    "prompt": "Get ready for rush hour."
+  },
+  {
+    "answer": "Scream",
+    "year": 1996,
+    "prompt": "Someone has taken their love of scary movies one step too far."
+  },
+  {
+    "answer": "Men in Black",
+    "year": 1997,
+    "prompt": "Protecting the Earth from the scum of the universe!",
+    "aliases": [
+      "MIB"
+    ]
+  },
+  {
+    "answer": "Titanic",
+    "year": 1997,
+    "prompt": "Nothing On Earth Could Come Between Them."
+  },
+  {
+    "answer": "The Truman Show",
+    "year": 1998,
+    "prompt": "On the air. Unaware."
+  },
+  {
+    "answer": "The Matrix",
+    "year": 1999,
+    "prompt": "Reality is a thing of the past."
+  },
+  {
+    "answer": "The Blair Witch Project",
+    "year": 1999,
+    "prompt": "Everything you've heard is true."
+  },
+  {
+    "answer": "Fight Club",
+    "year": 1999,
+    "prompt": "Mischief. Mayhem. Soap."
+  },
+  {
+    "answer": "Memento",
+    "year": 2000,
+    "prompt": "Some memories are best forgotten."
+  },
+  {
+    "answer": "Gladiator",
+    "year": 2000,
+    "prompt": "A Hero Will Rise"
+  },
+  {
+    "answer": "Inception",
+    "year": 2010,
+    "prompt": "Your mind is the scene of the crime."
+  },
+  {
+    "answer": "Mad Max: Fury Road",
+    "year": 2015,
+    "prompt": "What a Lovely Day!"
+  },
+  {
+    "answer": "Get Out",
+    "year": 2017,
+    "prompt": "Just because you're invited, doesn't mean you're welcome."
+  },
+  {
+    "answer": "A Quiet Place",
+    "year": 2018,
+    "prompt": "If they hear you, they hunt you."
+  },
+  {
+    "answer": "Parasite",
+    "year": 2019,
+    "prompt": "Act like you own the place."
+  },
+  {
+    "answer": "Barbie",
+    "year": 2023,
+    "prompt": "She's everything. He's just Ken."
+  },
+  {
+    "answer": "The Suckling",
+    "year": 1990,
+    "prompt": "He'll always be Mommy's little mutant.",
+    "aliases": [
+      "sewage baby"
+    ]
+  }
+]

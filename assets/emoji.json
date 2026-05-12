@@ -1,0 +1,403 @@
+[
+  {
+    "answer": "Jaws",
+    "year": 1975,
+    "prompt": "🦈🩸🚤"
+  },
+  {
+    "answer": "The Lion King",
+    "year": 1994,
+    "prompt": "🦁👑🌅"
+  },
+  {
+    "answer": "Finding Nemo",
+    "year": 2003,
+    "prompt": "🐠🔍🌊"
+  },
+  {
+    "answer": "Toy Story",
+    "year": 1995,
+    "prompt": "🤠🚀🧸"
+  },
+  {
+    "answer": "Up",
+    "year": 2009,
+    "prompt": "🎈🏠👴"
+  },
+  {
+    "answer": "Wall-E",
+    "year": 2008,
+    "prompt": "🤖🌍🗑️"
+  },
+  {
+    "answer": "Ratatouille",
+    "year": 2007,
+    "prompt": "🐀🍳👨‍🍳"
+  },
+  {
+    "answer": "Shrek",
+    "year": 2001,
+    "prompt": "🟢👹🏰"
+  },
+  {
+    "answer": "Frozen",
+    "year": 2013,
+    "prompt": "❄️👸⛄"
+  },
+  {
+    "answer": "The Wizard of Oz",
+    "year": 1939,
+    "prompt": "🌪️👠🦁"
+  },
+  {
+    "answer": "Titanic",
+    "year": 1997,
+    "prompt": "🚢🧊💔"
+  },
+  {
+    "answer": "Jurassic Park",
+    "year": 1993,
+    "prompt": "🦖🏝️🧬"
+  },
+  {
+    "answer": "Star Wars",
+    "year": 1977,
+    "prompt": "🌌⚔️🤖",
+    "aliases": [
+      "a new hope",
+      "star wars a new hope"
+    ]
+  },
+  {
+    "answer": "Indiana Jones and the Raiders of the Lost Ark",
+    "year": 1981,
+    "prompt": "🤠🐍🏺",
+    "aliases": [
+      "raiders of the lost ark",
+      "indiana jones"
+    ]
+  },
+  {
+    "answer": "Back to the Future",
+    "year": 1985,
+    "prompt": "⚡🚗⏰"
+  },
+  {
+    "answer": "The Matrix",
+    "year": 1999,
+    "prompt": "💊🕶️🟢"
+  },
+  {
+    "answer": "Inception",
+    "year": 2010,
+    "prompt": "🌀💭🎯"
+  },
+  {
+    "answer": "Interstellar",
+    "year": 2014,
+    "prompt": "🚀🌽⏳"
+  },
+  {
+    "answer": "Gladiator",
+    "year": 2000,
+    "prompt": "🏛️⚔️🦁"
+  },
+  {
+    "answer": "Forrest Gump",
+    "year": 1994,
+    "prompt": "🏃🍫🪶"
+  },
+  {
+    "answer": "The Godfather",
+    "year": 1972,
+    "prompt": "🐴🍝🔫"
+  },
+  {
+    "answer": "Goodfellas",
+    "year": 1990,
+    "prompt": "🍝🔫🚁"
+  },
+  {
+    "answer": "Pulp Fiction",
+    "year": 1994,
+    "prompt": "💼🍔💉"
+  },
+  {
+    "answer": "Fight Club",
+    "year": 1999,
+    "prompt": "🧼🥊🤜"
+  },
+  {
+    "answer": "Reservoir Dogs",
+    "year": 1992,
+    "prompt": "🕴️💎👂"
+  },
+  {
+    "answer": "The Shining",
+    "year": 1980,
+    "prompt": "🪓🏨👬"
+  },
+  {
+    "answer": "The Exorcist",
+    "year": 1973,
+    "prompt": "✝️🛏️👧"
+  },
+  {
+    "answer": "Get Out",
+    "year": 2017,
+    "prompt": "☕🎶🪑"
+  },
+  {
+    "answer": "Hereditary",
+    "year": 2018,
+    "prompt": "🏠🌳📐"
+  },
+  {
+    "answer": "Midsommar",
+    "year": 2019,
+    "prompt": "🌼☀️🇸🇪"
+  },
+  {
+    "answer": "Ghostbusters",
+    "year": 1984,
+    "prompt": "👻🚫🚗"
+  },
+  {
+    "answer": "E.T. the Extra-Terrestrial",
+    "year": 1982,
+    "prompt": "👽🚲🌕",
+    "aliases": [
+      "E.T.",
+      "ET",
+      "E T"
+    ]
+  },
+  {
+    "answer": "The Terminator",
+    "year": 1984,
+    "prompt": "🤖🕶️🔫"
+  },
+  {
+    "answer": "Terminator 2: Judgment Day",
+    "year": 1991,
+    "prompt": "🤖🏍️🔥",
+    "aliases": [
+      "T2",
+      "Terminator 2"
+    ]
+  },
+  {
+    "answer": "Alien",
+    "year": 1979,
+    "prompt": "👽🚀😱"
+  },
+  {
+    "answer": "Aliens",
+    "year": 1986,
+    "prompt": "👽👽💪"
+  },
+  {
+    "answer": "The Silence of the Lambs",
+    "year": 1991,
+    "prompt": "🦋🍷🔒"
+  },
+  {
+    "answer": "Se7en",
+    "year": 1995,
+    "prompt": "📦🌧️7️⃣",
+    "aliases": [
+      "Seven"
+    ]
+  },
+  {
+    "answer": "The Sixth Sense",
+    "year": 1999,
+    "prompt": "👦👻🏥"
+  },
+  {
+    "answer": "Home Alone",
+    "year": 1990,
+    "prompt": "🏠👦🪤"
+  },
+  {
+    "answer": "The Breakfast Club",
+    "year": 1985,
+    "prompt": "🏫✊📚"
+  },
+  {
+    "answer": "Ferris Bueller's Day Off",
+    "year": 1986,
+    "prompt": "😎🏎️🏙️"
+  },
+  {
+    "answer": "Groundhog Day",
+    "year": 1993,
+    "prompt": "🐿️📅🔁"
+  },
+  {
+    "answer": "The Princess Bride",
+    "year": 1987,
+    "prompt": "👸⚔️💋"
+  },
+  {
+    "answer": "The Goonies",
+    "year": 1985,
+    "prompt": "🗺️💎☠️"
+  },
+  {
+    "answer": "Beetlejuice",
+    "year": 1988,
+    "prompt": "🪲🧃👻"
+  },
+  {
+    "answer": "Edward Scissorhands",
+    "year": 1990,
+    "prompt": "✂️🙌🏘️"
+  },
+  {
+    "answer": "Men in Black",
+    "year": 1997,
+    "prompt": "🕶️👽🧠",
+    "aliases": [
+      "MIB"
+    ]
+  },
+  {
+    "answer": "The Truman Show",
+    "year": 1998,
+    "prompt": "📺🌤️👀"
+  },
+  {
+    "answer": "Cast Away",
+    "year": 2000,
+    "prompt": "🏐🏝️✈️"
+  },
+  {
+    "answer": "The Lord of the Rings: The Fellowship of the Ring",
+    "year": 2001,
+    "prompt": "💍🧙‍♂️🧝",
+    "aliases": [
+      "the fellowship of the ring",
+      "fellowship of the ring"
+    ]
+  },
+  {
+    "answer": "Harry Potter and the Sorcerer's Stone",
+    "year": 2001,
+    "prompt": "⚡🧙‍♂️🏰",
+    "aliases": [
+      "Harry Potter and the Philosopher's Stone",
+      "Harry Potter 1"
+    ]
+  },
+  {
+    "answer": "Spider-Man",
+    "year": 2002,
+    "prompt": "🕷️🕸️🗽"
+  },
+  {
+    "answer": "Pirates of the Caribbean: The Curse of the Black Pearl",
+    "year": 2003,
+    "prompt": "🏴‍☠️⚓💀",
+    "aliases": [
+      "Pirates of the Caribbean"
+    ]
+  },
+  {
+    "answer": "Kill Bill: Volume 1",
+    "year": 2003,
+    "prompt": "🟨⚔️🐍",
+    "aliases": [
+      "Kill Bill"
+    ]
+  },
+  {
+    "answer": "Shaun of the Dead",
+    "year": 2004,
+    "prompt": "🧟‍♂️🍺🏏"
+  },
+  {
+    "answer": "The Devil Wears Prada",
+    "year": 2006,
+    "prompt": "👠👜📰"
+  },
+  {
+    "answer": "Little Miss Sunshine",
+    "year": 2006,
+    "prompt": "🚌👑🌞"
+  },
+  {
+    "answer": "No Country for Old Men",
+    "year": 2007,
+    "prompt": "💰🌵🪙"
+  },
+  {
+    "answer": "The Dark Knight",
+    "year": 2008,
+    "prompt": "🦇🃏🏙️"
+  },
+  {
+    "answer": "Avatar",
+    "year": 2009,
+    "prompt": "🌿💙🌌"
+  },
+  {
+    "answer": "Black Swan",
+    "year": 2010,
+    "prompt": "🩰🦢🖤"
+  },
+  {
+    "answer": "The Avengers",
+    "year": 2012,
+    "prompt": "🦸‍♂️🛡️🟢",
+    "aliases": [
+      "Avengers Assemble"
+    ]
+  },
+  {
+    "answer": "The Wolf of Wall Street",
+    "year": 2013,
+    "prompt": "🐺💵📈"
+  },
+  {
+    "answer": "Guardians of the Galaxy",
+    "year": 2014,
+    "prompt": "🌌🦝🌳"
+  },
+  {
+    "answer": "John Wick",
+    "year": 2014,
+    "prompt": "🐶🖤🔫"
+  },
+  {
+    "answer": "La La Land",
+    "year": 2016,
+    "prompt": "🎹💃🌃"
+  },
+  {
+    "answer": "Knives Out",
+    "year": 2019,
+    "prompt": "🔪🏠🕵️"
+  },
+  {
+    "answer": "Top Gun: Maverick",
+    "year": 2022,
+    "prompt": "✈️🏍️🔥",
+    "aliases": [
+      "Maverick"
+    ]
+  },
+  {
+    "answer": "Oppenheimer",
+    "year": 2023,
+    "prompt": "⚛️💣🎩"
+  },
+  {
+    "answer": "The Suckling",
+    "year": 1990,
+    "prompt": "👶🧪🚽",
+    "aliases": [
+      "sewage baby"
+    ]
+  }
+]

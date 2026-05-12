@@ -1,0 +1,424 @@
+[
+  {
+    "answer": "Jaws",
+    "year": 1975,
+    "prompt": "The mechanical shark malfunctioned constantly during filming, which forced the director to suggest the creature's presence rather than show it. The result is now considered a masterclass in tension."
+  },
+  {
+    "answer": "The Lord of the Rings: The Fellowship of the Ring",
+    "year": 2001,
+    "prompt": "The actor playing one of the lead hobbits broke his toe kicking a helmet during filming. His pained reaction made it into the final cut.",
+    "aliases": [
+      "the fellowship of the ring",
+      "fellowship of the ring"
+    ]
+  },
+  {
+    "answer": "The Dark Knight",
+    "year": 2008,
+    "prompt": "The lead villain actor reportedly isolated himself in a hotel room for over a month to develop the character's voice and mannerisms before shooting began."
+  },
+  {
+    "answer": "Mad Max: Fury Road",
+    "year": 2015,
+    "prompt": "Nearly every vehicle stunt in the film was performed practically in the Namibian desert, with minimal CGI. The production was famously chaotic, taking years to complete."
+  },
+  {
+    "answer": "The Texas Chain Saw Massacre",
+    "year": 1974,
+    "prompt": "Filmed in brutal Texas summer heat with a tiny budget, the cast and crew worked grueling hours and the on-set conditions became legendary for their misery.",
+    "aliases": [
+      "texas chainsaw massacre"
+    ]
+  },
+  {
+    "answer": "Citizen Kane",
+    "year": 1941,
+    "prompt": "Its unusually low camera angles required ceilings to be built on sets, something Hollywood productions usually avoided. The visual style helped make the film feel larger and more grounded."
+  },
+  {
+    "answer": "Casablanca",
+    "year": 1942,
+    "prompt": "Many of the actors playing refugees in this film were real European refugees, which gave several crowd scenes an extra layer of emotion and authenticity."
+  },
+  {
+    "answer": "Singin' in the Rain",
+    "year": 1952,
+    "prompt": "The lead actor performed one of the film's most famous dance numbers while reportedly running a high fever, turning a miserable shoot into one of movie musical history's signature moments."
+  },
+  {
+    "answer": "Psycho",
+    "year": 1960,
+    "prompt": "A famous practical-effects trick used chocolate syrup as screen-friendly stand-in liquid because the film was shot in black and white."
+  },
+  {
+    "answer": "2001: A Space Odyssey",
+    "year": 1968,
+    "prompt": "A massive rotating set was built so actors could appear to walk along walls and ceilings, creating weightless-looking movement without digital effects.",
+    "aliases": [
+      "2001"
+    ]
+  },
+  {
+    "answer": "The Godfather",
+    "year": 1972,
+    "prompt": "The studio was hesitant about several major casting choices, but the director fought for them. One lead actor even used cotton in his mouth during the audition to find the character's voice."
+  },
+  {
+    "answer": "Rocky",
+    "year": 1976,
+    "prompt": "Made on a small budget, this film used early Steadicam work to capture its lead running through the city with an energy that helped define the whole movie."
+  },
+  {
+    "answer": "Star Wars: Episode IV - A New Hope",
+    "year": 1977,
+    "prompt": "The space battles were inspired partly by old aerial combat footage, which helped give the effects team a grounded reference for fast, readable action.",
+    "aliases": [
+      "star wars",
+      "a new hope"
+    ]
+  },
+  {
+    "answer": "Alien",
+    "year": 1979,
+    "prompt": "The creature design came from surreal biomechanical artwork, giving the film a look that felt far stranger and more unsettling than most studio science fiction of the era."
+  },
+  {
+    "answer": "Raiders of the Lost Ark",
+    "year": 1981,
+    "prompt": "The production leaned heavily on old adventure serials, practical stunts, and physical props to make the action feel dusty, dangerous, and handmade.",
+    "aliases": [
+      "indiana jones and the raiders of the lost ark"
+    ]
+  },
+  {
+    "answer": "Blade Runner",
+    "year": 1982,
+    "prompt": "Its futuristic city was created with dense miniature work, smoke, rain, neon lighting, and layered production design rather than relying on computer-generated environments."
+  },
+  {
+    "answer": "E.T. the Extra-Terrestrial",
+    "year": 1982,
+    "prompt": "A candy brand passed on a product-placement opportunity, allowing a rival candy to become permanently associated with one of the film's most memorable sequences.",
+    "aliases": [
+      "et",
+      "e t"
+    ]
+  },
+  {
+    "answer": "The Terminator",
+    "year": 1984,
+    "prompt": "A relatively low-budget production used miniatures, makeup effects, animatronics, and clever lighting to make its science-fiction action feel much bigger than its resources."
+  },
+  {
+    "answer": "Back to the Future",
+    "year": 1985,
+    "prompt": "Weeks of footage were shot with a different lead actor before the filmmakers recast the role and reshot the material with the performer now inseparable from the part."
+  },
+  {
+    "answer": "Die Hard",
+    "year": 1988,
+    "prompt": "Much of the movie was filmed in and around a real corporate tower that was still being completed, giving the production a ready-made vertical action playground."
+  },
+  {
+    "answer": "Goodfellas",
+    "year": 1990,
+    "prompt": "A famous nightclub entrance was filmed as an extended tracking shot, moving through back corridors and the kitchen to make the world feel seductive and effortless."
+  },
+  {
+    "answer": "Jurassic Park",
+    "year": 1993,
+    "prompt": "The production combined full-size animatronics with groundbreaking computer-generated shots, helping change what audiences expected from movie creatures."
+  },
+  {
+    "answer": "Forrest Gump",
+    "year": 1994,
+    "prompt": "The visual effects team inserted the lead character into archival footage, creating scenes that made him appear to interact with real historical figures."
+  },
+  {
+    "answer": "Toy Story",
+    "year": 1995,
+    "prompt": "This was the first feature-length film made entirely with computer animation, turning what had been a short-film experiment into a new Hollywood model."
+  },
+  {
+    "answer": "Clueless",
+    "year": 1995,
+    "prompt": "The film updates a classic 19th-century novel into a glossy Beverly Hills teen comedy, keeping the social matchmaking structure while completely changing the setting."
+  },
+  {
+    "answer": "Scream",
+    "year": 1996,
+    "prompt": "The original script title was different, but the final title helped sell the movie's blend of slasher thrills and self-aware horror commentary."
+  },
+  {
+    "answer": "Titanic",
+    "year": 1997,
+    "prompt": "The production built enormous partial ship sets and used large water tanks, miniatures, and digital effects to create a scale that felt both epic and tactile."
+  },
+  {
+    "answer": "The Matrix",
+    "year": 1999,
+    "prompt": "Its signature slow-motion action look was created with arrays of still cameras firing in sequence, a technique that became one of the defining visual effects trends of the era."
+  },
+  {
+    "answer": "The Blair Witch Project",
+    "year": 1999,
+    "prompt": "The actors shot much of the footage themselves and were given limited direction while camping, helping the movie's improvised realism become part of its marketing legend."
+  },
+  {
+    "answer": "Gladiator",
+    "year": 2000,
+    "prompt": "A partial arena set was extended with visual effects and crowd duplication, allowing the film to suggest ancient spectacle without building an entire colosseum."
+  },
+  {
+    "answer": "Eternal Sunshine of the Spotless Mind",
+    "year": 2004,
+    "prompt": "Many of the dreamlike transitions were achieved with practical, in-camera tricks rather than digital effects, including hidden doors, lighting shifts, and forced perspective."
+  },
+  {
+    "answer": "Mean Girls",
+    "year": 2004,
+    "prompt": "This teen comedy was inspired by a nonfiction book about social cliques, then reshaped into one of the most quotable high-school movies of the 2000s."
+  },
+  {
+    "answer": "Iron Man",
+    "year": 2008,
+    "prompt": "The production allowed unusual amounts of improvisation for a superhero blockbuster, helping define the loose comic rhythm of the franchise that followed."
+  },
+  {
+    "answer": "Inception",
+    "year": 2010,
+    "prompt": "A rotating hallway set was built for one of the film's most famous action sequences, letting the actors perform the disorienting movement practically."
+  },
+  {
+    "answer": "The Grand Budapest Hotel",
+    "year": 2014,
+    "prompt": "The film uses changing aspect ratios, miniatures, and ornate handmade production design to make its fictional hotel feel like a memory of old European cinema."
+  },
+  {
+    "answer": "Get Out",
+    "year": 2017,
+    "prompt": "Made on a modest horror budget by a first-time feature director, this film turned a sharp social premise into a mainstream breakout hit."
+  },
+  {
+    "answer": "Parasite",
+    "year": 2019,
+    "prompt": "The central house was built as a set rather than found as a real location, allowing the director to precisely control movement, sightlines, and class contrast."
+  },
+  {
+    "answer": "Dune",
+    "year": 2021,
+    "prompt": "The production combined real desert locations, large practical sets, and carefully designed vehicles to make its science-fiction world feel ancient and physical."
+  },
+  {
+    "answer": "Everything Everywhere All at Once",
+    "year": 2022,
+    "prompt": "Many of the film's wild visual effects were created by a small, unusually hands-on team, giving the movie a scrappy inventiveness despite its huge scale of ideas."
+  },
+  {
+    "answer": "Barbie",
+    "year": 2023,
+    "prompt": "The production built oversized practical Dreamhouse sets with theatrical artificiality, leaning into painted skies, forced perspective, and deliberately toy-like design."
+  },
+  {
+    "answer": "The Wizard of Oz",
+    "year": 1939,
+    "prompt": "One of its most famous magical transitions was achieved with a carefully timed practical effect on set, using lighting, makeup, and a hidden costume change rather than digital trickery."
+  },
+  {
+    "answer": "The Red Shoes",
+    "year": 1948,
+    "prompt": "The filmmakers built the movie around long, elaborate dance sequences that treated ballet as cinematic spectacle rather than simply photographing a stage performance."
+  },
+  {
+    "answer": "Rear Window",
+    "year": 1954,
+    "prompt": "A massive courtyard set was built on a soundstage so the camera could observe dozens of apartments from one fixed vantage point, matching the lead character's limited perspective."
+  },
+  {
+    "answer": "Lawrence of Arabia",
+    "year": 1962,
+    "prompt": "The desert photography relied on real locations, huge logistical planning, and careful lens choices, helping create images that still feel impossibly vast."
+  },
+  {
+    "answer": "Mary Poppins",
+    "year": 1964,
+    "prompt": "The film combined live action, animation, wire work, matte paintings, and elaborate stagecraft at a level that made its fantasy sequences feel unusually seamless for the era."
+  },
+  {
+    "answer": "The Graduate",
+    "year": 1967,
+    "prompt": "Its pop-song soundtrack was not just background decoration; the music helped sell the film's mood of youthful alienation and became central to its cultural identity."
+  },
+  {
+    "answer": "The French Connection",
+    "year": 1971,
+    "prompt": "Its gritty New York feel came from extensive location shooting and a documentary-like approach, giving the crime story an unusually raw texture for a studio thriller."
+  },
+  {
+    "answer": "The Sting",
+    "year": 1973,
+    "prompt": "The production leaned into period design, old-fashioned title cards, and ragtime music to make the film feel like a stylish throwback without turning it into a museum piece."
+  },
+  {
+    "answer": "Carrie",
+    "year": 1976,
+    "prompt": "The filmmakers used split-screen effects, stylized lighting, and carefully staged practical mess to turn a modestly budgeted horror story into something operatic."
+  },
+  {
+    "answer": "Annie Hall",
+    "year": 1977,
+    "prompt": "The film uses playful formal tricks like direct address and animation, giving a romantic comedy the loose, personal feel of a comic essay."
+  },
+  {
+    "answer": "Halloween",
+    "year": 1978,
+    "prompt": "A low-budget production used a simple modified mask, careful widescreen framing, and a minimalist synth score to create an instantly recognizable horror style."
+  },
+  {
+    "answer": "Raging Bull",
+    "year": 1980,
+    "prompt": "The black-and-white boxing scenes were designed with smoke, flashbulbs, varied camera speeds, and stylized sound to feel more psychological than purely realistic."
+  },
+  {
+    "answer": "The Evil Dead",
+    "year": 1981,
+    "prompt": "The crew used handmade rigs, aggressive camera movement, and messy practical effects to make a tiny-budget horror film feel kinetic and relentless."
+  },
+  {
+    "answer": "Tootsie",
+    "year": 1982,
+    "prompt": "The lead actor spent extensive time developing the central disguise and performance, while the film balanced farce with a surprisingly grounded look at acting and identity."
+  },
+  {
+    "answer": "Ghostbusters",
+    "year": 1984,
+    "prompt": "Its supernatural comedy depended on a mix of optical effects, puppetry, miniatures, matte work, and deadpan performances that treated the absurd premise like a workplace problem."
+  },
+  {
+    "answer": "The Breakfast Club",
+    "year": 1985,
+    "prompt": "The production was largely confined to one school location, turning limited space and long dialogue scenes into a pressure cooker for character work."
+  },
+  {
+    "answer": "Who Framed Roger Rabbit",
+    "year": 1988,
+    "prompt": "The actors performed opposite empty space, puppeteers, stand-ins, and mechanical props so animated characters could appear to interact physically with the live-action world."
+  },
+  {
+    "answer": "Home Alone",
+    "year": 1990,
+    "prompt": "The slapstick was carefully choreographed with stunt doubles, breakaway props, and exaggerated sound design so the violence could play as cartoonish rather than grim."
+  },
+  {
+    "answer": "The Silence of the Lambs",
+    "year": 1991,
+    "prompt": "The film's unnerving close-ups often place actors directly facing the lens, making conversations feel intimate, confrontational, and psychologically boxed-in."
+  },
+  {
+    "answer": "Beauty and the Beast",
+    "year": 1991,
+    "prompt": "The ballroom sequence blended traditional hand-drawn animation with computer-generated camera movement, giving a classic musical number a new sense of depth and sweep."
+  },
+  {
+    "answer": "Unforgiven",
+    "year": 1992,
+    "prompt": "The film's weathered production design, muted lighting, and anti-glamorous approach helped reshape the western into something older, dirtier, and more reflective."
+  },
+  {
+    "answer": "The Nightmare Before Christmas",
+    "year": 1993,
+    "prompt": "Its stop-motion production required armies of puppets, replacement faces, and frame-by-frame animation, giving the fantasy world a handmade spookiness."
+  },
+  {
+    "answer": "The Lion King",
+    "year": 1994,
+    "prompt": "Animators studied real animals and natural movement, then filtered that research through bold theatrical design and Broadway-style musical staging."
+  },
+  {
+    "answer": "Mission: Impossible",
+    "year": 1996,
+    "prompt": "One of its signature suspense sequences was built around controlled physical stillness, wire work, and precise blocking rather than a large-scale explosion or chase."
+  },
+  {
+    "answer": "Crouching Tiger, Hidden Dragon",
+    "year": 2000,
+    "prompt": "The production blended classical wuxia wire work with elegant international art-film pacing, helping martial-arts choreography reach a huge global audience."
+  },
+  {
+    "answer": "The Royal Tenenbaums",
+    "year": 2001,
+    "prompt": "The film's symmetrical compositions, color-coded costumes, and storybook chapter structure helped lock in one of the most recognizable visual styles in early-2000s American cinema."
+  },
+  {
+    "answer": "Pan's Labyrinth",
+    "year": 2006,
+    "prompt": "Its fantasy creatures were brought to life through a blend of elaborate prosthetics, suit performance, animatronics, and digital enhancement rather than fully digital characters."
+  },
+  {
+    "answer": "Avatar",
+    "year": 2009,
+    "prompt": "The production developed new performance-capture and virtual-camera workflows so the director could frame computer-generated environments almost like live-action sets."
+  },
+  {
+    "answer": "La La Land",
+    "year": 2016,
+    "prompt": "Many musical numbers were staged with long takes, real locations, and old-Hollywood color design, giving the modern setting a deliberately classic movie-musical feel."
+  },
+  {
+    "answer": "Top Gun: Maverick",
+    "year": 2022,
+    "prompt": "The actors trained for real aerial photography, with cameras placed inside fighter jets to capture faces under actual flight pressure rather than relying only on simulation.",
+    "aliases": [
+      "Maverick"
+    ]
+  },
+  {
+    "answer": "The Suckling",
+    "year": 1990,
+    "prompt": "This low-budget American horror film was written and directed by Francis Teri, who reportedly spent about a year and a half raising the money to make it.",
+    "aliases": [
+      "sewage baby"
+    ]
+  },
+  {
+    "answer": "The Suckling",
+    "year": 1990,
+    "prompt": "This direct-to-video horror oddity was also released under the alternate title Sewage Baby, making it one of the rare films where the alternate title may be even more blunt than the original.",
+    "aliases": [
+      "sewage baby"
+    ]
+  },
+  {
+    "answer": "The Suckling",
+    "year": 1990,
+    "prompt": "A boutique Blu-ray release later restored this grimy monster movie from its original 16mm camera negative, giving an unlikely cult title a surprisingly careful preservation treatment.",
+    "aliases": [
+      "sewage baby"
+    ]
+  },
+  {
+    "answer": "The Suckling",
+    "year": 1990,
+    "prompt": "This cult horror film features Michael Gingold, later known for his work as a major horror journalist and Fangoria figure, in the title monster role.",
+    "aliases": [
+      "sewage baby"
+    ]
+  },
+  {
+    "answer": "The Suckling",
+    "year": 1990,
+    "prompt": "Despite being released in 1990, this grimy creature feature is often grouped with late-80s direct-to-video horror because of its handmade effects and VHS-era energy.",
+    "aliases": [
+      "sewage baby"
+    ]
+  },
+  {
+    "answer": "The Suckling",
+    "year": 1990,
+    "prompt": "This movie's crew credits include Joseph Teri as composer, matching the surname of writer-director Francis Teri.",
+    "aliases": [
+      "sewage baby"
+    ]
+  }
+]

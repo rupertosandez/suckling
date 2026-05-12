@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — 2026-05-12
+
+### Added
+- `/play` — trivia roulette game. Bot randomly picks a category (quote, emoji, tagline, or trivia) and posts a clue. First correct guess in chat wins. 30-second rounds, 1 point per win.
+- `trivia_roulette.py` module with round state, JSON asset loading, and fuzzy answer matching
+- `assets/` folder containing curated content per category (`quotes.json`, `emoji.json`, `taglines.json`, `trivia.json`)
+- `trivia_prompt_embed` and `trivia_reveal_embed` builders in `embeds.py`
+
+### Changed
+- `/play` writes to the shared `guess_scores` table — the existing `/leaderboard` command now reflects wins from both `/guess` and `/play`
+- `/giveup` extended to also end active `/play` rounds
+- `/guess` and `/six` now refuse to start if a `/play` round is active in the channel (and vice versa)
+
+### Notes
+- Category content lives in `assets/*.json` and is loaded once at startup. Missing or malformed files log a warning and are skipped; the bot keeps running with whatever categories are populated. If no categories load, `/play` refuses with a friendly message.
+- Each category has its own embed color and emoji badge so the "roulette" reveal feels distinct.
+- No no-repeat tracking yet — with 70+ entries per category, immediate repeats are rare. Easy to add later if it becomes annoying.
+
+---
+
 ## [1.2.4] — 2026-05-11
 
    ### Changed

@@ -13,6 +13,7 @@ built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 - `/rb9` + 9 stat commands - pick from the return by 9 library, plus stats (longest, shortest, oldest, decade breakdown, genres, etc.)
 - `/track` - community watchlist with first-time streaming alerts
 - `/guess` - poster + still guessing game with scaled scoring (1 pt easy, 2 pts hard)
+- `/play` - trivia roulette game with four categories (quote, emoji, tagline, trivia)
 - `/six` - six degrees of separation game with chain validation against tmdb cast data
 - daily streaming announcements at 9 am, with first-time-only filtering (no re-promotion noise)
 - daily recommendations at noon, with 30-day no-repeat window
@@ -114,6 +115,7 @@ sucklingbot/
 ├── imageops.py         poster cropping for /guess
 ├── game.py             /guess round state
 ├── sixdegrees.py       /six round state, chain parsing, validation
+├── trivia_roulette.py  /play round state, json asset loading, matching
 ├── plex.py             plex connection, random pick, library stats
 ├── cache.py            in-memory ttl cache
 ├── logger.py           file logging setup
@@ -122,6 +124,11 @@ sucklingbot/
 ├── CHANGELOG.md        release history
 ├── README.md           this file
 ├── .env                secrets (gitignored)
+├── assets/             curated trivia roulette content (committed)
+│   ├── quotes.json
+│   ├── emoji.json
+│   ├── taglines.json
+│   └── trivia.json
 └── data/               persistent state (gitignored)
     ├── moviebot.db
     └── bot.log

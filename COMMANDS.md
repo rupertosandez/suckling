@@ -99,6 +99,23 @@ show every movie currently being tracked, plus who added each one.
 
 ## games
 
+### `/play`
+start a trivia roulette round. the bot randomly picks one of four categories and posts a clue. first person to guess correctly in chat wins.
+
+categories:
+- 🎬 **quote** - a memorable line of dialogue
+- 🎭 **emoji** - the film described in emoji
+- 📜 **tagline** - the marketing tagline from posters or trailers
+- 🎞️ **trivia** - a piece of behind-the-scenes or production trivia
+
+30-second time limit per round. 1 point per win. shares the leaderboard with `/guess` (use `/leaderboard` to see standings).
+
+only one round can be active in a channel at a time. `/giveup` ends the round.
+
+example: `/play`
+
+---
+
 ### `/guess [difficulty]`
 start a guessing round. the bot posts an image and the first person to guess correctly in chat wins. 60-second time limit per round.
 

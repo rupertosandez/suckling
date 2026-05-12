@@ -3,6 +3,7 @@ from datetime import datetime
 import discord
 
 import tmdb
+import trivia_roulette
 
 
 SHUDDER_PROVIDER_NAME = "Shudder"
@@ -404,4 +405,54 @@ def rb9_random_scene_embed(scene: dict) -> discord.Embed:
         embed.set_image(url=scene["art_url"])
 
     embed.set_footer(text="From the Return by 9 library")
+    return embed
+
+
+# ---------- trivia roulette ----------
+
+def trivia_prompt_embed(category: str, prompt: str, started_by: str) -> discord.Embed:
+    """Round-start embed showing the category and the clue."""
+    meta = trivia_roulette.CATEGORIES.get(category, {})
+    cat_emoji = meta.get("emoji", "🎲")
+    cat_label = meta.get("label", category)
+    color = meta.get("color", 0x808080)
+
+    embed = discord.Embed(
+        title=f"{cat_emoji} rb9 roulette: {cat_label}!",
+        description=prompt,
+        color=color,
+    )
+    embed.set_footer(text=f"started by {started_by} · 30 seconds to guess")
+    return embed
+
+
+def trivia_reveal_embed(
+    category: str,
+    answer: str,
+    year: int | None,
+    winner_tag: str | None = None,
+    new_total: int | None = None,
+) -> discord.Embed:
+    """
+    Reveal embed for both win and timeout. If winner_tag is set, shows the
+    winner; otherwise shows a time's-up message. If new_total is provided
+    alongside a winner, the running total is shown below the answer.
+    """
+    meta = trivia_roulette.CATEGORIES.get(category, {})
+    cat_label = meta.get("label", category)
+    color = meta.get("color", 0x808080)
+
+    year_str = f" ({year})" if year else ""
+
+    if winner_tag:
+        title = f"✅ {winner_tag} got it!"
+        description = f"**{answer}**{year_str}"
+        if new_total is not None:
+            description += f"\n\n+1 point · total: **{new_total}**"
+    else:
+        title = "⏰ time's up!"
+        description = f"the answer was **{answer}**{year_str}"
+
+    embed = discord.Embed(title=title, description=description, color=color)
+    embed.set_footer(text=f"category: {cat_label}")
     return embed

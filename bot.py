@@ -21,6 +21,7 @@ import logger
 import plex
 import version
 import sixdegrees
+import trivia_roulette
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -107,6 +108,15 @@ async def on_message(message: discord.Message):
                 round_obj.end_event.set()
                 return
 
+        # Trivia roulette
+        trivia_round = trivia_roulette.get_round(message.channel.id)
+        if trivia_round and not trivia_round.revealed:
+            if trivia_roulette.answer_matches(message.content, trivia_round):
+                trivia_round.winner_id = str(message.author.id)
+                trivia_round.winner_tag = str(message.author)
+                trivia_round.end_event.set()
+                return
+            
         # Six degrees game
         six_round = sixdegrees.get_round(message.channel.id)
         if six_round and not six_round.revealed:
@@ -460,6 +470,13 @@ async def guess(
             ephemeral=True,
         )
         return
+    
+    if trivia_roulette.get_round(channel_id):
+        await interaction.response.send_message(
+            "🎲 A trivia round is active in this channel. Wait for it to finish or use `/giveup`.",
+            ephemeral=True,
+        )
+        return
 
     await interaction.response.defer()
 
@@ -572,6 +589,98 @@ async def guess(
     await interaction.channel.send(embed=reveal_embed)
 
 
+@bot.tree.command(name="play", description="Start a trivia roulette round")
+async def play(interaction: discord.Interaction):
+    channel_id = interaction.channel.id
+
+    # Cross-game guards
+    if trivia_roulette.get_round(channel_id):
+        await interaction.response.send_message(
+            "🎲 A trivia round is already active in this channel. Wait for it to finish or use `/giveup`.",
+            ephemeral=True,
+        )
+        return
+    if game.get_round(channel_id):
+        await interaction.response.send_message(
+            "🎬 A /guess round is active in this channel. Wait for it to finish or use `/giveup`.",
+            ephemeral=True,
+        )
+        return
+    if sixdegrees.get_round(channel_id):
+        await interaction.response.send_message(
+            "🎬 A /six round is active in this channel. Wait for it to finish or use `/giveup`.",
+            ephemeral=True,
+        )
+        return
+
+    pick = trivia_roulette.pick_random_entry()
+    if pick is None:
+        await interaction.response.send_message(
+            "⚠️ No trivia content loaded — check the assets folder.",
+            ephemeral=True,
+        )
+        return
+
+    category, entry = pick
+
+    await interaction.response.defer()
+
+    round_obj = trivia_roulette.TriviaRound(
+        channel_id=channel_id,
+        category=category,
+        prompt=entry["prompt"],
+        answer=entry["answer"],
+        year=entry.get("year"),
+        aliases=entry.get("aliases", []),
+        started_at=datetime.now(timezone.utc),
+        started_by=str(interaction.user),
+        end_event=asyncio.Event(),
+    )
+    if not trivia_roulette.start_round(round_obj):
+        await interaction.followup.send(
+            "🎲 A round just started in this channel, wait for it to finish.",
+            ephemeral=True,
+        )
+        return
+
+    intro_embed = embeds.trivia_prompt_embed(
+        category=category,
+        prompt=entry["prompt"],
+        started_by=str(interaction.user),
+    )
+    await interaction.followup.send(embed=intro_embed)
+
+    try:
+        await asyncio.wait_for(
+            round_obj.end_event.wait(),
+            timeout=trivia_roulette.ROUND_DURATION_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        pass
+
+    round_obj.revealed = True
+    trivia_roulette.end_round(channel_id)
+
+    if round_obj.winner_id:
+        new_total = db.increment_guess_score(
+            round_obj.winner_id, round_obj.winner_tag, points=1
+        )
+        reveal_embed = embeds.trivia_reveal_embed(
+            category=category,
+            answer=round_obj.answer,
+            year=round_obj.year,
+            winner_tag=round_obj.winner_tag,
+            new_total=new_total,
+        )
+    else:
+        reveal_embed = embeds.trivia_reveal_embed(
+            category=category,
+            answer=round_obj.answer,
+            year=round_obj.year,
+        )
+
+    await interaction.channel.send(embed=reveal_embed)
+
 @bot.tree.command(name="giveup", description="End the current guessing round in this channel")
 async def giveup(interaction: discord.Interaction):
     channel_id = interaction.channel.id
@@ -588,6 +697,13 @@ async def giveup(interaction: discord.Interaction):
     if six_round and not six_round.revealed:
         six_round.end_event.set()
         await interaction.response.send_message("🏳️ Ending the round...", ephemeral=True)
+        return
+
+    # Check for an active trivia roulette round
+    trivia_round = trivia_roulette.get_round(channel_id)
+    if trivia_round and not trivia_round.revealed:
+        trivia_round.end_event.set()
+        await interaction.response.send_message("🏳️ Revealing answer...", ephemeral=True)
         return
 
     await interaction.response.send_message(
@@ -632,6 +748,13 @@ async def six_command(interaction: discord.Interaction):
             ephemeral=True,
         )
         return
+
+    if trivia_roulette.get_round(channel_id):
+            await interaction.response.send_message(
+                "🎲 A trivia round is active in this channel. Wait for it to finish or use `/giveup`.",
+                ephemeral=True,
+            )
+            return
 
     await interaction.response.defer()
 
@@ -1011,4 +1134,11 @@ if __name__ == "__main__":
     print(f"[startup] sucklingbot v{version.VERSION}")
     db.init_db()
     print("Database initialized")
+    trivia_counts = trivia_roulette.load_assets()
+    if trivia_counts:
+        total = sum(trivia_counts.values())
+        breakdown = ", ".join(f"{k}: {v}" for k, v in trivia_counts.items())
+        print(f"[trivia] Loaded {total} entries ({breakdown})")
+    else:
+        print("[trivia] No trivia content loaded — /play will be unavailable")
     bot.run(config.DISCORD_TOKEN)
