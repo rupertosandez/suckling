@@ -9,12 +9,33 @@ import trivia_roulette
 SHUDDER_PROVIDER_NAME = "Shudder"
 SEERR_BASE_URL = "https://seerr.cajou.enyo.bysh.me"
 
+BOT_DESCRIPTION = (
+    "a discord bot for the return by 9 movie community. looks up films, "
+    "tracks streaming availability, runs poster guessing, trivia roulette, "
+    "and six degrees games, and surfaces stats from the RB9 plex library."
+)
+
 
 def _format_date(d: datetime) -> str:
     if not hasattr(d, "strftime"):
         return str(d)
     formatted = d.strftime("%b %d, %Y")
     return formatted.replace(" 0", " ", 1)
+
+
+def _format_uptime(seconds: float) -> str:
+    """Convert seconds into a short 'Xd Yh Zm' / 'Yh Zm' / 'Zm' string."""
+    seconds = int(seconds)
+    days, rem = divmod(seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, _ = divmod(rem, 60)
+    parts = []
+    if days:
+        parts.append(f"{days}d")
+    if hours or days:
+        parts.append(f"{hours}h")
+    parts.append(f"{minutes}m")
+    return " ".join(parts)
 
 
 def _theaters_status(details: dict) -> str:
@@ -455,4 +476,24 @@ def trivia_reveal_embed(
 
     embed = discord.Embed(title=title, description=description, color=color)
     embed.set_footer(text=f"category: {cat_label}")
+    return embed
+
+
+# ---------- info ----------
+
+def info_embed(version: str, uptime_seconds: float, guild_count: int) -> discord.Embed:
+    """About card for /info. References attachment://logo.png for the wordmark banner."""
+    embed = discord.Embed(
+        title=f"sucklingbot v{version}",
+        description=BOT_DESCRIPTION,
+        color=0x8B0000,
+    )
+
+    embed.add_field(name="Uptime", value=_format_uptime(uptime_seconds), inline=True)
+    server_word = "server" if guild_count == 1 else "servers"
+    embed.add_field(name="Serving", value=f"{guild_count} {server_word}", inline=True)
+    embed.add_field(name="Commands", value="type `/` to see them", inline=True)
+
+    embed.set_image(url="attachment://logo.png")
+    embed.set_footer(text="caj's little mutant")
     return embed

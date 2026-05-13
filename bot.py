@@ -28,7 +28,11 @@ intents.message_content = True
 
 
 class SucklingBot(commands.Bot):
-    """Bot subclass that closes the shared TMDB aiohttp session on shutdown."""
+    """Bot subclass that tracks startup time and closes the shared TMDB session on shutdown."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.started_at = datetime.now(timezone.utc)
 
     async def close(self) -> None:
         try:
@@ -851,6 +855,17 @@ async def sixleaderboard(interaction: discord.Interaction):
     )
     await interaction.response.send_message(embed=embed)
 
+@bot.tree.command(name="info", description="show info about the bot")
+async def info(interaction: discord.Interaction):
+    await interaction.response.defer()
+
+    uptime_seconds = (datetime.now(timezone.utc) - bot.started_at).total_seconds()
+    guild_count = len(bot.guilds)
+
+    logo = discord.File("assets/logo.png", filename="logo.png")
+    embed = embeds.info_embed(version.VERSION, uptime_seconds, guild_count)
+
+    await interaction.followup.send(embed=embed, file=logo)
 
 # ---------- admin ----------
 

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] — 2026-05-12
+
+### Added
+- `/info` command — public about card showing bot version, uptime, server count, and the Suckling wordmark banner. Quick "what is this thing" reference for new server members.
+- `assets/logo.png` — the Suckling wordmark, attached and referenced via `attachment://logo.png` in the embed. Rendered as `set_image` (full-width banner) rather than thumbnail since the wordmark is wide (~4.3:1).
+- `SucklingBot.__init__` now stores `started_at`, used to compute uptime for `/info`.
+- `info_embed()` and `_format_uptime()` helpers in `embeds.py`.
+
+### Notes
+- Uptime resets on every restart (no persistence — hobby scale).
+
+---
+
 ## [1.3.0] — 2026-05-12
 
 ### Added

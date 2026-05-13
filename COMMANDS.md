@@ -6,6 +6,13 @@ this bot is for the **return by 9** movie community.
 
 ---
 
+## about the bot
+
+### `/info`
+quick about card for the bot.
+
+---
+
 ## lookup & discovery
 
 ### `/suck <title> [year]`
