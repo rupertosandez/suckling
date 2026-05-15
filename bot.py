@@ -68,7 +68,10 @@ async def _post_update_announcement_once() -> None:
 
     mention = f"<@{SONICKLES_USER_ID}>"
     embed = discord.Embed(
-        description=f"yo {mention} check me out! i've been updated!!! v{current_version} 💪",
+        description=(
+            f"yo {mention} check me out! i've been updated!!! v{current_version} 💪\n\n"
+            "[ view changelog ](https://rupertosandez.github.io/sucklingsite/changelog/)"
+        ),
         color=0x8B0000,
     )
 
