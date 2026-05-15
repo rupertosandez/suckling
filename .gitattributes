@@ -1,0 +1,32 @@
+diff --git a/.gitattributes b/.gitattributes
+new file mode 100644
+index 0000000..d629a7b
+--- /dev/null
++++ b/.gitattributes
+@@ -0,0 +1,26 @@
++# Keep text files normalized in git so Windows checkouts do not create noisy diffs.
++* text=auto
++
++# Python and project text files should stay LF in the repository.
++*.py text eol=lf
++*.md text eol=lf
++*.txt text eol=lf
++*.json text eol=lf
++*.yml text eol=lf
++*.yaml text eol=lf
++*.toml text eol=lf
++*.ini text eol=lf
++*.cfg text eol=lf
++*.env.example text eol=lf
++.gitignore text eol=lf
++
++# Binary assets should never be line-ending normalized.
++*.png binary
++*.jpg binary
++*.jpeg binary
++*.gif binary
++*.webp binary
++*.ico binary
++*.db binary
++*.sqlite binary
++*.zip binary
