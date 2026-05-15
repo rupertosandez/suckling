@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.6.2] - 2026-05-15
+
+### Changed
+
+- Rental flow buttons now immediately show processing feedback and disable themselves to prevent double-click errors.
+
 ## [1.6.1] - 2026-05-15
 
 ### Changed

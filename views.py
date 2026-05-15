@@ -178,6 +178,28 @@ class TrackSelectView(discord.ui.View):
 
 # ---------- rental views ----------
 
+def _disable_view_items(view: discord.ui.View) -> None:
+    for item in view.children:
+        item.disabled = True
+
+
+async def _mark_view_processing(
+    interaction: discord.Interaction,
+    view: discord.ui.View,
+    content: str,
+) -> bool:
+    """Immediately acknowledge a rental button click and prevent double-clicks."""
+    if getattr(view, "_processing", False):
+        if not interaction.response.is_done():
+            await interaction.response.defer()
+        return False
+
+    setattr(view, "_processing", True)
+    _disable_view_items(view)
+    await interaction.response.edit_message(content=content, embed=None, view=view)
+    return True
+
+
 async def _confirm_rental(
     interaction: discord.Interaction,
     bot: discord.Client,
@@ -264,6 +286,7 @@ class RentWarningView(discord.ui.View):
         self.bot = bot
         self.user_id = user_id
         self.user_name = user_name
+        self._processing = False
 
         async def start_cb(interaction: discord.Interaction):
             await self._start(interaction)
@@ -288,7 +311,9 @@ class RentWarningView(discord.ui.View):
         self.add_item(cancel_btn)
 
     async def _start(self, interaction: discord.Interaction):
-        await interaction.response.defer()
+        if not await _mark_view_processing(interaction, self, "checking the shelves..."):
+            return
+
         self.stop()
 
         # Check for existing active rental
@@ -354,8 +379,11 @@ class RentWarningView(discord.ui.View):
         await interaction.edit_original_response(embed=embed, view=pick_view, content=None)
 
     async def _cancel(self, interaction: discord.Interaction):
+        if not await _mark_view_processing(interaction, self, "canceling rental..."):
+            return
+
         self.stop()
-        await interaction.response.edit_message(
+        await interaction.edit_original_response(
             content="no problem - come back when you're ready.",
             embed=None,
             view=None,
@@ -389,6 +417,7 @@ class RentPickView(discord.ui.View):
         self.user_id = user_id
         self.user_name = user_name
         self.rerolls_used = rerolls_used
+        self._processing = False
 
         async def accept_cb(interaction: discord.Interaction):
             await self._accept(interaction)
@@ -413,7 +442,9 @@ class RentPickView(discord.ui.View):
         self.add_item(reroll_btn)
 
     async def _accept(self, interaction: discord.Interaction):
-        await interaction.response.defer()
+        if not await _mark_view_processing(interaction, self, "processing rental..."):
+            return
+
         self.stop()
         await _confirm_rental(
             interaction=interaction,
@@ -426,7 +457,9 @@ class RentPickView(discord.ui.View):
         )
 
     async def _reroll(self, interaction: discord.Interaction):
-        await interaction.response.defer()
+        if not await _mark_view_processing(interaction, self, "finding another tape..."):
+            return
+
         self.stop()
 
         new_rerolls_remaining = self.rerolls_remaining - 1
