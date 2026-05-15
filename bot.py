@@ -22,6 +22,7 @@ import plex
 import version
 import sixdegrees
 import trivia_roulette
+import rental as rental_module
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -71,6 +72,16 @@ async def _scheduled_daily_rec():
         print(f"[scheduler] Daily recommendation failed: {e}")
 
 
+async def _scheduled_rental_check():
+    """Hourly job: send overdue DMs and 12-hour reminder DMs."""
+    try:
+        await rental_module.check_overdue(bot)
+        await rental_module.check_reminders(bot)
+    except Exception as e:
+        logger.log_exception("scheduled_rental_check", e)
+        print(f"[scheduler] Rental check failed: {e}")
+
+
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (id: {bot.user.id})")
@@ -91,9 +102,14 @@ async def on_ready():
             _scheduled_daily_rec, trigger="cron", hour=12, minute=0,
             id="daily_horror_rec", replace_existing=True,
         )
+        scheduler.add_job(
+            _scheduled_rental_check, trigger="interval", hours=1,
+            id="rental_check", replace_existing=True,
+        )
         scheduler.start()
         print("[scheduler] Daily tracker check scheduled for 9:00 local time")
         print("[scheduler] Daily horror recommendation scheduled for 12:00 local time")
+        print("[scheduler] Rental overdue/reminder check scheduled hourly")
 
 
 @bot.event
@@ -205,9 +221,22 @@ async def post_daily_recommendation(bot: discord.Client) -> bool:
         print(f"[daily-rec] TMDB error: {e}")
         return False
 
+    # Check Plex availability to optionally show rent button
+    release_date = details.get("release_date", "")
+    plex_year = int(release_date[:4]) if release_date[:4].isdigit() else None
+    plex_available = await plex.check_availability(details.get("title"), year=plex_year)
+
     embed = embeds.daily_rec_embed(details, providers)
+    rent_view = None
+    if plex_available:
+        rent_view = views.EmbedRentView(
+            bot=bot,
+            title=details.get("title", ""),
+            year=plex_year,
+        )
+
     try:
-        await channel.send(embed=embed)
+        await channel.send(embed=embed, view=rent_view)
         db.record_daily_rec(movie["id"], details.get("title", "Unknown"))
         print(f"[daily-rec] Posted: {details.get('title')}")
         return True
@@ -256,7 +285,16 @@ async def suck(interaction: discord.Interaction, title: str, year: int | None = 
         embed = embeds.movie_embed(
             details, providers, in_theaters=False, plex_available=plex_available
         )
-        await interaction.followup.send(embed=embed)
+
+        rent_view = None
+        if plex_available:
+            rent_view = views.EmbedRentView(
+                bot=bot,
+                title=details.get("title", ""),
+                year=plex_year,
+            )
+
+        await interaction.followup.send(embed=embed, view=rent_view)
     else:
         view = views.MovieSelectView(results)
         await interaction.followup.send(
@@ -448,8 +486,20 @@ async def roll(
         await interaction.followup.send(f"Sorry, TMDB lookup failed: {e}")
         return
 
+    release_date = details.get("release_date", "")
+    plex_year = int(release_date[:4]) if release_date[:4].isdigit() else None
+    plex_available = await plex.check_availability(details.get("title"), year=plex_year)
+
     embed = embeds.roll_embed(details, providers)
-    await interaction.followup.send(embed=embed)
+    rent_view = None
+    if plex_available:
+        rent_view = views.EmbedRentView(
+            bot=bot,
+            title=details.get("title", ""),
+            year=plex_year,
+        )
+
+    await interaction.followup.send(embed=embed, view=rent_view)
 
 
 # ---------- guessing game ----------
@@ -867,113 +917,8 @@ async def info(interaction: discord.Interaction):
 
     await interaction.followup.send(embed=embed, file=logo)
 
-# ---------- admin ----------
 
-@bot.tree.command(
-    name="version",
-    description="Show the bot's current version (admin only)",
-)
-@app_commands.default_permissions(manage_guild=True)
-async def version_command(interaction: discord.Interaction):
-    await interaction.response.send_message(
-        f"🎬 **sucklingbot** v{version.VERSION}",
-        ephemeral=True,
-    )
-
-
-@bot.tree.command(
-    name="toggle",
-    description="Enable or disable an auto-posting feature (admin only)",
-)
-@app_commands.describe(
-    feature="Which feature to toggle",
-    enabled="True to enable, False to disable",
-)
-@app_commands.choices(feature=[
-    app_commands.Choice(name="streaming announcements", value="announcements"),
-    app_commands.Choice(name="daily recommendation", value="daily"),
-])
-@app_commands.default_permissions(manage_guild=True)
-async def toggle(
-    interaction: discord.Interaction,
-    feature: app_commands.Choice[str],
-    enabled: bool,
-):
-    if feature.value == "announcements":
-        db.set_announcements_enabled(enabled)
-        channel_id = db.get_announcement_channel_id()
-        channel_note = ""
-        if enabled and not channel_id:
-            channel_note = " ⚠️ No announcement channel set yet — use `/setannouncements`."
-        await interaction.response.send_message(
-            f"{'✅ Enabled' if enabled else '🔕 Disabled'} **streaming announcements**.{channel_note}",
-            ephemeral=True,
-        )
-    elif feature.value == "daily":
-        db.set_daily_rec_enabled(enabled)
-        channel_id = db.get_daily_rec_channel_id()
-        channel_note = ""
-        if enabled and not channel_id:
-            channel_note = " ⚠️ No daily-rec channel set yet — use `/setdaily`."
-        await interaction.response.send_message(
-            f"{'✅ Enabled' if enabled else '🔕 Disabled'} **daily horror recommendation**.{channel_note}",
-            ephemeral=True,
-        )
-
-
-@bot.tree.command(
-    name="checknow",
-    description="Manually trigger the streaming check, dry-run (admin only)",
-)
-@app_commands.default_permissions(manage_guild=True)
-async def checknow(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    result = await tracker.run_check(bot=bot, dry_run=True)
-    await interaction.followup.send(result.to_discord_summary(), ephemeral=True)
-
-
-@bot.tree.command(
-    name="checknowlive",
-    description="Manually trigger the streaming check and POST announcements (admin only)",
-)
-@app_commands.default_permissions(manage_guild=True)
-async def checknowlive(interaction: discord.Interaction):
-    channel_id = db.get_announcement_channel_id()
-    if not channel_id:
-        await interaction.response.send_message(
-            "⚠️ No announcement channel set. Use `/setannouncements` first.",
-            ephemeral=True,
-        )
-        return
-
-    await interaction.response.defer(ephemeral=True)
-    result = await tracker.run_check(bot=bot, dry_run=False)
-    await interaction.followup.send(result.to_discord_summary(), ephemeral=True)
-
-
-@bot.tree.command(
-    name="dailynow",
-    description="Manually trigger today's horror recommendation post (admin only)",
-)
-@app_commands.default_permissions(manage_guild=True)
-async def dailynow(interaction: discord.Interaction):
-    channel_id = db.get_daily_rec_channel_id()
-    if not channel_id:
-        await interaction.response.send_message(
-            "⚠️ No daily-rec channel set. Use `/setdaily` first.",
-            ephemeral=True,
-        )
-        return
-
-    await interaction.response.defer(ephemeral=True)
-    ok = await post_daily_recommendation(bot)
-    if ok:
-        await interaction.followup.send("✅ Daily recommendation posted.", ephemeral=True)
-    else:
-        await interaction.followup.send(
-            "⚠️ Failed to post — see PowerShell for details.", ephemeral=True
-        )
-
+# ---------- rb9 library ----------
 
 @bot.tree.command(name="rb9", description="Pick a random movie from the RB9 library")
 async def rb9_pick(interaction: discord.Interaction):
@@ -995,7 +940,8 @@ async def rb9_pick(interaction: discord.Interaction):
         return
 
     embed = embeds.rb9_pick_embed(movie)
-    await interaction.followup.send(embed=embed)
+    rent_view = views.EmbedRentView(bot=bot, title=movie["title"], year=movie.get("year"), plex_movie=movie)
+    await interaction.followup.send(embed=embed, view=rent_view)
 
 
 @bot.tree.command(name="rb9stats", description="Overall stats for the rb9 library")
@@ -1118,7 +1064,355 @@ async def rb9randomscene(interaction: discord.Interaction):
         await interaction.followup.send("📀 No films with art data found.")
         return
     embed = embeds.rb9_random_scene_embed(scene)
+    # Scene dict has title/year but not rating_key — look up plex movie for the rent button
+    plex_movie = await plex.find_movie_by_title(scene["title"], year=scene.get("year"))
+    rent_view = views.EmbedRentView(
+        bot=bot,
+        title=scene["title"],
+        year=scene.get("year"),
+        plex_movie=plex_movie,
+    ) if plex_movie else None
+    await interaction.followup.send(embed=embed, view=rent_view)
+
+
+# ---------- rentals ----------
+
+@bot.tree.command(name="rent", description="rent a random movie from the rb9 library — 48 hours to watch it")
+async def rent(interaction: discord.Interaction):
+    user_id = str(interaction.user.id)
+
+    # Fast pre-check: already has an active rental?
+    existing = db.get_active_rental(user_id)
+    if existing:
+        title = existing.get("title", "a film")
+        due_at_iso = existing.get("due_at", "")
+        try:
+            due = datetime.fromisoformat(due_at_iso)
+            due_ts = int(due.timestamp())
+            due_str = f" (due <t:{due_ts}:R>)"
+        except (ValueError, TypeError):
+            due_str = ""
+        await interaction.response.send_message(
+            f"you already have **{title}** checked out{due_str}. "
+            "use `/return` to return it before renting something new.",
+            ephemeral=True,
+        )
+        return
+
+    warning_view = views.RentWarningView(
+        bot=bot,
+        user_id=user_id,
+        user_name=str(interaction.user),
+    )
+    await interaction.response.send_message(
+        "📼 **heads up before you rent**\n\n"
+        "once you confirm a rental, the 48-hour clock starts immediately. "
+        "you can re-roll up to **2 times** if you get something you've seen, "
+        "but after that the film is locked in.\n\n"
+        "ready to grab something from the shelf?",
+        view=warning_view,
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(name="return", description="return your current rental and post a review to the forum")
+@app_commands.describe(
+    rating="your rating out of 10 (1-10)",
+    recommend="would you recommend this to the group?",
+    thoughts="your review (optional but encouraged)",
+)
+async def return_film(
+    interaction: discord.Interaction,
+    rating: int,
+    recommend: bool,
+    thoughts: str | None = None,
+):
+    await interaction.response.defer(ephemeral=True)
+
+    user_id = str(interaction.user.id)
+
+    if not 1 <= rating <= 10:
+        await interaction.followup.send(
+            "⚠️ rating has to be between 1 and 10.", ephemeral=True
+        )
+        return
+
+    rental = db.get_active_rental(user_id)
+    if not rental:
+        await interaction.followup.send(
+            "you don't have an active rental. use `/rent` to grab something.",
+            ephemeral=True,
+        )
+        return
+
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    late_fee = rental_module.compute_late_fee(rental["due_at"], now_iso)
+
+    db.mark_rental_returned(
+        rental_id=rental["id"],
+        returned_at=now_iso,
+        rating=rating,
+        thoughts=thoughts,
+        recommended=recommend,
+        late_fee_dollars=late_fee,
+    )
+
+    # Reload the updated rental record so edit_thread_returned has all fields
+    updated_rental = db.get_rental_by_id(rental["id"])
+
+    # Edit the forum thread
+    await rental_module.edit_thread_returned(bot, updated_rental)
+
+    title = rental.get("title", "your film")
+    late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
+    rec_note = "recommended" if recommend else "not recommended"
+
+    await interaction.followup.send(
+        f"✅ **{title}** returned. rating: {rating}/10, {rec_note}.{late_note}\n"
+        f"-# review posted to the forum.",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(name="myrental", description="check your current rental and time remaining")
+async def myrental(interaction: discord.Interaction):
+    user_id = str(interaction.user.id)
+    rental = db.get_active_rental(user_id)
+
+    if not rental:
+        await interaction.response.send_message(
+            "you don't have anything checked out right now. use `/rent` to grab something.",
+            ephemeral=True,
+        )
+        return
+
+    embed = embeds.rental_status_embed(rental)
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="latefees", description="see who owes the store money")
+async def latefees(interaction: discord.Interaction):
+    await interaction.response.defer()
+    rows = db.get_late_fees_leaderboard(limit=10)
+    embed = embeds.late_fees_embed(rows)
     await interaction.followup.send(embed=embed)
+
+
+@bot.tree.command(name="rentalstats", description="your rental history and stats")
+@app_commands.describe(user="optional: check another user's stats")
+async def rentalstats(
+    interaction: discord.Interaction,
+    user: discord.Member | None = None,
+):
+    await interaction.response.defer()
+    target = user or interaction.user
+    history = db.get_user_rental_history(str(target.id))
+    embed = embeds.rental_stats_embed(history, str(target))
+    await interaction.followup.send(embed=embed)
+
+
+# ---------- admin ----------
+
+@bot.tree.command(
+    name="setreviews",
+    description="set the forum channel for rental reviews (admin only)",
+)
+@app_commands.describe(channel="the forum channel where rental reviews will post")
+@app_commands.default_permissions(manage_guild=True)
+async def set_reviews(
+    interaction: discord.Interaction,
+    channel: discord.ForumChannel,
+):
+    perms = channel.permissions_for(interaction.guild.me)
+    if not perms.create_public_threads or not perms.send_messages_in_threads:
+        await interaction.response.send_message(
+            f"⚠️ i need **create public threads** and **send messages in threads** "
+            f"permissions in {channel.mention}. grant those first then try again.",
+            ephemeral=True,
+        )
+        return
+
+    db.set_reviews_channel_id(channel.id)
+
+    # Auto-detect tags
+    rental_tag = next(
+        (t for t in channel.available_tags if t.name.lower() == "rental"), None
+    )
+    rec_tag = next(
+        (t for t in channel.available_tags
+         if t.name.lower() in ("recommendation", "recommended", "recommend")),
+        None,
+    )
+
+    if rental_tag:
+        db.set_rental_tag_id(rental_tag.id)
+    if rec_tag:
+        db.set_recommendation_tag_id(rec_tag.id)
+
+    tag_note = ""
+    if not rental_tag:
+        tag_note += "\n⚠️ no **rental** tag found on this forum. create it in the forum settings and run `/setreviews` again."
+    if not rec_tag:
+        tag_note += "\n⚠️ no **recommendation** tag found. create it in the forum settings and run `/setreviews` again."
+
+    found = []
+    if rental_tag:
+        found.append("rental")
+    if rec_tag:
+        found.append("recommendation")
+    found_str = f" tags found: {', '.join(found)}." if found else ""
+
+    await interaction.response.send_message(
+        f"✅ rental reviews will post in {channel.mention}.{found_str}{tag_note}",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="cancelrental",
+    description="cancel a user's active rental with no late fee (admin only)",
+)
+@app_commands.describe(
+    user="the user whose rental to cancel",
+    reason="optional reason (shown in the forum thread)",
+)
+@app_commands.default_permissions(manage_guild=True)
+async def cancel_rental(
+    interaction: discord.Interaction,
+    user: discord.Member,
+    reason: str | None = None,
+):
+    await interaction.response.defer(ephemeral=True)
+
+    rental = db.get_active_rental(str(user.id))
+    if not rental:
+        await interaction.followup.send(
+            f"**{user}** doesn't have an active rental.", ephemeral=True
+        )
+        return
+
+    db.cancel_rental_by_id(rental["id"])
+    await rental_module.edit_thread_cancelled(bot, rental, reason)
+
+    # DM the user
+    reason_str = f" reason: {reason}" if reason else ""
+    await rental_module._send_dm(
+        bot,
+        str(user.id),
+        f"📼 your rental of **{rental['title']}** was cancelled by an admin.{reason_str}",
+    )
+
+    await interaction.followup.send(
+        f"✅ cancelled **{rental['title']}** for **{user}**.{reason_str}",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="version",
+    description="Show the bot's current version (admin only)",
+)
+@app_commands.default_permissions(manage_guild=True)
+async def version_command(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        f"🎬 **sucklingbot** v{version.VERSION}",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="toggle",
+    description="Enable or disable an auto-posting feature (admin only)",
+)
+@app_commands.describe(
+    feature="Which feature to toggle",
+    enabled="True to enable, False to disable",
+)
+@app_commands.choices(feature=[
+    app_commands.Choice(name="streaming announcements", value="announcements"),
+    app_commands.Choice(name="daily recommendation", value="daily"),
+])
+@app_commands.default_permissions(manage_guild=True)
+async def toggle(
+    interaction: discord.Interaction,
+    feature: app_commands.Choice[str],
+    enabled: bool,
+):
+    if feature.value == "announcements":
+        db.set_announcements_enabled(enabled)
+        channel_id = db.get_announcement_channel_id()
+        channel_note = ""
+        if enabled and not channel_id:
+            channel_note = " ⚠️ No announcement channel set yet — use `/setannouncements`."
+        await interaction.response.send_message(
+            f"{'✅ Enabled' if enabled else '🔕 Disabled'} **streaming announcements**.{channel_note}",
+            ephemeral=True,
+        )
+    elif feature.value == "daily":
+        db.set_daily_rec_enabled(enabled)
+        channel_id = db.get_daily_rec_channel_id()
+        channel_note = ""
+        if enabled and not channel_id:
+            channel_note = " ⚠️ No daily-rec channel set yet — use `/setdaily`."
+        await interaction.response.send_message(
+            f"{'✅ Enabled' if enabled else '🔕 Disabled'} **daily horror recommendation**.{channel_note}",
+            ephemeral=True,
+        )
+
+
+@bot.tree.command(
+    name="checknow",
+    description="Manually trigger the streaming check, dry-run (admin only)",
+)
+@app_commands.default_permissions(manage_guild=True)
+async def checknow(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    result = await tracker.run_check(bot=bot, dry_run=True)
+    await interaction.followup.send(result.to_discord_summary(), ephemeral=True)
+
+
+@bot.tree.command(
+    name="checknowlive",
+    description="Manually trigger the streaming check and POST announcements (admin only)",
+)
+@app_commands.default_permissions(manage_guild=True)
+async def checknowlive(interaction: discord.Interaction):
+    channel_id = db.get_announcement_channel_id()
+    if not channel_id:
+        await interaction.response.send_message(
+            "⚠️ No announcement channel set. Use `/setannouncements` first.",
+            ephemeral=True,
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    result = await tracker.run_check(bot=bot, dry_run=False)
+    await interaction.followup.send(result.to_discord_summary(), ephemeral=True)
+
+
+@bot.tree.command(
+    name="dailynow",
+    description="Manually trigger today's horror recommendation post (admin only)",
+)
+@app_commands.default_permissions(manage_guild=True)
+async def dailynow(interaction: discord.Interaction):
+    channel_id = db.get_daily_rec_channel_id()
+    if not channel_id:
+        await interaction.response.send_message(
+            "⚠️ No daily-rec channel set. Use `/setdaily` first.",
+            ephemeral=True,
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    ok = await post_daily_recommendation(bot)
+    if ok:
+        await interaction.followup.send("✅ Daily recommendation posted.", ephemeral=True)
+    else:
+        await interaction.followup.send(
+            "⚠️ Failed to post — see PowerShell for details.", ephemeral=True
+        )
 
 
 @bot.tree.command(

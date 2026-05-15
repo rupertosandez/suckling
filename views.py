@@ -1,9 +1,11 @@
 import discord
+from datetime import datetime, timezone, timedelta
 
 import tmdb
 import embeds
 import db
 import plex
+import rental as rental_module
 
 
 def _record_existing_providers(movie_id: int, providers: dict) -> list[str]:
@@ -97,7 +99,16 @@ class MovieSelect(discord.ui.Select):
         embed = embeds.movie_embed(
             details, providers, in_theaters=False, plex_available=plex_available
         )
-        await interaction.edit_original_response(content=None, embed=embed, view=None)
+
+        view = None
+        if plex_available:
+            view = EmbedRentView(
+                bot=interaction.client,
+                title=details.get("title", ""),
+                year=plex_year,
+            )
+
+        await interaction.edit_original_response(content=None, embed=embed, view=view)
 
 
 class MovieSelectView(discord.ui.View):
@@ -172,3 +183,465 @@ class TrackSelectView(discord.ui.View):
     async def on_timeout(self):
         for item in self.children:
             item.disabled = True
+
+
+# ---------- rental views ----------
+
+async def _confirm_rental(
+    interaction: discord.Interaction,
+    bot: discord.Client,
+    movie: dict,
+    user_id: str,
+    user_name: str,
+    rerolls_used: int,
+    initiated_by: str,
+) -> None:
+    """
+    Shared finalization: creates the DB record, forum thread, DMs the user,
+    and edits the ephemeral message to a confirmation.
+    Called from RentPickView and EmbedRentView on acceptance.
+    """
+    now = datetime.now(timezone.utc)
+    due_at = rental_module.compute_due_at(now)
+
+    # Check reviews channel is configured before committing
+    reviews_channel_id = db.get_reviews_channel_id()
+    if not reviews_channel_id:
+        await interaction.edit_original_response(
+            content=(
+                "⚠️ the reviews forum hasn't been configured yet. "
+                "ask an admin to run `/setreviews` first."
+            ),
+            embed=None,
+            view=None,
+        )
+        return
+
+    rental_id = db.create_rental(
+        user_id=user_id,
+        user_name=user_name,
+        plex_key=movie["rating_key"],
+        title=movie["title"],
+        year=movie.get("year"),
+        poster_url=movie.get("thumb_url"),
+        rented_at=now.isoformat(),
+        due_at=due_at.isoformat(),
+        rerolls_used=rerolls_used,
+        initiated_by=initiated_by,
+    )
+
+    # Create the forum thread
+    thread_ok = await rental_module.create_forum_thread(
+        bot=bot,
+        rental_id=rental_id,
+        movie=movie,
+        user_tag=user_name,
+        due_at=due_at,
+    )
+
+    due_ts = int(due_at.timestamp())
+    title_str = f"**{movie['title']} ({movie.get('year', '?')})**"
+
+    if thread_ok:
+        rental = db.get_rental_by_id(rental_id)
+        thread_id = rental.get("thread_id") if rental else None
+        thread_mention = f" - check <#{thread_id}>" if thread_id else ""
+        confirm_text = (
+            f"📼 rental confirmed: {title_str}\n"
+            f"due back <t:{due_ts}:F> (<t:{due_ts}:R>){thread_mention}\n\n"
+            f"-# use `/return` when you're done."
+        )
+    else:
+        confirm_text = (
+            f"📼 rental confirmed: {title_str}\n"
+            f"due back <t:{due_ts}:F> (<t:{due_ts}:R>)\n\n"
+            f"-# use `/return` when you're done. "
+            f"(couldn't post to the reviews forum - check bot permissions)"
+        )
+
+    await interaction.edit_original_response(content=confirm_text, embed=None, view=None)
+
+
+class RentWarningView(discord.ui.View):
+    """
+    Step 1 of /rent: shown before any film is revealed. Gives the user
+    a chance to bail before committing to the rental flow.
+    """
+
+    def __init__(self, bot: discord.Client, user_id: str, user_name: str):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.user_id = user_id
+        self.user_name = user_name
+
+        async def start_cb(interaction: discord.Interaction):
+            await self._start(interaction)
+
+        async def cancel_cb(interaction: discord.Interaction):
+            await self._cancel(interaction)
+
+        start_btn = discord.ui.Button(
+            label="start rental",
+            style=discord.ButtonStyle.success,
+            emoji="📼",
+        )
+        start_btn.callback = start_cb
+
+        cancel_btn = discord.ui.Button(
+            label="nevermind",
+            style=discord.ButtonStyle.secondary,
+        )
+        cancel_btn.callback = cancel_cb
+
+        self.add_item(start_btn)
+        self.add_item(cancel_btn)
+
+    async def _start(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.stop()
+
+        # Check for existing active rental
+        existing = db.get_active_rental(self.user_id)
+        if existing:
+            title = existing.get("title", "a film")
+            await interaction.edit_original_response(
+                content=(
+                    f"you already have **{title}** checked out. "
+                    "use `/return` to return it before renting something new."
+                ),
+                embed=None,
+                view=None,
+            )
+            return
+
+        # Check reviews channel is set
+        if not db.get_reviews_channel_id():
+            await interaction.edit_original_response(
+                content=(
+                    "⚠️ the reviews forum hasn't been configured yet. "
+                    "ask an admin to run `/setreviews` first."
+                ),
+                embed=None,
+                view=None,
+            )
+            return
+
+        # Pick the first film
+        exclude_keys = db.get_user_rented_plex_keys(self.user_id)
+        try:
+            movie = await plex.pick_random_for_rental(exclude_keys)
+        except plex.PlexError as e:
+            await interaction.edit_original_response(
+                content=f"⚠️ couldn't reach the library right now: {e}",
+                embed=None,
+                view=None,
+            )
+            return
+
+        if movie is None:
+            await interaction.edit_original_response(
+                content=(
+                    "⚠️ looks like you've rented everything in the library! "
+                    "nothing left to offer you."
+                ),
+                embed=None,
+                view=None,
+            )
+            return
+
+        shown_keys = exclude_keys | {movie["rating_key"]}
+        pick_view = RentPickView(
+            bot=self.bot,
+            current_film=movie,
+            rerolls_remaining=2,
+            shown_keys=shown_keys,
+            user_id=self.user_id,
+            user_name=self.user_name,
+            rerolls_used=0,
+        )
+        embed = embeds.rental_offer_embed(movie, is_last_reroll=False)
+        await interaction.edit_original_response(embed=embed, view=pick_view, content=None)
+
+    async def _cancel(self, interaction: discord.Interaction):
+        self.stop()
+        await interaction.response.edit_message(
+            content="no problem - come back when you're ready.",
+            embed=None,
+            view=None,
+        )
+
+    async def on_timeout(self):
+        self.stop()
+
+
+class RentPickView(discord.ui.View):
+    """
+    Step 2+ of /rent: shows a film offer with accept/reroll buttons.
+    On the last reroll the next pick is auto-confirmed with no buttons.
+    """
+
+    def __init__(
+        self,
+        bot: discord.Client,
+        current_film: dict,
+        rerolls_remaining: int,
+        shown_keys: set[str],
+        user_id: str,
+        user_name: str,
+        rerolls_used: int,
+    ):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.current_film = current_film
+        self.rerolls_remaining = rerolls_remaining
+        self.shown_keys = shown_keys
+        self.user_id = user_id
+        self.user_name = user_name
+        self.rerolls_used = rerolls_used
+
+        async def accept_cb(interaction: discord.Interaction):
+            await self._accept(interaction)
+
+        async def reroll_cb(interaction: discord.Interaction):
+            await self._reroll(interaction)
+
+        accept_btn = discord.ui.Button(
+            label="accept rental",
+            style=discord.ButtonStyle.success,
+            emoji="📼",
+        )
+        accept_btn.callback = accept_cb
+        self.add_item(accept_btn)
+
+        reroll_label = "re-roll (last one)" if rerolls_remaining == 1 else "re-roll"
+        reroll_btn = discord.ui.Button(
+            label=reroll_label,
+            style=discord.ButtonStyle.secondary,
+        )
+        reroll_btn.callback = reroll_cb
+        self.add_item(reroll_btn)
+
+    async def _accept(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.stop()
+        await _confirm_rental(
+            interaction=interaction,
+            bot=self.bot,
+            movie=self.current_film,
+            user_id=self.user_id,
+            user_name=self.user_name,
+            rerolls_used=self.rerolls_used,
+            initiated_by="command",
+        )
+
+    async def _reroll(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.stop()
+
+        new_rerolls_remaining = self.rerolls_remaining - 1
+        new_rerolls_used = self.rerolls_used + 1
+
+        # Pick a new film, excluding everything shown so far + user's history
+        exclude_keys = self.shown_keys | db.get_user_rented_plex_keys(self.user_id)
+        try:
+            new_film = await plex.pick_random_for_rental(exclude_keys)
+        except plex.PlexError as e:
+            await interaction.edit_original_response(
+                content=f"⚠️ couldn't reach the library right now: {e}",
+                embed=None,
+                view=None,
+            )
+            return
+
+        if new_film is None:
+            await interaction.edit_original_response(
+                content="⚠️ couldn't find another film to offer. try `/rent` again.",
+                embed=None,
+                view=None,
+            )
+            return
+
+        new_shown = self.shown_keys | {new_film["rating_key"]}
+
+        if new_rerolls_remaining == 0:
+            # Auto-confirm — no more choices
+            await interaction.edit_original_response(
+                content=f"🎲 rerolled to **{new_film['title']}** - locking it in...",
+                embed=None,
+                view=None,
+            )
+            await _confirm_rental(
+                interaction=interaction,
+                bot=self.bot,
+                movie=new_film,
+                user_id=self.user_id,
+                user_name=self.user_name,
+                rerolls_used=new_rerolls_used,
+                initiated_by="command",
+            )
+        else:
+            # Show the next pick with updated buttons
+            is_last = (new_rerolls_remaining == 1)
+            embed = embeds.rental_offer_embed(new_film, is_last_reroll=is_last)
+            new_view = RentPickView(
+                bot=self.bot,
+                current_film=new_film,
+                rerolls_remaining=new_rerolls_remaining,
+                shown_keys=new_shown,
+                user_id=self.user_id,
+                user_name=self.user_name,
+                rerolls_used=new_rerolls_used,
+            )
+            await interaction.edit_original_response(embed=embed, view=new_view, content=None)
+
+    async def on_timeout(self):
+        self.stop()
+
+
+class EmbedRentView(discord.ui.View):
+    """
+    Confirmation step for rent buttons on existing embeds (/rb9, /suck, /roll,
+    daily rec). The user picked a specific film, so no rerolls.
+    """
+
+    def __init__(
+        self,
+        bot: discord.Client,
+        title: str,
+        year: int | None,
+        plex_movie: dict | None = None,
+    ):
+        super().__init__(timeout=120)
+        self.bot = bot
+        self.title = title
+        self.year = year
+        self.plex_movie = plex_movie  # pre-fetched if available (e.g. from /rb9)
+
+        async def confirm_cb(interaction: discord.Interaction):
+            await self._confirm(interaction)
+
+        async def cancel_cb(interaction: discord.Interaction):
+            await self._cancel(interaction)
+
+        confirm_btn = discord.ui.Button(
+            label="confirm rental",
+            style=discord.ButtonStyle.success,
+            emoji="📼",
+        )
+        confirm_btn.callback = confirm_cb
+
+        cancel_btn = discord.ui.Button(
+            label="nevermind",
+            style=discord.ButtonStyle.secondary,
+        )
+        cancel_btn.callback = cancel_cb
+
+        self.add_item(confirm_btn)
+        self.add_item(cancel_btn)
+
+    async def _confirm(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        user_id = str(interaction.user.id)
+        user_name = str(interaction.user)
+
+        # Check for existing active rental
+        existing = db.get_active_rental(user_id)
+        if existing:
+            existing_title = existing.get("title", "a film")
+            await interaction.followup.send(
+                f"you already have **{existing_title}** checked out. "
+                "use `/return` to return it before renting something new.",
+                ephemeral=True,
+            )
+            return
+
+        if not db.get_reviews_channel_id():
+            await interaction.followup.send(
+                "⚠️ the reviews forum hasn't been configured yet. "
+                "ask an admin to run `/setreviews` first.",
+                ephemeral=True,
+            )
+            return
+
+        # Resolve plex movie if not pre-fetched
+        movie = self.plex_movie
+        if movie is None:
+            try:
+                movie = await plex.find_movie_by_title(self.title, year=self.year)
+            except plex.PlexError as e:
+                await interaction.followup.send(
+                    f"⚠️ couldn't reach the library: {e}", ephemeral=True
+                )
+                return
+
+        if movie is None:
+            await interaction.followup.send(
+                "⚠️ couldn't find that film in the library right now.",
+                ephemeral=True,
+            )
+            return
+
+        # Check they haven't already rented this one
+        rented_keys = db.get_user_rented_plex_keys(user_id)
+        if movie["rating_key"] in rented_keys:
+            await interaction.followup.send(
+                f"you've already rented **{movie['title']}** before. "
+                "try `/rent` for a random pick from films you haven't seen.",
+                ephemeral=True,
+            )
+            return
+
+        now = datetime.now(timezone.utc)
+        due_at = rental_module.compute_due_at(now)
+
+        rental_id = db.create_rental(
+            user_id=user_id,
+            user_name=user_name,
+            plex_key=movie["rating_key"],
+            title=movie["title"],
+            year=movie.get("year"),
+            poster_url=movie.get("thumb_url"),
+            rented_at=now.isoformat(),
+            due_at=due_at.isoformat(),
+            rerolls_used=0,
+            initiated_by="button",
+        )
+
+        thread_ok = await rental_module.create_forum_thread(
+            bot=self.bot,
+            rental_id=rental_id,
+            movie=movie,
+            user_tag=user_name,
+            due_at=due_at,
+        )
+
+        due_ts = int(due_at.timestamp())
+        title_str = f"**{movie['title']} ({movie.get('year', '?')})**"
+
+        if thread_ok:
+            rental = db.get_rental_by_id(rental_id)
+            thread_id = rental.get("thread_id") if rental else None
+            thread_mention = f" - check <#{thread_id}>" if thread_id else ""
+            msg = (
+                f"📼 rental confirmed: {title_str}\n"
+                f"due back <t:{due_ts}:F> (<t:{due_ts}:R>){thread_mention}\n\n"
+                f"-# use `/return` when you're done."
+            )
+        else:
+            msg = (
+                f"📼 rental confirmed: {title_str}\n"
+                f"due back <t:{due_ts}:F> (<t:{due_ts}:R>)\n\n"
+                f"-# use `/return` when you're done. "
+                f"(couldn't post to the reviews forum - check bot permissions)"
+            )
+
+        await interaction.followup.send(msg, ephemeral=True)
+        self.stop()
+
+    async def _cancel(self, interaction: discord.Interaction):
+        self.stop()
+        await interaction.response.send_message("no problem.", ephemeral=True)
+
+    async def on_timeout(self):
+        self.stop()

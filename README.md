@@ -1,6 +1,6 @@
 # sucklingbot
 
-a discord bot built specifically for the **return by 9** movie community. looks up films, tracks streaming availability, posts daily recommendations, runs poster/still guessing games and six degrees of separation rounds, and pulls random picks and stats from the return by 9 plex library.
+a discord bot built specifically for the **return by 9** movie community. looks up films, tracks streaming availability, posts daily recommendations, runs poster/still guessing games and six degrees of separation rounds, pulls random picks and stats from the return by 9 plex library, and runs a video-store-themed rental system where members can check out films for 48 hours and post reviews.
 
 built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 
@@ -11,14 +11,19 @@ built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 - `/suck` - film lookup with full availability info (theatrical + streaming, per-region)
 - `/roll` - random film pick with decade and runtime filters
 - `/rb9` + 9 stat commands - pick from the return by 9 library, plus stats (longest, shortest, oldest, decade breakdown, genres, etc.)
+- `/rent` - rent a random library film for 48 hours, with up to 2 rerolls. past rentals excluded forever
+- `/return` - return your rental and post a review to a configurable forum channel, with late-fee tracking
+- `/latefees` - leaderboard of accumulated late fees
+- `/rentalstats` - personal rental history
 - `/track` - community watchlist with first-time streaming alerts
 - `/guess` - poster + still guessing game with scaled scoring (1 pt easy, 2 pts hard)
 - `/play` - trivia roulette game with four categories (quote, emoji, tagline, trivia)
 - `/six` - six degrees of separation game with chain validation against tmdb cast data
+- 📼 rent buttons on `/rb9`, `/rb9randomscene`, `/suck`, `/roll`, and the daily rec (shown when the film is in the library)
 - daily streaming announcements at 9 am, with first-time-only filtering (no re-promotion noise)
 - daily recommendations at noon, with 30-day no-repeat window
 - toggle controls for both auto-posting features
-- persistent sqlite for tracked films, leaderboards, and provider snapshots
+- persistent sqlite for tracked films, leaderboards, provider snapshots, and rental records
 - in-memory caching for tmdb calls
 - error logging to `data/bot.log`
 
@@ -35,7 +40,7 @@ for change history, see [changelog.md](CHANGELOG.md).
 - python 3.10 or higher
 - a discord bot application + token ([discord developer portal](https://discord.com/developers/applications))
 - a tmdb v3 api key ([tmdb account settings](https://www.themoviedb.org/settings/api))
-- (optional) a plex auth token if you want `/rb9` and the stats commands
+- (optional) a plex auth token if you want `/rb9`, the stats commands, and the rental system
 
 ### quick start
 
@@ -70,7 +75,7 @@ PLEX_LIBRARY=Movies
 | `DISCORD_TOKEN` | yes      | from the discord developer portal             |
 | `TMDB_API_KEY`  | yes      | v3 key from tmdb account settings             |
 | `GUILD_ID`      | yes      | server id; right-click your server then copy id |
-| `PLEX_TOKEN`    | no       | enables `/rb9` and `/rb9*` stats commands     |
+| `PLEX_TOKEN`    | no       | enables `/rb9`, `/rb9*` stats, and `/rent`    |
 | `PLEX_LIBRARY`  | no       | plex library name (default: `Movies`)         |
 
 the `.env` file is gitignored — never commit it.
@@ -90,6 +95,14 @@ in discord, configure the auto-posting channels (admin only):
 /setdaily <channel>
 ```
 
+to enable the rental system, create a discord forum channel, add **rental** and **recommendation** tags to it in the forum settings, then:
+
+```
+/setreviews <forum_channel>
+```
+
+the bot will confirm it found the tags. if tags are missing it will tell you what to create.
+
 then optionally toggle features off if you want them disabled:
 
 ```
@@ -108,8 +121,9 @@ sucklingbot/
 ├── version.py          version constant
 ├── tmdb.py             tmdb api wrapper + caching
 ├── embeds.py           discord embed builders
-├── views.py            discord ui components (dropdowns)
+├── views.py            discord ui components (dropdowns, rental views)
 ├── db.py               sqlite schema and helpers
+├── rental.py           rental lifecycle: forum threads, late fees, DMs
 ├── tracker.py          daily streaming-availability scan
 ├── picker.py           random film candidate pool + filtering
 ├── imageops.py         poster cropping for /guess
@@ -139,36 +153,39 @@ sucklingbot/
 ## architecture notes
 
 - `bot.py` is the only file that imports discord.py command/event decorators. everything else is plain async python.
+- `rental.py` never imports `bot.py` — takes `bot: discord.Client` as a parameter, same pattern as `tracker.py`.
 - `tmdb.py` uses the cache transparently — pass `force=True` to bypass when fresh data is needed.
 - `tracker.py` uses `force=True` everywhere because it needs fresh data to detect changes.
 - `picker.py` maintains a separate 24-hour-cached candidate pool of ~1000 films (used by `/roll` and the daily recommendation).
 - `plex.py` uses `asyncio.to_thread` to wrap `plexapi`'s synchronous calls so they don't block the event loop. the library list is cached for 1 hour.
 - `sixdegrees.py` maintains a separate 24-hour-cached pool of popular actors and uses tmdb cast data to validate chain submissions.
-- all persistent state lives in `data/moviebot.db`. loseable: in-memory caches, active rounds.
+- all persistent state lives in `data/moviebot.db`. loseable: in-memory caches, active rounds, active rental view state (in-progress `/rent` flows restart cleanly).
 - the error log captures exceptions from scheduled jobs and `on_message` handlers.
 
 ### database tables
 
 | table                | purpose                                                                |
 | -------------------- | ---------------------------------------------------------------------- |
-| `config`             | key/value settings (channels, toggles)                                 |
+| `config`             | key/value settings (channels, toggles, rental tag IDs)                 |
 | `tracked_movies`     | user-curated watchlist                                                 |
 | `provider_snapshots` | `(movie_id, provider)` pairs we've seen — used to detect new providers |
 | `announced_movies`   | tmdb ids ever announced — prevents re-promotion announcements          |
 | `daily_recs`         | past daily picks (powers the 30-day no-repeat window)                  |
 | `guess_scores`       | leaderboard for poster/still guessing                                  |
 | `six_scores`         | leaderboard for six degrees game                                       |
+| `rentals`            | full rental lifecycle: status, plex key snapshot, thread IDs, rating, late fee, notification flags |
 
 ---
 
 ## scheduled jobs
 
-two scheduled jobs run via apscheduler:
+three scheduled jobs run via apscheduler:
 
-- 9:00 am local time - streaming-availability scan + announcements
-- 12:00 pm local time - daily recommendation
+- **9:00 am** local time - streaming-availability scan + announcements
+- **12:00 pm** local time - daily recommendation
+- **every hour** - rental overdue DMs (once per rental when due_at passes) and 12-hour reminders (once per rental when <12h remain)
 
-both can be disabled at runtime with `/toggle` without removing channel configuration.
+both auto-posting features can be disabled at runtime with `/toggle` without removing channel configuration.
 
 manual triggers are available via `/checknow`, `/checknowlive`, and `/dailynow` — these run regardless of toggle state.
 
@@ -232,6 +249,18 @@ python bot.py
 - `No Plex servers found on this account` - token is for an account with no owned servers
 - `Library 'Movies' not found` - the error message lists available libraries. update `PLEX_LIBRARY` in `.env`
 
+### `/rent` says the reviews forum isn't configured
+
+run `/setreviews` as an admin and point it at a discord forum channel. make sure the bot has **create public threads** and **send messages in threads** permissions in that channel.
+
+### `/setreviews` says tags weren't found
+
+create **rental** and **recommendation** tags in the forum channel's settings (edit channel → tags), then run `/setreviews` again. the bot auto-detects them by name.
+
+### rent button doesn't appear on `/suck` or `/roll`
+
+the button only shows when the film is confirmed to be in the Plex library. if plex is unreachable or the film isn't there, the button is omitted rather than showing a broken state.
+
 ### `/six` validation feels too strict
 
 chain matching is fuzzy on punctuation and case but doesn't handle name variants well (e.g. accent marks, last-first conventions). if a chain you know is correct keeps getting rejected, the tmdb-listed name might differ from the common name.
@@ -252,7 +281,7 @@ chain matching is fuzzy on punctuation and case but doesn't handle name variants
 
 the project files themselves are backed up by git. the pieces that aren't tracked (and matter):
 
-- `data/moviebot.db` - leaderboards, tracked films, provider snapshots, announced movies. if this is lost, the bot will treat its first run as a baseline and silently re-mark all currently-streaming films as already announced.
+- `data/moviebot.db` - leaderboards, tracked films, provider snapshots, announced movies, **rental records**. if this is lost, the bot will treat its first run as a baseline and silently re-mark all currently-streaming films as already announced. rental history will be lost.
 - `.env` - secrets. easy to recreate if you have your tokens recorded elsewhere.
 
 to back up the database manually:

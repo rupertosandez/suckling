@@ -248,8 +248,7 @@ def rb9_stats_embed(stats: dict) -> discord.Embed:
         title="📊 Return by 9 Library Stats",
         color=0xE5A00D,
     )
-
-    embed.add_field(name="Total Movies", value=f"**{stats['count']:,}**", inline=True)
+    embed.add_field(name="Total Films", value=f"{stats['count']:,}", inline=True)
 
     if stats.get("total_minutes"):
         embed.add_field(
@@ -268,7 +267,7 @@ def rb9_stats_embed(stats: dict) -> discord.Embed:
     if stats.get("min_year") and stats.get("max_year"):
         embed.add_field(
             name="Year Range",
-            value=f"{stats['min_year']} – {stats['max_year']}",
+            value=f"{stats['min_year']} - {stats['max_year']}",
             inline=True,
         )
 
@@ -337,15 +336,15 @@ def rb9_total_runtime_embed(stats: dict) -> discord.Embed:
     desc_lines = [
         f"Return by 9 has **{count:,} movies** with a combined runtime of:",
         "",
-        f"⏱️ **{total_minutes:,} minutes**",
-        f"📆 **{days:.1f} days** of nonstop watching",
-        f"🗓️ **{weeks:.1f} weeks**",
+        f"- **{total_minutes:,} minutes**",
+        f"- **{days:.1f} days** of nonstop watching",
+        f"- **{weeks:.1f} weeks**",
         "",
         f"At a more reasonable 8 hours/day, you'd finish in **{realistic:.0f} days**.",
     ]
 
     embed = discord.Embed(
-        title="⏰ Total Return by 9 Library Runtime",
+        title="Total Return by 9 Library Runtime",
         description="\n".join(desc_lines),
         color=0xE5A00D,
     )
@@ -396,7 +395,7 @@ def rb9_genre_embed(genres: list[tuple[str, int]]) -> discord.Embed:
     for name, count in genres:
         bar_length = max(1, round((count / max_count) * bar_width))
         bar = "█" * bar_length
-        lines.append(f"**{name}** — {bar} {count}")
+        lines.append(f"**{name}** - {bar} {count}")
 
     embed = discord.Embed(
         title="🎭 Top Genres in Return by 9",
@@ -408,7 +407,7 @@ def rb9_genre_embed(genres: list[tuple[str, int]]) -> discord.Embed:
 
 
 def rb9_random_scene_embed(scene: dict) -> discord.Embed:
-    """Embed for /rb9randomscene — random film backdrop."""
+    """Embed for /rb9randomscene - random film backdrop."""
     title = scene.get("title", "Unknown")
     year = scene.get("year") or "?"
     summary = scene.get("summary") or ""
@@ -496,4 +495,291 @@ def info_embed(version: str, uptime_seconds: float, guild_count: int) -> discord
 
     embed.set_image(url="attachment://logo.png")
     embed.set_footer(text="caj's little mutant")
+    return embed
+
+
+# ---------- rentals ----------
+
+def rental_offer_embed(movie: dict, is_last_reroll: bool = False) -> discord.Embed:
+    """
+    Shown during the /rent reroll flow (ephemeral). Displays the current
+    film offer before the user commits.
+    """
+    title = movie.get("title", "Unknown")
+    year = movie.get("year") or "?"
+    summary = movie.get("summary") or "*No summary available.*"
+    duration = movie.get("duration_minutes")
+
+    if len(summary) > 400:
+        summary = summary[:397].rstrip() + "..."
+
+    desc = summary
+    if is_last_reroll:
+        desc += (
+            "\n\n-# this is your last reroll - if you reroll again, "
+            "the next film will be locked in automatically."
+        )
+
+    embed = discord.Embed(
+        title=f"📼 your rental: {title} ({year})",
+        description=desc,
+        color=0xE5A00D,
+    )
+
+    if duration:
+        embed.add_field(name="Runtime", value=f"{duration} min", inline=True)
+
+    if movie.get("thumb_url"):
+        embed.set_thumbnail(url=movie["thumb_url"])
+
+    embed.set_footer(text="from the return by 9 library")
+    return embed
+
+
+def rental_confirmed_embed(movie: dict, user_tag: str, due_at: datetime) -> discord.Embed:
+    """
+    Forum thread opener posted when a rental is confirmed. Edited to a
+    review embed when the user returns the film.
+    """
+    title = movie.get("title", "Unknown")
+    year = movie.get("year") or "?"
+    summary = movie.get("summary") or "*No summary available.*"
+    duration = movie.get("duration_minutes")
+
+    if len(summary) > 400:
+        summary = summary[:397].rstrip() + "..."
+
+    due_ts = int(due_at.timestamp())
+
+    embed = discord.Embed(
+        title=f"📼 {title} ({year})",
+        description=summary,
+        color=0xE5A00D,
+    )
+
+    embed.add_field(name="checked out by", value=user_tag, inline=True)
+    if duration:
+        embed.add_field(name="runtime", value=f"{duration} min", inline=True)
+    embed.add_field(
+        name="due back",
+        value=f"<t:{due_ts}:F> (<t:{due_ts}:R>)",
+        inline=False,
+    )
+
+    if movie.get("thumb_url"):
+        embed.set_thumbnail(url=movie["thumb_url"])
+
+    embed.set_footer(text="use /return to post your review when you're done")
+    return embed
+
+
+def rental_review_embed(
+    movie: dict,
+    user_tag: str,
+    rating: int,
+    thoughts: str | None,
+    recommend: bool,
+    returned_at_iso: str,
+    late_fee: float,
+) -> discord.Embed:
+    """
+    Replaces the confirmed embed in the forum thread after /return is used.
+    """
+    title = movie.get("title", "Unknown")
+    year = movie.get("year") or "?"
+    is_late = late_fee > 0
+
+    color = 0xED4245 if is_late else 0x57F287  # red if late, green if on time
+    header = f"{'🔴 late return' if is_late else '✅ returned'} by {user_tag}"
+
+    try:
+        returned_dt = datetime.fromisoformat(returned_at_iso)
+        returned_ts = int(returned_dt.timestamp())
+        returned_str = f"<t:{returned_ts}:F>"
+    except (ValueError, TypeError):
+        returned_str = "unknown"
+
+    embed = discord.Embed(
+        title=f"📼 {title} ({year})",
+        color=color,
+    )
+
+    desc_parts = [f"**{header}**"]
+    if thoughts:
+        desc_parts.append(f"\n{thoughts}")
+    embed.description = "\n".join(desc_parts)
+
+    stars = "⭐" * rating + "☆" * (10 - rating)
+    embed.add_field(name="rating", value=f"{rating}/10  {stars}", inline=False)
+    embed.add_field(name="recommend?", value="yes" if recommend else "no", inline=True)
+    embed.add_field(name="returned", value=returned_str, inline=True)
+
+    if is_late:
+        embed.add_field(name="late fee", value=f"${late_fee:.2f}", inline=True)
+
+    if movie.get("poster_url") or movie.get("thumb_url"):
+        embed.set_thumbnail(url=movie.get("poster_url") or movie.get("thumb_url"))
+
+    embed.set_footer(text="from the return by 9 library")
+    return embed
+
+
+def rental_cancelled_embed(
+    movie: dict,
+    user_tag: str,
+    reason: str | None = None,
+) -> discord.Embed:
+    """Replaces the forum thread opener when an admin cancels a rental."""
+    title = movie.get("title", "Unknown")
+    year = movie.get("year") or "?"
+
+    embed = discord.Embed(
+        title=f"📼 {title} ({year})",
+        description=f"rental by **{user_tag}** was cancelled by an admin."
+        + (f"\n\nreason: {reason}" if reason else ""),
+        color=0x808080,
+    )
+
+    if movie.get("poster_url") or movie.get("thumb_url"):
+        embed.set_thumbnail(url=movie.get("poster_url") or movie.get("thumb_url"))
+
+    embed.set_footer(text="from the return by 9 library")
+    return embed
+
+
+def rental_status_embed(rental: dict) -> discord.Embed:
+    """Shown by /myrental - current rental status for the requesting user."""
+    title = rental.get("title", "Unknown")
+    year = rental.get("year") or "?"
+    due_at_iso = rental.get("due_at", "")
+    rented_at_iso = rental.get("rented_at", "")
+
+    now = datetime.now(datetime.now().astimezone().tzinfo)
+
+    try:
+        due = datetime.fromisoformat(due_at_iso)
+        due_ts = int(due.timestamp())
+        due_str = f"<t:{due_ts}:F> (<t:{due_ts}:R>)"
+        is_overdue = due < datetime.now(due.tzinfo)
+    except (ValueError, TypeError):
+        due_str = "unknown"
+        is_overdue = False
+
+    try:
+        rented = datetime.fromisoformat(rented_at_iso)
+        rented_ts = int(rented.timestamp())
+        rented_str = f"<t:{rented_ts}:F>"
+    except (ValueError, TypeError):
+        rented_str = "unknown"
+
+    color = 0xED4245 if is_overdue else 0xE5A00D
+    status = "overdue!" if is_overdue else "checked out"
+
+    embed = discord.Embed(
+        title=f"📼 {title} ({year})",
+        description=f"status: **{status}**",
+        color=color,
+    )
+
+    embed.add_field(name="checked out", value=rented_str, inline=True)
+    embed.add_field(name="due back", value=due_str, inline=True)
+
+    rerolls = rental.get("rerolls_used", 0)
+    if rerolls:
+        embed.add_field(name="rerolls used", value=str(rerolls), inline=True)
+
+    thread_id = rental.get("thread_id")
+    if thread_id:
+        embed.add_field(
+            name="forum thread",
+            value=f"<#{thread_id}>",
+            inline=False,
+        )
+
+    if rental.get("poster_url"):
+        embed.set_thumbnail(url=rental["poster_url"])
+
+    embed.set_footer(text="use /return to post your review when you're done")
+    return embed
+
+
+def late_fees_embed(rows: list[dict]) -> discord.Embed:
+    """Leaderboard of accumulated late fees."""
+    if not rows:
+        return discord.Embed(
+            title="🏪 late fee ledger",
+            description="no late fees on record. everyone's been returning on time.",
+            color=0xE5A00D,
+        )
+
+    lines = []
+    medals = ["🥇", "🥈", "🥉"]
+    for i, row in enumerate(rows):
+        prefix = medals[i] if i < 3 else f"#{i + 1}"
+        name = row.get("user_name", "unknown")
+        fees = row.get("total_fees", 0)
+        late_count = row.get("late_count", 0)
+        lines.append(
+            f"{prefix} **{name}** - ${fees:.2f} "
+            f"({late_count} late return{'s' if late_count != 1 else ''})"
+        )
+
+    embed = discord.Embed(
+        title="🏪 late fee ledger",
+        description="\n".join(lines),
+        color=0xE5A00D,
+    )
+    embed.set_footer(text="$1/day for every day overdue")
+    return embed
+
+
+def rental_stats_embed(history: list[dict], user_tag: str) -> discord.Embed:
+    """Personal rental stats for /rentalstats."""
+    if not history:
+        return discord.Embed(
+            title=f"📼 rental history - {user_tag}",
+            description="no rentals yet.",
+            color=0xE5A00D,
+        )
+
+    total = len(history)
+    returned = [r for r in history if r["status"] == "returned"]
+    on_time = [r for r in returned if r.get("late_fee_dollars", 0) == 0]
+    late = [r for r in returned if r.get("late_fee_dollars", 0) > 0]
+    total_fees = sum(r.get("late_fee_dollars", 0) for r in history)
+    active = [r for r in history if r["status"] == "active"]
+
+    embed = discord.Embed(
+        title=f"📼 rental history - {user_tag}",
+        color=0xE5A00D,
+    )
+
+    embed.add_field(name="total rentals", value=str(total), inline=True)
+    embed.add_field(name="returned on time", value=str(len(on_time)), inline=True)
+    embed.add_field(name="returned late", value=str(len(late)), inline=True)
+
+    if total_fees > 0:
+        embed.add_field(name="total late fees", value=f"${total_fees:.2f}", inline=True)
+
+    if active:
+        r = active[0]
+        try:
+            due = datetime.fromisoformat(r["due_at"])
+            due_ts = int(due.timestamp())
+            active_str = f"{r['title']} - due <t:{due_ts}:R>"
+        except (ValueError, TypeError):
+            active_str = r["title"]
+        embed.add_field(name="currently renting", value=active_str, inline=False)
+
+    # Last 5 returned
+    recent = [r for r in returned[:5]]
+    if recent:
+        lines = []
+        for r in recent:
+            rating_str = f"{r['rating']}/10" if r.get("rating") else "no rating"
+            rec_str = " - recommended" if r.get("recommended") else ""
+            lines.append(f"- **{r['title']}** ({r.get('year', '?')}) - {rating_str}{rec_str}")
+        embed.add_field(name="recent returns", value="\n".join(lines), inline=False)
+
+    embed.set_footer(text="from the return by 9 library")
     return embed

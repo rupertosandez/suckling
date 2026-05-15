@@ -9,6 +9,9 @@ ANNOUNCEMENT_CHANNEL_KEY = "announcement_channel_id"
 DAILY_REC_CHANNEL_KEY = "daily_rec_channel_id"
 ANNOUNCEMENTS_ENABLED_KEY = "announcements_enabled"
 DAILY_REC_ENABLED_KEY = "daily_rec_enabled"
+REVIEWS_CHANNEL_KEY = "reviews_channel_id"
+RENTAL_TAG_KEY = "rental_tag_id"
+RECOMMENDATION_TAG_KEY = "recommendation_tag_id"
 
 
 def _utc_now_iso() -> str:
@@ -74,6 +77,30 @@ def init_db() -> None:
                 wins       INTEGER NOT NULL DEFAULT 0,
                 last_win   TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS rentals (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id          TEXT NOT NULL,
+                user_name        TEXT NOT NULL,
+                plex_key         TEXT NOT NULL,
+                title            TEXT NOT NULL,
+                year             INTEGER,
+                poster_url       TEXT,
+                rented_at        TEXT NOT NULL,
+                due_at           TEXT NOT NULL,
+                returned_at      TEXT,
+                thread_id        TEXT,
+                message_id       TEXT,
+                rerolls_used     INTEGER NOT NULL DEFAULT 0,
+                initiated_by     TEXT NOT NULL DEFAULT 'command',
+                status           TEXT NOT NULL DEFAULT 'active',
+                rating           INTEGER,
+                thoughts         TEXT,
+                recommended      INTEGER,
+                late_fee_dollars REAL NOT NULL DEFAULT 0,
+                reminder_sent    INTEGER NOT NULL DEFAULT 0,
+                overdue_notified INTEGER NOT NULL DEFAULT 0
+            );
         """)
 
 
@@ -132,6 +159,33 @@ def is_daily_rec_enabled() -> bool:
 
 def set_daily_rec_enabled(enabled: bool) -> None:
     set_setting(DAILY_REC_ENABLED_KEY, "1" if enabled else "0")
+
+
+def get_reviews_channel_id() -> int | None:
+    raw = get_setting(REVIEWS_CHANNEL_KEY)
+    return int(raw) if raw else None
+
+
+def set_reviews_channel_id(channel_id: int) -> None:
+    set_setting(REVIEWS_CHANNEL_KEY, str(channel_id))
+
+
+def get_rental_tag_id() -> int | None:
+    raw = get_setting(RENTAL_TAG_KEY)
+    return int(raw) if raw else None
+
+
+def set_rental_tag_id(tag_id: int) -> None:
+    set_setting(RENTAL_TAG_KEY, str(tag_id))
+
+
+def get_recommendation_tag_id() -> int | None:
+    raw = get_setting(RECOMMENDATION_TAG_KEY)
+    return int(raw) if raw else None
+
+
+def set_recommendation_tag_id(tag_id: int) -> None:
+    set_setting(RECOMMENDATION_TAG_KEY, str(tag_id))
 
 
 # ---------- tracked_movies ----------
@@ -201,9 +255,6 @@ def recent_rec_ids(within_days: int = 30) -> set[int]:
     recent = set()
     for row in rows:
         try:
-            # fromisoformat handles both naive (legacy) and aware (new) strings.
-            # .timestamp() works on both; naive values are interpreted as local
-            # time, which is close enough for the 30-day exclusion window.
             posted_ts = datetime.fromisoformat(row["posted_at"]).timestamp()
             if posted_ts >= cutoff:
                 recent.add(row["tmdb_id"])
@@ -292,5 +343,170 @@ def get_six_leaderboard(limit: int = 10) -> list[dict]:
             "SELECT user_id, user_tag, points, wins, last_win "
             "FROM six_scores ORDER BY points DESC, last_win ASC LIMIT ?",
             (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+# ---------- rentals ----------
+
+def create_rental(
+    user_id: str,
+    user_name: str,
+    plex_key: str,
+    title: str,
+    year: int | None,
+    poster_url: str | None,
+    rented_at: str,
+    due_at: str,
+    rerolls_used: int = 0,
+    initiated_by: str = "command",
+) -> int:
+    """Insert a new rental record. Returns the new rental id."""
+    with _connect() as conn:
+        cursor = conn.execute(
+            "INSERT INTO rentals "
+            "(user_id, user_name, plex_key, title, year, poster_url, "
+            " rented_at, due_at, rerolls_used, initiated_by, status) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')",
+            (user_id, user_name, plex_key, title, year, poster_url,
+             rented_at, due_at, rerolls_used, initiated_by),
+        )
+        return cursor.lastrowid
+
+
+def get_active_rental(user_id: str) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM rentals WHERE user_id = ? AND status = 'active'",
+            (user_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def get_rental_by_id(rental_id: int) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM rentals WHERE id = ?", (rental_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def set_rental_thread(rental_id: int, thread_id: int, message_id: int) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE rentals SET thread_id = ?, message_id = ? WHERE id = ?",
+            (str(thread_id), str(message_id), rental_id),
+        )
+
+
+def mark_rental_returned(
+    rental_id: int,
+    returned_at: str,
+    rating: int,
+    thoughts: str | None,
+    recommended: bool,
+    late_fee_dollars: float,
+) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE rentals SET status = 'returned', returned_at = ?, rating = ?, "
+            "thoughts = ?, recommended = ?, late_fee_dollars = ? WHERE id = ?",
+            (returned_at, rating, thoughts, 1 if recommended else 0,
+             late_fee_dollars, rental_id),
+        )
+
+
+def cancel_rental_by_id(rental_id: int) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE rentals SET status = 'cancelled' WHERE id = ?",
+            (rental_id,),
+        )
+
+
+def get_user_rented_plex_keys(user_id: str) -> set[str]:
+    """All plex keys ever rented by this user (active, returned, or cancelled)."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT plex_key FROM rentals WHERE user_id = ?", (user_id,)
+        ).fetchall()
+        return {row["plex_key"] for row in rows}
+
+
+def get_overdue_active_rentals() -> list[dict]:
+    """Active rentals that are past due and haven't been DM-notified yet."""
+    now = _utc_now_iso()
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM rentals "
+            "WHERE status = 'active' AND due_at < ? AND overdue_notified = 0",
+            (now,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_reminder_due_rentals() -> list[dict]:
+    """Active rentals due within 12 hours that haven't been reminded yet."""
+    now = datetime.now(timezone.utc)
+    window_end = now.replace(microsecond=0).isoformat().replace("+00:00", "") 
+    # Build the 12h-from-now boundary as an ISO string
+    from datetime import timedelta
+    cutoff = (now + timedelta(hours=12)).isoformat()
+    now_iso = now.isoformat()
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM rentals "
+            "WHERE status = 'active' AND due_at > ? AND due_at <= ? AND reminder_sent = 0",
+            (now_iso, cutoff),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def mark_overdue_notified(rental_id: int) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE rentals SET overdue_notified = 1 WHERE id = ?", (rental_id,)
+        )
+
+
+def mark_reminder_sent(rental_id: int) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE rentals SET reminder_sent = 1 WHERE id = ?", (rental_id,)
+        )
+
+
+def get_late_fees_leaderboard(limit: int = 10) -> list[dict]:
+    """Total late fees accumulated per user, descending."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT user_id, user_name, "
+            "  SUM(late_fee_dollars) AS total_fees, "
+            "  COUNT(*) AS total_rentals, "
+            "  SUM(CASE WHEN late_fee_dollars > 0 THEN 1 ELSE 0 END) AS late_count "
+            "FROM rentals "
+            "WHERE status IN ('returned', 'active') "
+            "GROUP BY user_id "
+            "HAVING total_fees > 0 "
+            "ORDER BY total_fees DESC "
+            "LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_user_rental_history(user_id: str) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM rentals WHERE user_id = ? ORDER BY rented_at DESC",
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_all_active_rentals() -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM rentals WHERE status = 'active' ORDER BY rented_at ASC"
         ).fetchall()
         return [dict(row) for row in rows]

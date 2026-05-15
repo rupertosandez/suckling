@@ -92,6 +92,7 @@ def _absolute_url(relative: str | None) -> str | None:
 def _movie_to_dict(movie: Any) -> dict:
     """Serialize a Plex movie object into a plain dict."""
     return {
+        "rating_key": str(movie.ratingKey),
         "title": movie.title,
         "year": movie.year,
         "summary": movie.summary or "",
@@ -113,6 +114,21 @@ async def pick_random_movie() -> dict | None:
     if not movies:
         return None
     return _movie_to_dict(random.choice(movies))
+
+
+# ---------- rental pick ----------
+
+async def pick_random_for_rental(exclude_keys: set[str]) -> dict | None:
+    """
+    Pick a random movie from the library, excluding any with a rating_key
+    in exclude_keys. Used by the rental flow to skip already-seen and
+    previously-rented films.
+    """
+    movies = await _get_movies()
+    candidates = [m for m in movies if str(m.ratingKey) not in exclude_keys]
+    if not candidates:
+        return None
+    return _movie_to_dict(random.choice(candidates))
 
 
 # ---------- title lookup ----------

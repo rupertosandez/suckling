@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] — 2026-05-15
+
+### Added
+
+**video store rental system** — users can "rent" a film from the RB9 Plex library, have 48 hours to watch it, and return it with a review. reviews post to a configurable Discord forum channel.
+
+- `/rent` — picks a random film from the library (excluding anything the user has rented before). shows an offer screen with up to 2 re-rolls: first pick shows "re-roll", second shows "re-roll (last one)" with a warning, third pick is auto-confirmed with no choice. flow is fully ephemeral.
+- `/return rating recommend [thoughts]` — returns the active rental and posts a review to the forum. rating is 1-10, recommend is a boolean toggle, thoughts are optional. edits the forum thread in-place: updates the starter message, renames the thread from "checked out" to "reviewed", and adds the recommendation tag if applicable.
+- `/myrental` — ephemeral status card for your current rental: film, when you checked it out, when it's due (as a Discord timestamp), and a link to the forum thread.
+- `/latefees` — leaderboard of accumulated late fees sorted descending. $1/day for every day overdue (computed at return time).
+- `/rentalstats [user]` — rental history and stats for yourself or any member: total rentals, on-time vs late count, total fees paid, currently renting (if applicable), and last 5 returns.
+- `/setreviews <forum_channel>` — admin-only. configures the forum channel for rental posts and auto-detects "rental" and "recommendation" forum tags. warns if either tag is missing.
+- `/cancelrental @user [reason]` — admin-only. cancels a user's active rental with no late fee, edits the forum thread to show a grey cancelled state, and DMs the user with the reason.
+- **rent button** on existing embeds — `/rb9`, `/rb9randomscene`, `/suck` (if in library), `/roll` (if in library), and daily rec (if in library) all show a 📼 `confirm rental` / `nevermind` button when the film is available in the Plex library. button-initiated rentals get 0 re-rolls since the user already chose a specific film.
+- **DM reminders** — bot DMs users when they have less than 12 hours left on a rental (once), and again when they go overdue (once).
+- `rental.py` — new module handling forum thread creation/editing, late fee calculation, overdue notification, and reminder DMs. takes `bot` as a parameter; does not import `bot.py`.
+- `rentals` table in `data/moviebot.db` — stores rental records with full lifecycle state (active, returned, cancelled), plex key snapshot, thread/message IDs, rating, thoughts, late fee, and notification flags.
+- three new config keys in the `config` table: `reviews_channel_id`, `rental_tag_id`, `recommendation_tag_id`.
+- hourly APScheduler job (`rental_check`) running `check_overdue` and `check_reminders`.
+- `rating_key` field added to `plex._movie_to_dict` — needed to uniquely identify films across rerolls and for all-time exclusion tracking.
+- `plex.pick_random_for_rental(exclude_keys)` — picks a random film excluding a given set of plex rating keys.
+
+### Notes
+
+- one active rental per user at a time. must `/return` before renting again.
+- past rentals (any status) are permanently excluded from future `/rent` random picks for that user.
+- forum thread lifecycle: created on rental confirmation with a "checked out" embed, edited in-place on return or admin cancel. starter message ID = thread ID in Discord forums.
+- late fee is computed lazily at `/return` time: `ceil((returned_at − due_at) / 1 day) × $1`. returning on time = $0.
+- no DB migration needed — `init_db` uses `CREATE TABLE IF NOT EXISTS`. new `rating_key` field in `_movie_to_dict` is transparent to existing callers.
+- forum tags must be created manually in Discord's forum settings before `/setreviews` can auto-detect them. tags expected: **rental** and **recommendation** (or "recommended").
+- bot needs `create public threads` + `send messages in threads` permissions in the forum channel.
+- view timeouts are 300 seconds for `/rent` flow, 120 seconds for embed rent buttons. timed-out flows create no rental (the clock only starts on confirmation).
+
+---
+
 ## [1.4.0] — 2026-05-12
 
 ### Added
