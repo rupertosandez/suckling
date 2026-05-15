@@ -111,6 +111,17 @@ async def on_ready():
         print("[scheduler] Daily horror recommendation scheduled for 12:00 local time")
         print("[scheduler] Rental overdue/reminder check scheduled hourly")
 
+    # Warm Plex in the background so the first /rb9 or /rent call does not pay
+    # the full library scan cost. Errors are logged but never block startup.
+    async def _warm_plex_cache():
+        try:
+            await plex.warm_cache()
+        except Exception as e:
+            logger.log_exception("plex_warm_cache", e)
+            print(f"[plex] Warm cache failed: {e}")
+
+    asyncio.create_task(_warm_plex_cache())
+
 
 @bot.event
 async def on_message(message: discord.Message):

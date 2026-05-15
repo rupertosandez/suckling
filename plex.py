@@ -1,22 +1,38 @@
 """
-Plex integration: connects to your remote Plex server via plex.tv
-and provides random movie picking + library stats.
+Plex integration: connects to your Plex server and provides random movie picking
++ library stats.
+
+Performance notes:
+- plexapi is synchronous, so network-heavy calls run in a worker thread.
+- The full library is cached and guarded by one refresh lock so concurrent
+  commands do not stampede Plex with duplicate library scans.
+- Common lookup data is precomputed during refresh for fast title checks/stats.
 """
+from __future__ import annotations
+
 import asyncio
 import random
+import time
+from collections import Counter
 from typing import Any
 
-from plexapi.myplex import MyPlexAccount
 from plexapi.exceptions import NotFound, Unauthorized
+from plexapi.myplex import MyPlexAccount
 
 import config
 
 
+CACHE_TTL_SECONDS = 3600
+CONNECT_TIMEOUT_SECONDS = 15
+
 _account: MyPlexAccount | None = None
 _server: Any | None = None
 _library: Any | None = None
-_movies_cache: list | None = None
+_movies_cache: list[Any] | None = None
+_movie_dict_cache: list[dict] | None = None
+_title_index: dict[str, list[dict]] = {}
 _cache_age: float = 0
+_refresh_lock = asyncio.Lock()
 
 
 class PlexError(Exception):
@@ -34,51 +50,37 @@ def _connect_sync() -> None:
 
     try:
         _account = MyPlexAccount(token=config.PLEX_TOKEN)
-    except Unauthorized:
-        raise PlexError("Plex token is invalid or expired")
-    except Exception as e:
-        raise PlexError(f"Couldn't authenticate with Plex: {e}")
+    except Unauthorized as exc:
+        raise PlexError("Plex token is invalid or expired") from exc
+    except Exception as exc:
+        raise PlexError(f"Couldn't authenticate with Plex: {exc}") from exc
 
     resources = [r for r in _account.resources() if r.owned and "server" in r.provides]
     if not resources:
         raise PlexError("No Plex servers found on this account")
 
     try:
-        _server = resources[0].connect(timeout=15)
-    except Exception as e:
-        raise PlexError(f"Couldn't connect to Plex server: {e}")
+        _server = resources[0].connect(timeout=CONNECT_TIMEOUT_SECONDS)
+    except Exception as exc:
+        raise PlexError(f"Couldn't connect to Plex server: {exc}") from exc
 
     try:
         _library = _server.library.section(config.PLEX_LIBRARY)
-    except NotFound:
+    except NotFound as exc:
         available = ", ".join(s.title for s in _server.library.sections())
         raise PlexError(
-            f"Library '{config.PLEX_LIBRARY}' not found. "
-            f"Available: {available}"
-        )
+            f"Library '{config.PLEX_LIBRARY}' not found. Available: {available}"
+        ) from exc
 
 
 async def _connect() -> None:
     await asyncio.to_thread(_connect_sync)
 
 
-def _refresh_cache_sync() -> list:
+def _refresh_cache_sync() -> list[Any]:
     if _library is None:
         raise PlexError("Not connected to Plex")
     return list(_library.all())
-
-
-async def _get_movies() -> list:
-    """Get the movie list, refreshing the cache once per hour."""
-    global _movies_cache, _cache_age
-
-    import time
-    now = time.time()
-    if _movies_cache is None or (now - _cache_age) > 3600:
-        await _connect()
-        _movies_cache = await asyncio.to_thread(_refresh_cache_sync)
-        _cache_age = now
-    return _movies_cache
 
 
 def _absolute_url(relative: str | None) -> str | None:
@@ -106,33 +108,6 @@ def _movie_to_dict(movie: Any) -> dict:
     }
 
 
-# ---------- random pick (existing /rb9) ----------
-
-async def pick_random_movie() -> dict | None:
-    """Pick a random movie from the library."""
-    movies = await _get_movies()
-    if not movies:
-        return None
-    return _movie_to_dict(random.choice(movies))
-
-
-# ---------- rental pick ----------
-
-async def pick_random_for_rental(exclude_keys: set[str]) -> dict | None:
-    """
-    Pick a random movie from the library, excluding any with a rating_key
-    in exclude_keys. Used by the rental flow to skip already-seen and
-    previously-rented films.
-    """
-    movies = await _get_movies()
-    candidates = [m for m in movies if str(m.ratingKey) not in exclude_keys]
-    if not candidates:
-        return None
-    return _movie_to_dict(random.choice(candidates))
-
-
-# ---------- title lookup ----------
-
 def _normalize_title(s: str) -> str:
     """Normalize a title for fuzzy matching: lowercase, strip articles & punctuation."""
     s = (s or "").lower().strip()
@@ -142,46 +117,105 @@ def _normalize_title(s: str) -> str:
     return "".join(c for c in s if c.isalnum())
 
 
+def _rebuild_indexes() -> None:
+    global _movie_dict_cache, _title_index
+
+    movies = _movies_cache or []
+    _movie_dict_cache = [_movie_to_dict(m) for m in movies]
+
+    title_index: dict[str, list[dict]] = {}
+    for movie in _movie_dict_cache:
+        key = _normalize_title(movie.get("title", ""))
+        if key:
+            title_index.setdefault(key, []).append(movie)
+    _title_index = title_index
+
+
+async def _get_movies() -> list[Any]:
+    """Get the movie list, refreshing the cache once per hour."""
+    global _movies_cache, _cache_age
+
+    now = time.time()
+    if _movies_cache is not None and (now - _cache_age) <= CACHE_TTL_SECONDS:
+        return _movies_cache
+
+    async with _refresh_lock:
+        # Another coroutine may have populated the cache while this one waited.
+        now = time.time()
+        if _movies_cache is not None and (now - _cache_age) <= CACHE_TTL_SECONDS:
+            return _movies_cache
+
+        await _connect()
+        movies = await asyncio.to_thread(_refresh_cache_sync)
+        _movies_cache = movies
+        _cache_age = time.time()
+        _rebuild_indexes()
+        print(f"[plex] Library cache refreshed: {len(movies)} movies")
+        return movies
+
+
+async def _get_movie_dicts() -> list[dict]:
+    await _get_movies()
+    return _movie_dict_cache or []
+
+
+async def warm_cache() -> None:
+    """Refresh Plex in the background so the first /rb9 command is fast."""
+    if not config.PLEX_TOKEN:
+        return
+    await _get_movies()
+
+
+# ---------- random pick (existing /rb9) ----------
+
+async def pick_random_movie() -> dict | None:
+    """Pick a random movie from the library."""
+    movies = await _get_movie_dicts()
+    if not movies:
+        return None
+    return random.choice(movies)
+
+
+# ---------- rental pick ----------
+
+async def pick_random_for_rental(exclude_keys: set[str]) -> dict | None:
+    """Pick a random movie from the library, excluding rating keys."""
+    movies = await _get_movie_dicts()
+    candidates = [m for m in movies if m["rating_key"] not in exclude_keys]
+    if not candidates:
+        return None
+    return random.choice(candidates)
+
+
+# ---------- title lookup ----------
+
 async def find_movie_by_title(title: str, year: int | None = None) -> dict | None:
     """
     Look up a movie in the Plex library by title and optional year.
-    Title matching is fuzzy (case + article + punctuation insensitive).
-    Prefers a title+year match; falls back to title-only.
-    Returns the movie dict if found, None otherwise.
+    Uses the precomputed normalized title index instead of scanning every movie.
     """
-    movies = await _get_movies()
+    await _get_movies()
     needle = _normalize_title(title)
     if not needle:
         return None
 
+    matches = _title_index.get(needle, [])
     if year is not None:
-        for m in movies:
-            if m.year == year and _normalize_title(m.title) == needle:
-                return _movie_to_dict(m)
-
-    for m in movies:
-        if _normalize_title(m.title) == needle:
-            return _movie_to_dict(m)
-
-    return None
+        for movie in matches:
+            if movie.get("year") == year:
+                return movie
+    return matches[0] if matches else None
 
 
 async def check_availability(title: str | None, year: int | None = None) -> bool | None:
     """
     Safe wrapper for orchestration code.
-    Returns:
-        True  - found in library
-        False - not in library
-        None  - Plex not configured, or the check failed
-    Never raises.
+    Returns True/False for found/missing, None if Plex is unavailable.
     """
     if not config.PLEX_TOKEN or not title:
         return None
     try:
-        match = await find_movie_by_title(title, year=year)
-        return match is not None
-    except PlexError:
-        return None
+        return await find_movie_by_title(title, year=year) is not None
     except Exception:
         return None
 
@@ -190,20 +224,21 @@ async def check_availability(title: str | None, year: int | None = None) -> bool
 
 async def get_library_summary() -> dict:
     """Overall library stats: count, total runtime, oldest, newest, avg rating."""
-    movies = await _get_movies()
-    if not movies:
+    raw_movies = await _get_movies()
+    movies = await _get_movie_dicts()
+    if not raw_movies:
         return {"count": 0}
 
-    total_minutes = sum(int(m.duration / 60000) for m in movies if m.duration)
-    years = [m.year for m in movies if m.year]
-    ratings = [m.audienceRating for m in movies if m.audienceRating is not None]
+    total_minutes = sum(m.get("duration_minutes") or 0 for m in movies)
+    years = [m["year"] for m in movies if m.get("year")]
+    ratings = [m["audience_rating"] for m in movies if m.get("audience_rating") is not None]
 
-    oldest = min(movies, key=lambda m: m.year if m.year else 9999)
-    newest_by_year = max(movies, key=lambda m: m.year if m.year else 0)
-    newest_added = max(movies, key=lambda m: m.addedAt if m.addedAt else 0)
+    oldest = min(raw_movies, key=lambda m: m.year if m.year else 9999)
+    newest_by_year = max(raw_movies, key=lambda m: m.year if m.year else 0)
+    newest_added = max(raw_movies, key=lambda m: m.addedAt if m.addedAt else 0)
 
     return {
-        "count": len(movies),
+        "count": len(raw_movies),
         "total_minutes": total_minutes,
         "oldest": _movie_to_dict(oldest),
         "newest_by_year": _movie_to_dict(newest_by_year),
@@ -216,56 +251,39 @@ async def get_library_summary() -> dict:
 
 
 async def get_longest_movie() -> dict | None:
-    movies = await _get_movies()
-    candidates = [m for m in movies if m.duration]
-    if not candidates:
-        return None
-    longest = max(candidates, key=lambda m: m.duration)
-    return _movie_to_dict(longest)
+    movies = await _get_movie_dicts()
+    candidates = [m for m in movies if m.get("duration_minutes")]
+    return max(candidates, key=lambda m: m["duration_minutes"]) if candidates else None
 
 
 async def get_shortest_movie() -> dict | None:
-    movies = await _get_movies()
-    # Filter out very short entries (likely shorts/extras under 30 min)
-    candidates = [m for m in movies if m.duration and m.duration > 30 * 60000]
+    movies = await _get_movie_dicts()
+    candidates = [m for m in movies if m.get("duration_minutes") and m["duration_minutes"] > 30]
     if not candidates:
-        # Fall back to all if filter is too aggressive
-        candidates = [m for m in movies if m.duration]
-    if not candidates:
-        return None
-    shortest = min(candidates, key=lambda m: m.duration)
-    return _movie_to_dict(shortest)
+        candidates = [m for m in movies if m.get("duration_minutes")]
+    return min(candidates, key=lambda m: m["duration_minutes"]) if candidates else None
 
 
 async def get_oldest_movie() -> dict | None:
-    movies = await _get_movies()
-    candidates = [m for m in movies if m.year]
-    if not candidates:
-        return None
-    oldest = min(candidates, key=lambda m: m.year)
-    return _movie_to_dict(oldest)
+    movies = await _get_movie_dicts()
+    candidates = [m for m in movies if m.get("year")]
+    return min(candidates, key=lambda m: m["year"]) if candidates else None
 
 
 async def get_newest_movie() -> dict | None:
-    """Most recently *added* to the library."""
-    movies = await _get_movies()
-    candidates = [m for m in movies if m.addedAt]
-    if not candidates:
-        return None
-    newest = max(candidates, key=lambda m: m.addedAt)
-    return _movie_to_dict(newest)
+    """Most recently added to the library."""
+    movies = await _get_movie_dicts()
+    candidates = [m for m in movies if m.get("added_at")]
+    return max(candidates, key=lambda m: m["added_at"]) if candidates else None
 
 
 async def get_total_runtime() -> dict:
     """Total runtime + a fun breakdown of how long it'd take to watch."""
-    movies = await _get_movies()
-    total_minutes = sum(int(m.duration / 60000) for m in movies if m.duration)
-
+    movies = await _get_movie_dicts()
+    total_minutes = sum(m.get("duration_minutes") or 0 for m in movies)
     days = total_minutes / 1440
     hours = total_minutes / 60
     weeks = days / 7
-
-    # If you watched 8h/day, how many days would it take?
     realistic_days = total_minutes / (8 * 60)
 
     return {
@@ -280,57 +298,43 @@ async def get_total_runtime() -> dict:
 
 async def get_decade_breakdown() -> list[tuple[str, int]]:
     """Returns [(decade_label, count), ...] sorted by decade ascending."""
-    movies = await _get_movies()
-    decades: dict[int, int] = {}
-    for m in movies:
-        if m.year:
-            decade = (m.year // 10) * 10
-            decades[decade] = decades.get(decade, 0) + 1
-
-    sorted_decades = sorted(decades.items())
-    return [(f"{d}s", count) for d, count in sorted_decades]
+    movies = await _get_movie_dicts()
+    decades: Counter[int] = Counter()
+    for movie in movies:
+        year = movie.get("year")
+        if year:
+            decades[(year // 10) * 10] += 1
+    return [(f"{decade}s", count) for decade, count in sorted(decades.items())]
 
 
 async def get_genre_breakdown(top_n: int = 10) -> list[tuple[str, int]]:
     """Returns the top N genres by count."""
-    movies = await _get_movies()
-    genres: dict[str, int] = {}
-    for m in movies:
-        for g in (m.genres or []):
-            name = g.tag
-            genres[name] = genres.get(name, 0) + 1
-
-    sorted_genres = sorted(genres.items(), key=lambda x: x[1], reverse=True)
-    return sorted_genres[:top_n]
+    movies = await _get_movie_dicts()
+    genres: Counter[str] = Counter()
+    for movie in movies:
+        genres.update(movie.get("genres") or [])
+    return genres.most_common(top_n)
 
 
 async def get_random_scene() -> dict | None:
-    """
-    Pick a random film and a random backdrop from it.
-    Returns dict with title, year, art_url, fanart_url (if multiple available).
-    """
-    movies = await _get_movies()
-    # Filter to films that have art
-    candidates = [m for m in movies if m.art]
+    """Pick a random film with a backdrop/art image."""
+    movies = await _get_movie_dicts()
+    candidates = [m for m in movies if m.get("art_url")]
     if not candidates:
         return None
-
-    # Try a few times to find one with art that loads
-    for _ in range(5):
-        movie = random.choice(candidates)
-        art_url = _absolute_url(movie.art)
-        if art_url:
-            return {
-                "title": movie.title,
-                "year": movie.year,
-                "art_url": art_url,
-                "thumb_url": _absolute_url(movie.thumb),
-                "summary": movie.summary or "",
-            }
-    return None
+    movie = random.choice(candidates)
+    return {
+        "title": movie["title"],
+        "year": movie.get("year"),
+        "art_url": movie.get("art_url"),
+        "thumb_url": movie.get("thumb_url"),
+        "summary": movie.get("summary") or "",
+    }
 
 
 def force_refresh_cache() -> None:
-    global _movies_cache, _cache_age
+    global _movies_cache, _movie_dict_cache, _title_index, _cache_age
     _movies_cache = None
+    _movie_dict_cache = None
+    _title_index = {}
     _cache_age = 0

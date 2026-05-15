@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 
 import discord
 
-import config
 import tmdb
 import db
 import embeds
@@ -16,7 +15,8 @@ import embeds
 HORROR_GENRE_ID = 27
 LOOKBACK_MONTHS = 18
 DISCOVER_PAGES = 10
-PER_PAGE_SLEEP_SECONDS = 0.3
+FETCH_CONCURRENCY = 8
+PROVIDER_CHECK_CONCURRENCY = 8
 
 
 @dataclass
@@ -92,30 +92,32 @@ def _log(result: CheckResult, msg: str, *, warning: bool = False) -> None:
 
 async def _discover_horror_movies(result: CheckResult) -> list[dict]:
     cutoff = (datetime.now() - timedelta(days=LOOKBACK_MONTHS * 30)).strftime("%Y-%m-%d")
-    session = tmdb.get_session()
-    movies = []
+    movies: list[dict] = []
+    params = {
+        "with_genres": str(HORROR_GENRE_ID),
+        "primary_release_date.gte": cutoff,
+        "sort_by": "popularity.desc",
+    }
 
-    for page in range(1, DISCOVER_PAGES + 1):
-        params = {
-            "api_key": config.TMDB_API_KEY,
-            "with_genres": str(HORROR_GENRE_ID),
-            "primary_release_date.gte": cutoff,
-            "sort_by": "popularity.desc",
-            "page": page,
-            "include_adult": "false",
-        }
-        url = f"{tmdb.BASE_URL}/discover/movie"
-        async with session.get(url, params=params) as resp:
-            if resp.status != 200:
-                _log(result, f"  [warn] Discover page {page} returned {resp.status}, skipping", warning=True)
+    for start in range(1, DISCOVER_PAGES + 1, FETCH_CONCURRENCY):
+        pages = range(start, min(start + FETCH_CONCURRENCY, DISCOVER_PAGES + 1))
+        page_results = await asyncio.gather(
+            *(tmdb.discover_movies(page=page, **params) for page in pages),
+            return_exceptions=True,
+        )
+
+        stop_after_batch = False
+        for item in page_results:
+            if isinstance(item, Exception):
+                _log(result, f"  [warn] Discover page failed: {item}", warning=True)
                 continue
-            data = await resp.json()
-            page_results = data.get("results", [])
-            movies.extend(page_results)
-            if not page_results:
-                break
+            if not item:
+                stop_after_batch = True
+                continue
+            movies.extend(item)
 
-        await asyncio.sleep(PER_PAGE_SLEEP_SECONDS)
+        if stop_after_batch:
+            break
 
     return movies
 
@@ -129,15 +131,16 @@ def _build_candidate_pool(discover_movies: list[dict]) -> dict[int, str]:
     return candidates
 
 
-async def _check_movie_providers(
+async def _fetch_movie_provider_names(
     movie_id: int,
     title: str,
     result: CheckResult,
 ) -> tuple[list[str], bool]:
     """
-    Check current subscription providers for a movie.
+    Fetch current subscription provider names for a movie.
 
-    Returns (newly_seen_providers, currently_has_any_streaming).
+    Returns (provider_names, currently_has_any_streaming). Database reads/writes
+    happen later in the main loop so SQLite writes stay serialized.
     """
     try:
         providers = await tmdb.get_watch_providers(movie_id, region="US", force=True)
@@ -145,20 +148,12 @@ async def _check_movie_providers(
         _log(result, f"  [warn] Couldn't fetch providers for {title}: {e}", warning=True)
         return [], False
 
-    flatrate = providers.get("flatrate", [])
-    if not flatrate:
-        return [], False
-
-    newly_seen = []
-    for provider in flatrate:
-        provider_name = provider.get("provider_name", "")
-        if not provider_name:
-            continue
-        if not db.has_seen_provider(movie_id, provider_name):
-            newly_seen.append(provider_name)
-            db.record_provider(movie_id, provider_name)
-
-    return newly_seen, True
+    provider_names = [
+        provider.get("provider_name", "")
+        for provider in providers.get("flatrate", [])
+        if provider.get("provider_name")
+    ]
+    return provider_names, bool(provider_names)
 
 
 async def _post_announcement(
@@ -234,28 +229,42 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
     result.candidate_count = len(candidates)
     print(f"[tracker] Candidate pool: {result.candidate_count} films (Discover + tracked)")
 
-    for movie_id, title in candidates.items():
-        newly_seen, currently_streaming = await _check_movie_providers(movie_id, title, result)
+    candidate_items = list(candidates.items())
+    for start in range(0, len(candidate_items), PROVIDER_CHECK_CONCURRENCY):
+        batch = candidate_items[start:start + PROVIDER_CHECK_CONCURRENCY]
+        checks = await asyncio.gather(
+            *(_fetch_movie_provider_names(movie_id, title, result) for movie_id, title in batch),
+            return_exceptions=True,
+        )
 
-        # Skip everything during first-ever run (baseline only)
-        if result.is_first_run:
-            await asyncio.sleep(PER_PAGE_SLEEP_SECONDS)
-            continue
+        for (movie_id, title), check_result in zip(batch, checks):
+            if isinstance(check_result, Exception):
+                _log(result, f"  [warn] Provider check failed for {title}: {check_result}", warning=True)
+                continue
 
-        # First announce-aware run: silently mark currently-streaming films as announced
-        if is_first_announce_run and currently_streaming:
-            db.record_announced_movie(movie_id, title)
-            await asyncio.sleep(PER_PAGE_SLEEP_SECONDS)
-            continue
+            provider_names, currently_streaming = check_result
 
-        # Normal flow: only announce if it has new providers AND hasn't been announced before
-        if newly_seen:
-            if db.has_been_announced(movie_id):
-                result.skipped_already_announced += 1
-            else:
-                result.announcements.append((movie_id, title, newly_seen))
+            newly_seen: list[str] = []
+            for provider_name in provider_names:
+                if not db.has_seen_provider(movie_id, provider_name):
+                    newly_seen.append(provider_name)
+                    db.record_provider(movie_id, provider_name)
 
-        await asyncio.sleep(PER_PAGE_SLEEP_SECONDS)
+            # Skip everything during first-ever run (baseline only)
+            if result.is_first_run:
+                continue
+
+            # First announce-aware run: silently mark currently-streaming films as announced
+            if is_first_announce_run and currently_streaming:
+                db.record_announced_movie(movie_id, title)
+                continue
+
+            # Normal flow: only announce if it has new providers AND hasn't been announced before
+            if newly_seen:
+                if db.has_been_announced(movie_id):
+                    result.skipped_already_announced += 1
+                else:
+                    result.announcements.append((movie_id, title, newly_seen))
 
     print(f"[tracker] Scan complete. {len(result.announcements)} new announcement(s).")
     if result.skipped_already_announced > 0:

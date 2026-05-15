@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.5.1] — 2026-05-15
+
+### Changed
+- TMDB client hardened: `tmdb._get` now handles retry/backoff (429 with `Retry-After` honored, 5xx with exponential backoff, transient network errors retried twice), enforces a global concurrency semaphore (8 simultaneous requests), and de-dupes in-flight requests so simultaneous calls for the same movie share one network round-trip. TTL caching centralized in `_get` — per-function cache logic removed from `get_movie_details`, `get_movie_cast`, `get_watch_providers`, `get_movie_keywords`, and `get_movie_images`.
+- TMDB connection pool tuned: explicit `limit=32`, `limit_per_host=8`, DNS cache (5 min), `enable_cleanup_closed=True`. Timeout split into `sock_connect=10s` and `sock_read=20s`.
+- `picker._fetch_pool` and `tracker._discover_horror_movies` now fetch pages in batches of 8 concurrently instead of one-at-a-time with sleeps. Cold-cache refresh in picker drops from ~10s+ of sleeps to ~2-3s.
+- `tracker.run_check` runs 8 provider lookups concurrently per batch instead of sequentially. DB reads/writes still serialized per movie within the batch. Tracker no longer sleeps between movies — the global TMDB semaphore provides backpressure.
+- Plex library cache hardened: refresh lock prevents concurrent commands from kicking off duplicate library scans. Added a precomputed normalized-title index, making `find_movie_by_title` an O(1) dict lookup instead of an O(n) scan-and-normalize. Precomputed dict version of the library so stats/random commands don't rebuild dicts every call.
+- Plex library warms in the background at bot startup via a new `plex.warm_cache()` so the first `/rb9` or `/rent` after a restart doesn't pay the full library scan cost. Errors are logged but never block startup.
+- New `tmdb.discover_movies()` helper. `picker.py` and `tracker.py` no longer reach into `tmdb.get_session()` or craft raw aiohttp calls — they go through the helper and inherit the new semaphore/retry/dedup automatically. Removed now-unused `config` import from `picker.py` and `tracker.py`.
+
+### Notes
+- TMDB cache key format changed (from per-function prefixes like `details:{id}` to path+params like `tmdb:/movie/{id}?...`). Cache is in-memory only, so this only matters at deploy: the cache starts cold.
+- Watch providers TTL dropped from 6h to 30min. The tracker still passes `force=True` so its behavior is unchanged, but `/suck`, `/roll`, and the daily rec may refresh providers more often.
+- No behavior changes to any user-facing command. No database migrations.
+- One minor batching delta in picker/tracker discover pulls: when an empty page appears mid-batch, the loop now finishes the current batch before stopping instead of stopping immediately. TMDB doesn't have "holes" in discover results so this is academic.
+
+---
+
 ## [1.5.0] — 2026-05-15
 
 ### Added

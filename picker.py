@@ -8,14 +8,12 @@ import asyncio
 import random
 from datetime import datetime, timedelta
 
-import config
 import tmdb
-import db
 
 
 HORROR_GENRE_ID = 27
 DISCOVER_PAGES = 50  # 20 movies per page = 1000 candidates
-PER_PAGE_SLEEP_SECONDS = 0.2
+FETCH_CONCURRENCY = 8
 
 # When a runtime filter is set, cap how many candidates we check details for
 # before giving up — beats fetching details for 1000 films when the user picks
@@ -28,29 +26,39 @@ _POOL_TTL_SECONDS = 24 * 3600
 
 
 async def _fetch_pool() -> list[dict]:
-    """Fetch a broad pool of horror films from TMDB Discover."""
-    session = tmdb.get_session()
-    movies = []
-    for page in range(1, DISCOVER_PAGES + 1):
-        params = {
-            "api_key": config.TMDB_API_KEY,
-            "with_genres": str(HORROR_GENRE_ID),
-            "sort_by": "popularity.desc",
-            "page": page,
-            "include_adult": "false",
-            "vote_count.gte": 50,  # filter out obscure entries with no ratings
-        }
-        url = f"{tmdb.BASE_URL}/discover/movie"
-        async with session.get(url, params=params) as resp:
-            if resp.status != 200:
-                print(f"  [picker] page {page} returned {resp.status}, stopping")
-                break
-            data = await resp.json()
-            page_results = data.get("results", [])
+    """Fetch a broad pool of horror films from TMDB Discover.
+
+    This used to fetch 50 pages serially with a sleep after every page, which
+    made the first recommendation/guess after a cache miss feel slow. We now
+    fetch pages in small batches while tmdb.py enforces the global request cap.
+    """
+    movies: list[dict] = []
+    params = {
+        "with_genres": str(HORROR_GENRE_ID),
+        "sort_by": "popularity.desc",
+        "vote_count.gte": 50,  # filter out obscure entries with no ratings
+    }
+
+    for start in range(1, DISCOVER_PAGES + 1, FETCH_CONCURRENCY):
+        pages = range(start, min(start + FETCH_CONCURRENCY, DISCOVER_PAGES + 1))
+        results = await asyncio.gather(
+            *(tmdb.discover_movies(page=page, **params) for page in pages),
+            return_exceptions=True,
+        )
+
+        stop_after_batch = False
+        for page_results in results:
+            if isinstance(page_results, Exception):
+                print(f"  [picker] discover page failed: {page_results}")
+                continue
             if not page_results:
-                break
+                stop_after_batch = True
+                continue
             movies.extend(page_results)
-        await asyncio.sleep(PER_PAGE_SLEEP_SECONDS)
+
+        if stop_after_batch:
+            break
+
     return movies
 
 
