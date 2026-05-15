@@ -1,23 +1,30 @@
-﻿# Secrets — NEVER commit these
+﻿# secrets - never commit these
 .env
+.env.*
+!.env.example
 
-# Persistent state and logs (machine-specific)
+# persistent state and logs
 data/
+*.db
+*.sqlite
+*.sqlite3
+*.log
 
-# Virtual environment (regenerate per machine)
+# virtual environment
 venv/
+.venv/
 
-# Python compiled files
+# python compiled files
 __pycache__/
 *.pyc
 *.pyo
 
-# IDE/editor files
+# ide/editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS junk
+# os junk
 .DS_Store
 Thumbs.db
