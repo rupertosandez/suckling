@@ -221,22 +221,10 @@ async def post_daily_recommendation(bot: discord.Client) -> bool:
         print(f"[daily-rec] TMDB error: {e}")
         return False
 
-    # Check Plex availability to optionally show rent button
-    release_date = details.get("release_date", "")
-    plex_year = int(release_date[:4]) if release_date[:4].isdigit() else None
-    plex_available = await plex.check_availability(details.get("title"), year=plex_year)
-
     embed = embeds.daily_rec_embed(details, providers)
-    rent_view = None
-    if plex_available:
-        rent_view = views.EmbedRentView(
-            bot=bot,
-            title=details.get("title", ""),
-            year=plex_year,
-        )
 
     try:
-        await channel.send(embed=embed, view=rent_view)
+        await channel.send(embed=embed)
         db.record_daily_rec(movie["id"], details.get("title", "Unknown"))
         print(f"[daily-rec] Posted: {details.get('title')}")
         return True
@@ -286,15 +274,7 @@ async def suck(interaction: discord.Interaction, title: str, year: int | None = 
             details, providers, in_theaters=False, plex_available=plex_available
         )
 
-        rent_view = None
-        if plex_available:
-            rent_view = views.EmbedRentView(
-                bot=bot,
-                title=details.get("title", ""),
-                year=plex_year,
-            )
-
-        await interaction.followup.send(embed=embed, view=rent_view)
+        await interaction.followup.send(embed=embed)
     else:
         view = views.MovieSelectView(results)
         await interaction.followup.send(
@@ -486,20 +466,8 @@ async def roll(
         await interaction.followup.send(f"Sorry, TMDB lookup failed: {e}")
         return
 
-    release_date = details.get("release_date", "")
-    plex_year = int(release_date[:4]) if release_date[:4].isdigit() else None
-    plex_available = await plex.check_availability(details.get("title"), year=plex_year)
-
     embed = embeds.roll_embed(details, providers)
-    rent_view = None
-    if plex_available:
-        rent_view = views.EmbedRentView(
-            bot=bot,
-            title=details.get("title", ""),
-            year=plex_year,
-        )
-
-    await interaction.followup.send(embed=embed, view=rent_view)
+    await interaction.followup.send(embed=embed)
 
 
 # ---------- guessing game ----------
@@ -940,8 +908,7 @@ async def rb9_pick(interaction: discord.Interaction):
         return
 
     embed = embeds.rb9_pick_embed(movie)
-    rent_view = views.EmbedRentView(bot=bot, title=movie["title"], year=movie.get("year"), plex_movie=movie)
-    await interaction.followup.send(embed=embed, view=rent_view)
+    await interaction.followup.send(embed=embed)
 
 
 @bot.tree.command(name="rb9stats", description="Overall stats for the rb9 library")
@@ -1064,15 +1031,7 @@ async def rb9randomscene(interaction: discord.Interaction):
         await interaction.followup.send("📀 No films with art data found.")
         return
     embed = embeds.rb9_random_scene_embed(scene)
-    # Scene dict has title/year but not rating_key — look up plex movie for the rent button
-    plex_movie = await plex.find_movie_by_title(scene["title"], year=scene.get("year"))
-    rent_view = views.EmbedRentView(
-        bot=bot,
-        title=scene["title"],
-        year=scene.get("year"),
-        plex_movie=plex_movie,
-    ) if plex_movie else None
-    await interaction.followup.send(embed=embed, view=rent_view)
+    await interaction.followup.send(embed=embed)
 
 
 # ---------- rentals ----------
