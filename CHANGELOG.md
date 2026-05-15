@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] — 2026-05-15
+
+### Added
+- Startup update announcement: when the bot launches on a newly shipped version, it posts an embed to the configured update channel and records the announced version in sqlite so normal restarts do not repost it.
+
+---
+
 ## [1.5.1] — 2026-05-15
 
 ### Changed

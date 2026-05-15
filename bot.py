@@ -48,6 +48,40 @@ scheduler = AsyncIOScheduler()
 
 
 ROUND_DURATION_SECONDS = 60
+UPDATE_ANNOUNCEMENT_CHANNEL_ID = 1446966452669255761
+SONICKLES_USER_ID = 239311590975995904
+
+
+async def _post_update_announcement_once() -> None:
+    """Post a startup update announcement once per shipped version."""
+    current_version = version.VERSION
+    if db.get_last_update_announced_version() == current_version:
+        return
+
+    channel = bot.get_channel(UPDATE_ANNOUNCEMENT_CHANNEL_ID)
+    if channel is None:
+        try:
+            channel = await bot.fetch_channel(UPDATE_ANNOUNCEMENT_CHANNEL_ID)
+        except (discord.NotFound, discord.Forbidden) as e:
+            print(f"[startup-update] Couldn't access channel: {e}")
+            return
+
+    mention = f"<@{SONICKLES_USER_ID}>"
+    embed = discord.Embed(
+        description=f"yo {mention} check me out! i've been updated!!! v{current_version} 💪",
+        color=0x8B0000,
+    )
+
+    try:
+        await channel.send(
+            content=mention,
+            embed=embed,
+            allowed_mentions=discord.AllowedMentions(users=True),
+        )
+        db.set_last_update_announced_version(current_version)
+        print(f"[startup-update] Posted update announcement for v{current_version}")
+    except discord.HTTPException as e:
+        print(f"[startup-update] Failed to post update announcement: {e}")
 
 
 async def _scheduled_check():
@@ -121,6 +155,7 @@ async def on_ready():
             print(f"[plex] Warm cache failed: {e}")
 
     asyncio.create_task(_warm_plex_cache())
+    asyncio.create_task(_post_update_announcement_once())
 
 
 @bot.event

@@ -12,6 +12,7 @@ DAILY_REC_ENABLED_KEY = "daily_rec_enabled"
 REVIEWS_CHANNEL_KEY = "reviews_channel_id"
 RENTAL_TAG_KEY = "rental_tag_id"
 RECOMMENDATION_TAG_KEY = "recommendation_tag_id"
+LAST_UPDATE_ANNOUNCED_VERSION_KEY = "last_update_announced_version"
 
 
 def _utc_now_iso() -> str:
@@ -186,6 +187,14 @@ def get_recommendation_tag_id() -> int | None:
 
 def set_recommendation_tag_id(tag_id: int) -> None:
     set_setting(RECOMMENDATION_TAG_KEY, str(tag_id))
+
+
+def get_last_update_announced_version() -> str | None:
+    return get_setting(LAST_UPDATE_ANNOUNCED_VERSION_KEY)
+
+
+def set_last_update_announced_version(bot_version: str) -> None:
+    set_setting(LAST_UPDATE_ANNOUNCED_VERSION_KEY, bot_version)
 
 
 # ---------- tracked_movies ----------
