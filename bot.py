@@ -2,7 +2,9 @@ import asyncio
 import io
 import os
 import random
+import signal
 import sys
+import threading
 from datetime import datetime, timezone, timedelta
 
 import discord
@@ -47,11 +49,77 @@ class SucklingBot(commands.Bot):
 
 bot = SucklingBot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
+_shutdown_started = False
+_bot_loop: asyncio.AbstractEventLoop | None = None
 
 
 ROUND_DURATION_SECONDS = 60
 UPDATE_ANNOUNCEMENT_CHANNEL_ID = 1446966452669255761
-SONICKLES_USER_ID = 239311590975995904
+
+
+async def _shutdown_from_signal(signal_name: str) -> None:
+    """Close the bot cleanly when the launcher asks the process to stop."""
+    global _shutdown_started
+    if _shutdown_started:
+        return
+    _shutdown_started = True
+
+    print(f"[shutdown] received {signal_name}, closing sucklingbot")
+
+    try:
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
+    except Exception as e:
+        logger.log_exception("signal_scheduler_shutdown", e)
+
+    try:
+        await bot.close()
+    finally:
+        print("[shutdown] closed sucklingbot")
+        sys.exit(0)
+
+
+def _request_shutdown(reason: str) -> None:
+    loop = _bot_loop
+    if loop is None or loop.is_closed():
+        return
+
+    loop.call_soon_threadsafe(
+        lambda: asyncio.create_task(_shutdown_from_signal(reason))
+    )
+
+
+def _handle_shutdown_signal(signum, _frame) -> None:
+    signal_name = signal.Signals(signum).name
+    _request_shutdown(signal_name)
+
+
+signal.signal(signal.SIGTERM, _handle_shutdown_signal)
+if hasattr(signal, "SIGBREAK"):
+    signal.signal(signal.SIGBREAK, _handle_shutdown_signal)
+
+
+def _start_launcher_stdin_listener() -> None:
+    """Listen for the desktop launcher's stdin shutdown request."""
+
+    def _listen() -> None:
+        try:
+            for line in sys.stdin:
+                if line.strip().lower() == "shutdown":
+                    _request_shutdown("launcher stdin")
+                    return
+        except Exception as e:
+            logger.log_exception("launcher_stdin_listener", e)
+
+    if sys.stdin is None or sys.stdin.closed:
+        return
+
+    thread = threading.Thread(
+        target=_listen,
+        name="launcher-stdin-listener",
+        daemon=True,
+    )
+    thread.start()
 
 
 async def _post_update_announcement_once() -> None:
@@ -68,21 +136,16 @@ async def _post_update_announcement_once() -> None:
             print(f"[startup-update] Couldn't access channel: {e}")
             return
 
-    mention = f"<@{SONICKLES_USER_ID}>"
     embed = discord.Embed(
         description=(
-            f"yo {mention} check me out! i've been updated!!! v{current_version} 💪\n\n"
+            f"yo check me out! i've been updated!!! v{current_version} 💪\n\n"
             "[ view changelog ](https://rupertosandez.github.io/sucklingsite/changelog/)"
         ),
         color=0x8B0000,
     )
 
     try:
-        await channel.send(
-            content=mention,
-            embed=embed,
-            allowed_mentions=discord.AllowedMentions(users=True),
-        )
+        await channel.send(embed=embed)
         db.set_last_update_announced_version(current_version)
         print(f"[startup-update] Posted update announcement for v{current_version}")
     except discord.HTTPException as e:
@@ -145,6 +208,9 @@ async def _scheduled_rental_check():
 
 @bot.event
 async def on_ready():
+    global _bot_loop
+    _bot_loop = asyncio.get_running_loop()
+
     print(f"Logged in as {bot.user} (id: {bot.user.id})")
     guild = discord.Object(id=config.GUILD_ID)
     try:
@@ -1607,4 +1673,5 @@ if __name__ == "__main__":
         print(f"[trivia] Loaded {total} entries ({breakdown})")
     else:
         print("[trivia] No trivia content loaded — /play will be unavailable")
+    _start_launcher_stdin_listener()
     bot.run(config.DISCORD_TOKEN)

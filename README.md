@@ -89,6 +89,22 @@ python bot.py
 
 you should see startup output confirming the version, database init, and slash command sync.
 
+## desktop launcher
+
+if you'd rather not run the bot from a terminal, there's a tray app that wraps it.
+
+```bash
+venv\Scripts\python.exe launcher.py
+```
+
+or double-click `launch.vbs` to start it without a terminal window. `launch.bat` is also available when you want a visible troubleshooting terminal.
+
+the launcher lives in the system tray and lets you start, stop, and restart the bot, view its log, and apply updates from github with one click.
+
+right-click the tray icon for the menu. the launcher checks for updates hourly and on startup; when one is available, the menu shows the version diff and an `update and restart` option that pulls from main, installs any new requirements, and restarts the bot.
+
+local uncommitted changes block auto-update - the launcher will tell you to commit or stash first.
+
 in discord, configure the auto-posting channels (admin only):
 
 ```
@@ -134,6 +150,10 @@ sucklingbot/
 ├── plex.py             plex connection, random pick, library stats
 ├── cache.py            in-memory ttl cache
 ├── logger.py           file logging setup
+├── launcher.py         desktop launcher entry point
+├── launcher/           tray app, subprocess manager, updates, state
+├── launch.vbs          no-console launcher for windows
+├── launch.bat          visible terminal launcher for troubleshooting
 ├── requirements.txt    python dependencies
 ├── COMMANDS.md         user-facing command reference
 ├── CHANGELOG.md        release history
@@ -218,7 +238,9 @@ the current version is in [`version.py`](version.py) and is logged on startup.
 
 ## updating
 
-if you're running the bot from this repo, updates flow through git:
+if you're running the launcher, right-click the tray icon and choose `check for updates now` or use the `update and restart` option when it appears.
+
+if you're running the bot manually from this repo, updates flow through git:
 
 ```bash
 # on the live machine

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] - 2026-05-17
+
+### Added
+
+- desktop launcher (`launcher.py` and `launcher/` package) - windows system tray app that wraps the bot with start, stop, restart, live logs, hourly github update checks, one-click `update and restart`, and opt-in launch on startup.
+- `launch.vbs` for double-click launching without a terminal window, plus `launch.bat` for troubleshooting with the venv activated.
+- generated tray icon variants for running, update available, and crashed states.
+
+### Changed
+
+- bot shutdown now handles launcher stop signals cleanly so the tray app can stop the bot without a hard kill.
+
+### Notes
+
+- launcher requires `pystray` and `plyer`.
+- launcher state lives in `data/launcher.json`, which is ignored by git.
+- the launcher is windows-first. other platforms are not the target for this release.
+
 ## [1.8.0] - 2026-05-17
 
 ### Added
