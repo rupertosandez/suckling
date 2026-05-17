@@ -1,6 +1,8 @@
 import asyncio
 import io
+import os
 import random
+import sys
 from datetime import datetime, timezone, timedelta
 
 import discord
@@ -107,6 +109,28 @@ async def _scheduled_daily_rec():
     except Exception as e:
         logger.log_exception("scheduled_daily_rec", e)
         print(f"[scheduler] Daily recommendation failed: {e}")
+
+
+async def _restart_process(delay_seconds: float = 1.0) -> None:
+    """Restart the bot by replacing the current process with the same Python invocation."""
+    await asyncio.sleep(delay_seconds)
+    print("[restart] Restart requested from Discord")
+
+    try:
+        scheduler.shutdown(wait=False)
+    except Exception as e:
+        logger.log_exception("restart_scheduler_shutdown", e)
+
+    try:
+        await tmdb.close_session()
+    except Exception as e:
+        logger.log_exception("restart_tmdb_close", e)
+
+    try:
+        os.execv(sys.executable, [sys.executable, *sys.argv])
+    except Exception as e:
+        logger.log_exception("restart_exec", e)
+        print(f"[restart] Failed to exec replacement process: {e}")
 
 
 async def _scheduled_rental_check():
@@ -1327,6 +1351,19 @@ async def version_command(interaction: discord.Interaction):
         f"🎬 **sucklingbot** v{version.VERSION}",
         ephemeral=True,
     )
+
+
+@bot.tree.command(
+    name="restart",
+    description="Restart the bot process (admin only)",
+)
+@app_commands.default_permissions(manage_guild=True)
+async def restart_command(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        "Restarting sucklingbot...",
+        ephemeral=True,
+    )
+    asyncio.create_task(_restart_process())
 
 
 @bot.tree.command(

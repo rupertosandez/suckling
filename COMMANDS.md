@@ -279,6 +279,9 @@ manually trigger today's daily recommendation post.
 ### `/cachestats [clear]`
 show the size of the in-memory cache. pass `clear:True` to wipe both the tmdb cache and the random-pick pool (useful if data feels stale).
 
+### `/restart`
+restart the bot process. useful after pulling updates or clearing a stuck runtime state.
+
 ### `/version`
 show the bot's current version.
 
