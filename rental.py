@@ -15,6 +15,8 @@ import logger
 
 
 RENTAL_DURATION_HOURS = 48
+RENTAL_EXTENSION_HOURS = 24
+MAX_RENTAL_EXTENSIONS = 1
 LATE_FEE_PER_DAY = 1.0  # dollars
 
 
@@ -41,6 +43,54 @@ def compute_late_fee(due_at_iso: str, returned_at_iso: str) -> float:
     delta = returned - due
     days_late = int(delta.total_seconds() // 86400) + 1  # ceil: any part of a day counts
     return days_late * LATE_FEE_PER_DAY
+
+
+def compute_extended_due_at(due_at_iso: str) -> datetime | None:
+    try:
+        current_due = datetime.fromisoformat(due_at_iso)
+    except (ValueError, TypeError):
+        return None
+
+    now = datetime.now(timezone.utc)
+    if current_due.tzinfo is None:
+        current_due = current_due.replace(tzinfo=timezone.utc)
+    return max(current_due, now) + timedelta(hours=RENTAL_EXTENSION_HOURS)
+
+
+async def extend_rental(
+    bot: discord.Client,
+    user_id: str,
+    rental_id: int,
+) -> tuple[bool, str]:
+    rental = db.get_rental_by_id(rental_id)
+    if not rental or rental.get("status") != "active":
+        return False, "that rental is no longer active."
+    if str(rental.get("user_id")) != str(user_id):
+        return False, "only the person renting this film can extend it."
+    if rental.get("extensions_used", 0) >= MAX_RENTAL_EXTENSIONS:
+        return False, "you already used the extension for this rental."
+
+    new_due = compute_extended_due_at(rental.get("due_at", ""))
+    if new_due is None:
+        return False, "i couldn't read the current due date for that rental."
+
+    if not db.extend_rental_due_at(
+        rental_id=rental_id,
+        due_at=new_due.isoformat(),
+        max_extensions=MAX_RENTAL_EXTENSIONS,
+    ):
+        return False, "that rental could not be extended."
+
+    updated = db.get_rental_by_id(rental_id)
+    if updated:
+        await edit_thread_due_at(bot, updated)
+
+    due_ts = int(new_due.timestamp())
+    return (
+        True,
+        f"extended **{rental['title']}** by {RENTAL_EXTENSION_HOURS} hours. "
+        f"new due time: <t:{due_ts}:F> (<t:{due_ts}:R>).",
+    )
 
 
 # ---------- forum thread management ----------
@@ -188,13 +238,100 @@ async def edit_thread_cancelled(
         print(f"[rental] Failed to edit thread after cancel: {e}")
 
 
+async def edit_thread_due_at(
+    bot: discord.Client,
+    rental: dict,
+) -> None:
+    """Refresh the forum thread opener after a rental due date changes."""
+    thread_id = rental.get("thread_id")
+    message_id = rental.get("message_id")
+    if not thread_id or not message_id:
+        return
+
+    try:
+        thread = bot.get_channel(int(thread_id))
+        if thread is None:
+            thread = await bot.fetch_channel(int(thread_id))
+
+        msg = await thread.fetch_message(int(message_id))
+        due_at = datetime.fromisoformat(rental["due_at"])
+        due_ts = int(due_at.timestamp())
+        if msg.embeds:
+            embed = discord.Embed.from_dict(msg.embeds[0].to_dict())
+            existing_fields = [
+                field
+                for field in embed.fields
+                if field.name.lower() not in ("due back", "extension")
+            ]
+            embed.clear_fields()
+            for field in existing_fields:
+                embed.add_field(
+                    name=field.name,
+                    value=field.value,
+                    inline=field.inline,
+                )
+            embed.add_field(
+                name="due back",
+                value=f"<t:{due_ts}:F> (<t:{due_ts}:R>)",
+                inline=False,
+            )
+        else:
+            movie = {
+                "title": rental["title"],
+                "year": rental.get("year"),
+                "summary": "",
+                "thumb_url": rental.get("poster_url"),
+            }
+            embed = embeds.rental_confirmed_embed(movie, rental["user_name"], due_at)
+        if rental.get("extensions_used", 0):
+            embed.add_field(
+                name="extension",
+                value=f"+{RENTAL_EXTENSION_HOURS} hours",
+                inline=True,
+            )
+        await msg.edit(embed=embed)
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException, ValueError) as e:
+        print(f"[rental] Failed to edit thread after extension: {e}")
+
+
 # ---------- DM helpers ----------
 
-async def _send_dm(bot: discord.Client, user_id: str, content: str) -> None:
+class RentalExtensionView(discord.ui.View):
+    """One-click 24-hour rental extension for reminder DMs."""
+
+    def __init__(self, rental_id: int, user_id: str):
+        super().__init__(timeout=7 * 24 * 3600)
+        self.rental_id = rental_id
+        self.user_id = str(user_id)
+
+    @discord.ui.button(label="extend 24h", style=discord.ButtonStyle.primary)
+    async def extend_button(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
+    ):
+        ok, message = await extend_rental(
+            bot=interaction.client,
+            user_id=str(interaction.user.id),
+            rental_id=self.rental_id,
+        )
+        button.disabled = True
+        await interaction.response.edit_message(view=self)
+        await interaction.followup.send(message)
+        if ok:
+            self.stop()
+
+
+async def _send_dm(
+    bot: discord.Client,
+    user_id: str,
+    content: str,
+    view: discord.ui.View | None = None,
+) -> None:
     """Send a DM to a user. Silently swallows errors (DMs disabled, etc.)."""
     try:
         user = await bot.fetch_user(int(user_id))
-        await user.send(content)
+        await user.send(content, view=view)
     except (discord.Forbidden, discord.HTTPException, discord.NotFound):
         pass
 
@@ -247,11 +384,25 @@ async def check_reminders(bot: discord.Client) -> None:
             due = datetime.fromisoformat(r["due_at"])
             remaining_seconds = (due - now).total_seconds()
             hours_left = max(1, int(remaining_seconds // 3600))
+            can_extend = r.get("extensions_used", 0) < MAX_RENTAL_EXTENSIONS
+            extension_note = ""
+            extension_view = None
+            if can_extend:
+                extension_note = (
+                    f"\n\nneed more time? use the button below for a one-time "
+                    f"{RENTAL_EXTENSION_HOURS}-hour extension."
+                )
+                extension_view = RentalExtensionView(
+                    rental_id=r["id"],
+                    user_id=r["user_id"],
+                )
             await _send_dm(
                 bot,
                 r["user_id"],
                 f"⏰ heads up - **{r['title']}** is due in about **{hours_left} hour(s)**.\n"
-                f"watch it and use `/return` before the late fees kick in!",
+                f"watch it and use `/return` before the late fees kick in!"
+                f"{extension_note}",
+                view=extension_view,
             )
             db.mark_reminder_sent(r["id"])
         except Exception as e:

@@ -100,9 +100,30 @@ def init_db() -> None:
                 recommended      INTEGER,
                 late_fee_dollars REAL NOT NULL DEFAULT 0,
                 reminder_sent    INTEGER NOT NULL DEFAULT 0,
-                overdue_notified INTEGER NOT NULL DEFAULT 0
+                overdue_notified INTEGER NOT NULL DEFAULT 0,
+                extensions_used  INTEGER NOT NULL DEFAULT 0
             );
         """)
+        _ensure_column(
+            conn,
+            "rentals",
+            "extensions_used",
+            "INTEGER NOT NULL DEFAULT 0",
+        )
+
+
+def _ensure_column(
+    conn: sqlite3.Connection,
+    table: str,
+    column: str,
+    definition: str,
+) -> None:
+    existing = {
+        row["name"]
+        for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+    }
+    if column not in existing:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 # ---------- config ----------
@@ -423,6 +444,21 @@ def mark_rental_returned(
             (returned_at, rating, thoughts, 1 if recommended else 0,
              late_fee_dollars, rental_id),
         )
+
+
+def extend_rental_due_at(
+    rental_id: int,
+    due_at: str,
+    max_extensions: int = 1,
+) -> bool:
+    with _connect() as conn:
+        cursor = conn.execute(
+            "UPDATE rentals SET due_at = ?, extensions_used = extensions_used + 1, "
+            "reminder_sent = 0, overdue_notified = 0 "
+            "WHERE id = ? AND status = 'active' AND extensions_used < ?",
+            (due_at, rental_id, max_extensions),
+        )
+        return cursor.rowcount > 0
 
 
 def cancel_rental_by_id(rental_id: int) -> None:

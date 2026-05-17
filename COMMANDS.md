@@ -115,6 +115,13 @@ ephemeral — only you see it.
 
 ---
 
+### `/extend`
+extend your active rental by 24 hours. each rental can be extended once.
+
+the 12-hour reminder DM also includes an **extend 24h** button.
+
+---
+
 ### `/latefees`
 leaderboard of accumulated late fees. shows total fees, total rentals, and late return count per person.
 
@@ -254,6 +261,9 @@ set the forum channel where rental reviews post. the bot needs **create public t
 
 ### `/cancelrental @user [reason]`
 cancel a user's active rental. no late fee applied. edits the forum thread to a grey "cancelled" state and DMs the user. optionally include a reason — it shows in the thread and the DM.
+
+### `/assignrental @user <title> [year]`
+assign an rb9 library rental to a user. creates the rental record, opens the review forum thread, and DMs the user with the due date.
 
 ### `/setannouncements <channel>`
 set the channel where streaming announcements post. the bot needs send-message and embed-link permissions in the chosen channel.

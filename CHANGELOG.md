@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-05-17
+
+### Added
+
+- `/extend` lets users extend an active rental by 24 hours once per rental.
+- Rental reminder DMs now include an **extend 24h** button.
+- Admin-only `/assignrental` command assigns an rb9 library film to a user, creates the review forum thread, and DMs the user their due date.
+
 ## [1.7.0] - 2026-05-16
 
 ### Added

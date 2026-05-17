@@ -1223,6 +1223,26 @@ async def myrental(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
+@bot.tree.command(name="extend", description="extend your active rental by 24 hours")
+async def extend(interaction: discord.Interaction):
+    user_id = str(interaction.user.id)
+    rental = db.get_active_rental(user_id)
+    if not rental:
+        await interaction.response.send_message(
+            "you don't have an active rental to extend.",
+            ephemeral=True,
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    _, message = await rental_module.extend_rental(
+        bot=bot,
+        user_id=user_id,
+        rental_id=rental["id"],
+    )
+    await interaction.followup.send(message, ephemeral=True)
+
+
 @bot.tree.command(name="latefees", description="see who owes the store money")
 async def latefees(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -1337,6 +1357,98 @@ async def cancel_rental(
 
     await interaction.followup.send(
         f"✅ cancelled **{rental['title']}** for **{user}**.{reason_str}",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="assignrental",
+    description="assign an rb9 rental to a user (admin only)",
+)
+@app_commands.describe(
+    user="the user to assign the rental to",
+    title="the exact rb9 library title",
+    year="optional release year to disambiguate",
+)
+@app_commands.default_permissions(manage_guild=True)
+async def assign_rental(
+    interaction: discord.Interaction,
+    user: discord.Member,
+    title: str,
+    year: int | None = None,
+):
+    await interaction.response.defer(ephemeral=True)
+
+    existing = db.get_active_rental(str(user.id))
+    if existing:
+        await interaction.followup.send(
+            f"**{user}** already has **{existing['title']}** checked out.",
+            ephemeral=True,
+        )
+        return
+
+    if not db.get_reviews_channel_id():
+        await interaction.followup.send(
+            "the reviews forum hasn't been configured yet. run `/setreviews` first.",
+            ephemeral=True,
+        )
+        return
+
+    try:
+        movie = await plex.find_movie_by_title(title, year=year)
+    except plex.PlexError as e:
+        await interaction.followup.send(f"rb9 error: {e}", ephemeral=True)
+        return
+
+    if not movie:
+        year_note = f" ({year})" if year else ""
+        await interaction.followup.send(
+            f"couldn't find **{title}{year_note}** in the rb9 library.",
+            ephemeral=True,
+        )
+        return
+
+    now = datetime.now(timezone.utc)
+    due_at = rental_module.compute_due_at(now)
+    rental_id = db.create_rental(
+        user_id=str(user.id),
+        user_name=str(user),
+        plex_key=movie["rating_key"],
+        title=movie["title"],
+        year=movie.get("year"),
+        poster_url=movie.get("thumb_url"),
+        rented_at=now.isoformat(),
+        due_at=due_at.isoformat(),
+        rerolls_used=0,
+        initiated_by="admin",
+    )
+
+    thread_ok = await rental_module.create_forum_thread(
+        bot=bot,
+        rental_id=rental_id,
+        movie=movie,
+        user_tag=str(user),
+        due_at=due_at,
+    )
+
+    due_ts = int(due_at.timestamp())
+    thread_note = ""
+    if thread_ok:
+        rental = db.get_rental_by_id(rental_id)
+        if rental and rental.get("thread_id"):
+            thread_note = f" thread: <#{rental['thread_id']}>."
+
+    await rental_module._send_dm(
+        bot,
+        str(user.id),
+        f"you've been assigned **{movie['title']} ({movie.get('year', '?')})** "
+        f"from the rb9 library. it's due <t:{due_ts}:F> (<t:{due_ts}:R>). "
+        "use `/return` when you're done.",
+    )
+
+    await interaction.followup.send(
+        f"assigned **{movie['title']} ({movie.get('year', '?')})** to **{user}**. "
+        f"due <t:{due_ts}:R>.{thread_note}",
         ephemeral=True,
     )
 

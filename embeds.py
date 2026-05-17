@@ -688,6 +688,10 @@ def rental_status_embed(rental: dict) -> discord.Embed:
     if rerolls:
         embed.add_field(name="rerolls used", value=str(rerolls), inline=True)
 
+    extensions = rental.get("extensions_used", 0)
+    if extensions:
+        embed.add_field(name="extensions used", value=str(extensions), inline=True)
+
     thread_id = rental.get("thread_id")
     if thread_id:
         embed.add_field(

@@ -13,6 +13,7 @@ built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 - `/rb9` + 9 stat commands - pick from the return by 9 library, plus stats (longest, shortest, oldest, decade breakdown, genres, etc.)
 - `/rent` - rent a random library film for 48 hours, with up to 2 rerolls. past rentals excluded forever
 - `/return` - return your rental and post a review to a configurable forum channel, with late-fee tracking
+- `/extend` - one-time 24-hour rental extension, also available from reminder DMs
 - `/latefees` - leaderboard of accumulated late fees
 - `/rentalstats` - personal rental history
 - `/track` - community watchlist with first-time streaming alerts
@@ -173,7 +174,7 @@ sucklingbot/
 | `daily_recs`         | past daily picks (powers the 30-day no-repeat window)                  |
 | `guess_scores`       | leaderboard for poster/still guessing                                  |
 | `six_scores`         | leaderboard for six degrees game                                       |
-| `rentals`            | full rental lifecycle: status, plex key snapshot, thread IDs, rating, late fee, notification flags |
+| `rentals`            | full rental lifecycle: status, plex key snapshot, thread IDs, rating, late fee, extension count, notification flags |
 
 ---
 
