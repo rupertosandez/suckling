@@ -101,7 +101,7 @@ or double-click `launch.vbs` to start it without a terminal window. `launch.bat`
 
 the launcher lives in the system tray and lets you start, stop, and restart the bot, view its log, and apply updates from github with one click.
 
-right-click the tray icon for the menu. the launcher checks for updates hourly and on startup; when one is available, the menu shows the version diff and an `update and restart` option that pulls from main, installs any new requirements, and restarts the bot.
+right-click the tray icon for the menu. the launcher checks for updates daily and on startup; when one is available, the menu shows the version diff and an `update and restart` option that pulls from main, installs any new requirements, and restarts the bot.
 
 local uncommitted changes block auto-update - the launcher will tell you to commit or stash first.
 

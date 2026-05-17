@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -10,6 +11,7 @@ from typing import Callable
 
 
 LogCallback = Callable[[str], None]
+NO_WINDOW_FLAGS = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 
 class UpdateError(Exception):
@@ -148,6 +150,7 @@ class Updater:
                 capture_output=True,
                 timeout=timeout,
                 check=False,
+                creationflags=NO_WINDOW_FLAGS,
             )
         except subprocess.TimeoutExpired as exc:
             return subprocess.CompletedProcess(
@@ -167,6 +170,7 @@ class Updater:
             text=True,
             encoding="utf-8",
             errors="replace",
+            creationflags=NO_WINDOW_FLAGS,
         )
 
         output: list[str] = []

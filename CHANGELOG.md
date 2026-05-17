@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- desktop launcher (`launcher.py` and `launcher/` package) - windows system tray app that wraps the bot with start, stop, restart, live logs, hourly github update checks, one-click `update and restart`, and opt-in launch on startup.
+- desktop launcher (`launcher.py` and `launcher/` package) - windows system tray app that wraps the bot with start, stop, restart, live logs, daily github update checks, one-click `update and restart`, and opt-in launch on startup.
 - `launch.vbs` for double-click launching without a terminal window, plus `launch.bat` for troubleshooting with the venv activated.
 - generated tray icon variants for running, update available, and crashed states.
 

@@ -14,7 +14,7 @@ import version
 class LauncherState:
     auto_restart_on_crash: bool = True
     launch_on_startup: bool = False
-    check_interval_minutes: int = 60
+    check_interval_minutes: int = 1440
     last_seen_version: str = version.VERSION
     last_update_check_iso: str | None = None
 
@@ -40,7 +40,9 @@ class LauncherState:
         fields = {
             "auto_restart_on_crash": bool(raw.get("auto_restart_on_crash", True)),
             "launch_on_startup": bool(raw.get("launch_on_startup", False)),
-            "check_interval_minutes": int(raw.get("check_interval_minutes", 60)),
+            "check_interval_minutes": _normalize_check_interval(
+                raw.get("check_interval_minutes", 1440)
+            ),
             "last_seen_version": str(raw.get("last_seen_version", version.VERSION)),
             "last_update_check_iso": raw.get("last_update_check_iso"),
             "_path": path,
@@ -69,3 +71,13 @@ class LauncherState:
     def set_last_seen_version(self, bot_version: str) -> None:
         self.last_seen_version = bot_version
         self.save()
+
+
+def _normalize_check_interval(value) -> int:
+    try:
+        minutes = int(value)
+    except (TypeError, ValueError):
+        return 1440
+    if minutes == 60:
+        return 1440
+    return max(1, minutes)
