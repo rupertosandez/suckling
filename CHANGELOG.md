@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-05-19
+
+### Added
+
+- `/botstatus` - admin dashboard for version, uptime, latency, cache size, configured channels, auto-posting toggles, tracked films, linked Letterboxd accounts, active rentals, overdue rentals, and setup warnings.
+- `/lblinked [page]` - admin list of linked Letterboxd accounts with Discord member, Letterboxd profile, and linked date.
+
+### Changed
+
+- Letterboxd activity posting now only posts recent RSS activity from the last 60 minutes since the previous activity run, preventing old unseen entries from flooding the channel.
+
 ## [2.1.0] - 2026-05-19
 
 ### Added

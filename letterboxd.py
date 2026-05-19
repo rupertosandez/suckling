@@ -12,6 +12,7 @@ HTTP requests reuse a shared aiohttp session so feed checks keep connections war
 
 import re
 import xml.etree.ElementTree as ET
+from email.utils import parsedate_to_datetime
 from html import unescape
 
 import aiohttp
@@ -120,6 +121,19 @@ def _rss_channel(xml_text: str) -> ET.Element | None:
     return root.find("channel")
 
 
+def _rss_datetime(item: ET.Element, tag_name: str) -> str | None:
+    el = item.find(tag_name)
+    if el is None or not el.text:
+        return None
+    try:
+        parsed = parsedate_to_datetime(el.text.strip())
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        return parsed.isoformat()
+    return parsed.astimezone().isoformat()
+
+
 def _html_attr(tag: str, attr_name: str) -> str | None:
     match = re.search(rf'{attr_name}="([^"]*)"', tag)
     return unescape(match.group(1)).strip() if match else None
@@ -182,6 +196,7 @@ def _parse_diary_xml(xml_text: str) -> list[dict]:
             "rating": rating,
             "stars": _rating_to_stars(rating),
             "watch_date": watch_date,
+            "published_at": _rss_datetime(item, "pubDate"),
             "rewatch": rewatch,
             "link": link,
             "thumb": thumb,

@@ -313,6 +313,12 @@ you can also add films directly from the **+ watchlist** button on any film card
 
 > these commands require the **manage server** permission and are hidden from regular members.
 
+### `/botstatus`
+admin dashboard for the bot: version, uptime, latency, cache size, configured channels, auto-posting toggles, tracked film count, linked letterboxd count, active rentals, overdue rentals, and setup warnings.
+
+### `/lblinked [page]`
+list linked letterboxd accounts. shows each discord member, their letterboxd profile, and when they linked it. use `page` if the list is long.
+
 ### `/setreviews <forum_channel>`
 set the forum channel where rental reviews post. the bot needs **create public threads** and **send messages in threads** permissions. auto-detects **rental** and **recommendation** forum tags if they exist (create them in the forum's settings first, then run this command).
 
@@ -347,7 +353,7 @@ manually trigger the streaming check **and post** announcements live. use sparin
 manually trigger today's daily recommendation post.
 
 ### `/lbactivitynow [post]`
-manually check linked letterboxd activity. by default this is a dry run and only reports how many new entries it found. set `post:True` to post new entries to the configured activity channel.
+manually check linked letterboxd activity. by default this is a dry run and reports how many unseen entries were found, plus how many are recent enough to post. set `post:True` to post entries from the last 60 minutes only.
 
 ### `/cachestats [clear]`
 show the size of the in-memory cache. pass `clear:True` to wipe both the tmdb cache and the random-pick pool (useful if data feels stale).

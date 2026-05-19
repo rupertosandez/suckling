@@ -519,6 +519,97 @@ def info_embed(version: str, uptime_seconds: float, guild_count: int) -> discord
     return embed
 
 
+# ---------- admin ----------
+
+def bot_status_embed(status: dict) -> discord.Embed:
+    """Admin dashboard for /botstatus."""
+    embed = discord.Embed(
+        title="bot status",
+        description="admin overview for the current runtime and configured features.",
+        color=0x8B0000,
+    )
+
+    embed.add_field(
+        name="runtime",
+        value=(
+            f"version: **{status['version']}**\n"
+            f"uptime: **{_format_uptime(status['uptime_seconds'])}**\n"
+            f"latency: **{status['latency_ms']:.0f} ms**\n"
+            f"cache: **{status['cache_size']}** entries"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="counts",
+        value=(
+            f"tracked films: **{status['tracked_count']}**\n"
+            f"linked lb accounts: **{status['lb_account_count']}**\n"
+            f"active rentals: **{status['active_rental_count']}**\n"
+            f"overdue rentals: **{status['overdue_rental_count']}**"
+        ),
+        inline=True,
+    )
+    embed.add_field(
+        name="channels",
+        value=(
+            f"reviews: {status['reviews_channel']}\n"
+            f"streaming: {status['announcement_channel']}\n"
+            f"daily rec: {status['daily_channel']}\n"
+            f"lb activity: {status['lb_activity_channel']}"
+        ),
+        inline=False,
+    )
+    embed.add_field(
+        name="auto-posting",
+        value=(
+            f"streaming announcements: **{status['announcements_enabled']}**\n"
+            f"daily recommendation: **{status['daily_rec_enabled']}**\n"
+            f"letterboxd activity: **{status['lb_activity_enabled']}**"
+        ),
+        inline=False,
+    )
+
+    warnings = status.get("warnings") or []
+    if warnings:
+        embed.add_field(name="needs attention", value="\n".join(warnings), inline=False)
+
+    embed.set_footer(text="admin only")
+    return embed
+
+
+def lb_linked_embed(
+    accounts: list[dict],
+    *,
+    page: int,
+    total_pages: int,
+    total: int,
+) -> discord.Embed:
+    """Admin roster of linked Letterboxd accounts."""
+    embed = discord.Embed(
+        title="linked letterboxd accounts",
+        color=0x8B0000,
+    )
+
+    if not accounts:
+        embed.description = "no linked letterboxd accounts yet."
+        return embed
+
+    lines = []
+    for account in accounts:
+        username = account.get("lb_username", "unknown")
+        discord_label = account.get("discord_label", "unknown member")
+        linked_at = account.get("linked_at_display", "unknown date")
+        missing = " - left server?" if not account.get("in_server", True) else ""
+        lines.append(
+            f"**{discord_label}**{missing}\n"
+            f"<https://letterboxd.com/{username}/> - linked {linked_at}"
+        )
+
+    embed.description = "\n\n".join(lines)
+    embed.set_footer(text=f"{total} linked account(s) - page {page + 1}/{total_pages}")
+    return embed
+
+
 # ---------- rentals ----------
 
 def rental_offer_embed(movie: dict, is_last_reroll: bool = False) -> discord.Embed:

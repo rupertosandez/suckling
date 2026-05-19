@@ -10,6 +10,7 @@ import config
 ANNOUNCEMENT_CHANNEL_KEY = "announcement_channel_id"
 DAILY_REC_CHANNEL_KEY = "daily_rec_channel_id"
 LB_ACTIVITY_CHANNEL_KEY = "lb_activity_channel_id"
+LB_ACTIVITY_LAST_RUN_KEY = "lb_activity_last_run_at"
 ANNOUNCEMENTS_ENABLED_KEY = "announcements_enabled"
 DAILY_REC_ENABLED_KEY = "daily_rec_enabled"
 LB_ACTIVITY_ENABLED_KEY = "lb_activity_enabled"
@@ -220,6 +221,14 @@ def set_lb_activity_channel_id(channel_id: int) -> None:
     set_setting(LB_ACTIVITY_CHANNEL_KEY, str(channel_id))
 
 
+def get_lb_activity_last_run_at() -> str | None:
+    return get_setting(LB_ACTIVITY_LAST_RUN_KEY)
+
+
+def set_lb_activity_last_run_at(run_at: str | None = None) -> None:
+    set_setting(LB_ACTIVITY_LAST_RUN_KEY, run_at or _utc_now_iso())
+
+
 def is_announcements_enabled() -> bool:
     raw = get_setting(ANNOUNCEMENTS_ENABLED_KEY)
     if raw is None:
@@ -315,6 +324,11 @@ def list_tracked_movies() -> list[dict]:
             "SELECT tmdb_id, title, added_by, added_at FROM tracked_movies ORDER BY added_at DESC"
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+def tracked_movie_count() -> int:
+    with _connect() as conn:
+        return conn.execute("SELECT COUNT(*) AS c FROM tracked_movies").fetchone()["c"]
 
 
 # ---------- provider_snapshots ----------
@@ -623,6 +637,22 @@ def get_overdue_active_rentals() -> list[dict]:
         return [dict(row) for row in rows]
 
 
+def active_rental_count() -> int:
+    with _connect() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) AS c FROM rentals WHERE status = 'active'"
+        ).fetchone()["c"]
+
+
+def overdue_active_rental_count() -> int:
+    now = _utc_now_iso()
+    with _connect() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) AS c FROM rentals WHERE status = 'active' AND due_at < ?",
+            (now,),
+        ).fetchone()["c"]
+
+
 def get_reminder_due_rentals() -> list[dict]:
     """Active rentals due within 12 hours that haven't been reminded yet."""
     now = datetime.now(timezone.utc)
@@ -718,6 +748,11 @@ def get_all_lb_accounts() -> list[dict]:
             "SELECT user_id, lb_username, linked_at FROM lb_accounts"
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+def lb_account_count() -> int:
+    with _connect() as conn:
+        return conn.execute("SELECT COUNT(*) AS c FROM lb_accounts").fetchone()["c"]
 
 
 def has_seen_lb_activity(entry_key: str) -> bool:

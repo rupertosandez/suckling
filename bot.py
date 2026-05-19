@@ -32,6 +32,8 @@ import letterboxd as lb_module
 
 MY_WATCHLIST_PAGE_SIZE = 10
 LB_ACTIVITY_POST_LIMIT = 20
+LB_LINKED_PAGE_SIZE = 10
+LB_ACTIVITY_WINDOW_MINUTES = 60
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -257,6 +259,26 @@ def _member_label(user_id: str, lb_username: str) -> str:
     return member.display_name if member else lb_username
 
 
+def _parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _lb_activity_window_start(now: datetime) -> datetime:
+    recent_cutoff = now - timedelta(minutes=LB_ACTIVITY_WINDOW_MINUTES)
+    last_run = _parse_iso_datetime(db.get_lb_activity_last_run_at())
+    if last_run is None:
+        return recent_cutoff
+    return max(recent_cutoff, last_run)
+
+
 async def run_lb_activity_check(
     *,
     post: bool,
@@ -268,6 +290,7 @@ async def run_lb_activity_check(
         "accounts": len(accounts),
         "fetched": 0,
         "new": 0,
+        "recent": 0,
         "posted": 0,
         "seeded": 0,
         "skipped": 0,
@@ -307,11 +330,11 @@ async def run_lb_activity_check(
     seen_keys = db.get_seen_lb_activity_keys(
         item["entry_key"] for item in candidate_items
     )
-    new_items = [
+    unseen_items = [
         item for item in candidate_items
         if item["entry_key"] not in seen_keys
     ]
-    result["new"] = len(new_items)
+    result["new"] = len(unseen_items)
 
     if seed_only:
         db.record_lb_activity_seen_many(
@@ -321,17 +344,42 @@ async def run_lb_activity_check(
                 item["entry"].get("film_title", "Unknown"),
                 False,
             )
-            for item in new_items
+            for item in unseen_items
         )
-        result["seeded"] = len(new_items)
+        result["seeded"] = len(unseen_items)
+        db.set_lb_activity_last_run_at()
         return result
 
     if not post:
+        window_start = _lb_activity_window_start(datetime.now(timezone.utc))
+        result["recent"] = sum(
+            1
+            for item in unseen_items
+            if (
+                published_at := _parse_iso_datetime(
+                    item["entry"].get("published_at")
+                )
+            )
+            and published_at > window_start
+        )
         return result
 
-    new_items.sort(key=lambda item: item["entry"].get("watch_date", ""))
+    now = datetime.now(timezone.utc)
+    window_start = _lb_activity_window_start(now)
+    new_items = []
+    stale_items = []
+    for item in unseen_items:
+        published_at = _parse_iso_datetime(item["entry"].get("published_at"))
+        if published_at is not None and published_at > window_start:
+            new_items.append(item)
+        else:
+            stale_items.append(item)
+
+    result["recent"] = len(new_items)
+
+    new_items.sort(key=lambda item: item["entry"].get("published_at", ""))
     post_items = new_items[:limit]
-    skipped_items = new_items[limit:]
+    skipped_items = new_items[limit:] + stale_items
 
     for item in post_items:
         embed = embeds.lb_activity_embed(
@@ -364,6 +412,7 @@ async def run_lb_activity_check(
         for item in skipped_items
     )
     result["skipped"] = len(skipped_items)
+    db.set_lb_activity_last_run_at(now.isoformat())
     return result
 
 
@@ -708,6 +757,7 @@ def _lb_activity_summary(result: dict) -> str:
     return (
         f"checked **{result['fetched']}/{result['accounts']}** linked account(s), "
         f"found **{result['new']}** new entry/entries, "
+        f"**{result.get('recent', 0)}** within the posting window, "
         f"posted **{result['posted']}**, "
         f"seeded **{result['seeded']}**, "
         f"skipped **{result['skipped']}**."
@@ -1604,6 +1654,24 @@ async def rentalstats(
 
 # ---------- admin ----------
 
+def _admin_channel_label(channel_id: int | None) -> str:
+    return f"<#{channel_id}>" if channel_id else "not set"
+
+
+def _enabled_label(enabled: bool) -> str:
+    return "on" if enabled else "off"
+
+
+def _format_linked_at(value: str | None) -> str:
+    if not value:
+        return "unknown date"
+    try:
+        linked_at = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return value
+    return f"<t:{int(linked_at.timestamp())}:d>"
+
+
 @bot.tree.command(
     name="setreviews",
     description="set the forum channel for rental reviews (admin only)",
@@ -1787,6 +1855,108 @@ async def assign_rental(
     await interaction.followup.send(
         f"assigned **{movie['title']} ({movie.get('year', '?')})** to **{user}**. "
         f"due <t:{due_ts}:R>.{thread_note}",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="botstatus",
+    description="Show the admin dashboard for bot settings and health",
+)
+@app_commands.default_permissions(manage_guild=True)
+async def botstatus(interaction: discord.Interaction):
+    import cache as cache_mod
+
+    await interaction.response.defer(ephemeral=True)
+
+    announcement_channel_id = db.get_announcement_channel_id()
+    daily_channel_id = db.get_daily_rec_channel_id()
+    lb_activity_channel_id = db.get_lb_activity_channel_id()
+    reviews_channel_id = db.get_reviews_channel_id()
+
+    announcements_enabled = db.is_announcements_enabled()
+    daily_rec_enabled = db.is_daily_rec_enabled()
+    lb_activity_enabled = db.is_lb_activity_enabled()
+
+    warnings = []
+    if announcements_enabled and not announcement_channel_id:
+        warnings.append("streaming announcements are on, but no channel is set")
+    if daily_rec_enabled and not daily_channel_id:
+        warnings.append("daily recommendation is on, but no channel is set")
+    if lb_activity_enabled and not lb_activity_channel_id:
+        warnings.append("letterboxd activity is on, but no channel is set")
+    if not reviews_channel_id:
+        warnings.append("rental reviews forum is not set")
+
+    status = {
+        "version": version.VERSION,
+        "uptime_seconds": (datetime.now(timezone.utc) - bot.started_at).total_seconds(),
+        "latency_ms": bot.latency * 1000,
+        "cache_size": cache_mod.size(),
+        "tracked_count": db.tracked_movie_count(),
+        "lb_account_count": db.lb_account_count(),
+        "active_rental_count": db.active_rental_count(),
+        "overdue_rental_count": db.overdue_active_rental_count(),
+        "reviews_channel": _admin_channel_label(reviews_channel_id),
+        "announcement_channel": _admin_channel_label(announcement_channel_id),
+        "daily_channel": _admin_channel_label(daily_channel_id),
+        "lb_activity_channel": _admin_channel_label(lb_activity_channel_id),
+        "announcements_enabled": _enabled_label(announcements_enabled),
+        "daily_rec_enabled": _enabled_label(daily_rec_enabled),
+        "lb_activity_enabled": _enabled_label(lb_activity_enabled),
+        "warnings": warnings,
+    }
+    await interaction.followup.send(
+        embed=embeds.bot_status_embed(status),
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="lblinked",
+    description="List linked Letterboxd accounts (admin only)",
+)
+@app_commands.describe(page="page number, if there are many linked accounts")
+@app_commands.default_permissions(manage_guild=True)
+async def lblinked(interaction: discord.Interaction, page: int = 1):
+    await interaction.response.defer(ephemeral=True)
+
+    rows = sorted(
+        db.get_all_lb_accounts(),
+        key=lambda row: row.get("lb_username", "").lower(),
+    )
+    total = len(rows)
+    total_pages = max(1, -(-total // LB_LINKED_PAGE_SIZE))
+    page_index = min(max(page, 1), total_pages) - 1
+    page_rows = rows[
+        page_index * LB_LINKED_PAGE_SIZE:
+        (page_index + 1) * LB_LINKED_PAGE_SIZE
+    ]
+
+    accounts = []
+    guild = interaction.guild
+    for row in page_rows:
+        user_id = row["user_id"]
+        member = None
+        try:
+            member = guild.get_member(int(user_id)) if guild else None
+        except (TypeError, ValueError):
+            member = None
+
+        accounts.append({
+            "discord_label": member.display_name if member else f"user id {user_id}",
+            "lb_username": row["lb_username"],
+            "linked_at_display": _format_linked_at(row.get("linked_at")),
+            "in_server": member is not None,
+        })
+
+    await interaction.followup.send(
+        embed=embeds.lb_linked_embed(
+            accounts,
+            page=page_index,
+            total_pages=total_pages,
+            total=total,
+        ),
         ephemeral=True,
     )
 
