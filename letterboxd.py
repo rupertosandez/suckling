@@ -7,7 +7,7 @@ Provides async helpers to:
   - Validate that a Letterboxd username is public and reachable
 
 All responses are cached with a 15-minute TTL using the shared cache module.
-HTTP requests use an aiohttp session per-call (feeds are cached so calls are rare).
+HTTP requests reuse a shared aiohttp session so feed checks keep connections warm.
 """
 
 import re
@@ -30,10 +30,30 @@ _LB_NS = "https://a.ltrbxd.com/legal/letterboxd-terms-of-service"
 _MEDIA_NS = "http://search.yahoo.com/mrss/"
 
 _CACHE_TTL = 15 * 60  # 15 minutes
+_USER_AGENT = "sucklingbot/2.0 (discord bot; rss reader)"
+_session: aiohttp.ClientSession | None = None
 
 
 class LetterboxdError(Exception):
     pass
+
+
+def get_session() -> aiohttp.ClientSession:
+    """Return a shared Letterboxd HTTP session with keep-alive enabled."""
+    global _session
+    if _session is None or _session.closed:
+        timeout = aiohttp.ClientTimeout(total=10)
+        connector = aiohttp.TCPConnector(limit=10, limit_per_host=4, ttl_dns_cache=300)
+        _session = aiohttp.ClientSession(timeout=timeout, connector=connector)
+    return _session
+
+
+async def close_session() -> None:
+    """Close the shared session on bot shutdown/restart."""
+    global _session
+    if _session is not None and not _session.closed:
+        await _session.close()
+    _session = None
 
 
 # ---------- cache keys ----------
@@ -50,17 +70,17 @@ def _lb_watchlist_key(username: str) -> str:
 
 async def _fetch_text(url: str, forbidden_error: str = "private") -> str:
     """Fetch raw text from a URL. Raises LetterboxdError on failure."""
-    headers = {"User-Agent": "sucklingbot/2.0 (discord bot; rss reader)"}
+    headers = {"User-Agent": _USER_AGENT}
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status == 404:
-                    raise LetterboxdError("not_found")
-                if resp.status == 403:
-                    raise LetterboxdError(forbidden_error)
-                if resp.status != 200:
-                    raise LetterboxdError(f"http_{resp.status}")
-                return await resp.text()
+        session = get_session()
+        async with session.get(url, headers=headers) as resp:
+            if resp.status == 404:
+                raise LetterboxdError("not_found")
+            if resp.status == 403:
+                raise LetterboxdError(forbidden_error)
+            if resp.status != 200:
+                raise LetterboxdError(f"http_{resp.status}")
+            return await resp.text()
     except LetterboxdError:
         raise
     except aiohttp.ClientError as e:

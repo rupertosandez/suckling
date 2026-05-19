@@ -1,6 +1,7 @@
-import sqlite3
 import re
-from datetime import datetime, timezone
+import sqlite3
+from collections.abc import Iterable
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import config
@@ -33,6 +34,11 @@ def _connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+def _chunks(items: list, size: int = 900):
+    for start in range(0, len(items), size):
+        yield items[start:start + size]
 
 
 def init_db() -> None:
@@ -144,6 +150,16 @@ def init_db() -> None:
             "extensions_used",
             "INTEGER NOT NULL DEFAULT 0",
         )
+        conn.executescript("""
+            CREATE INDEX IF NOT EXISTS idx_rentals_user_status
+                ON rentals (user_id, status);
+            CREATE INDEX IF NOT EXISTS idx_rentals_status_due
+                ON rentals (status, due_at);
+            CREATE INDEX IF NOT EXISTS idx_watchlist_user_added
+                ON watchlist (user_id, added_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_lb_activity_username
+                ON lb_activity_seen (lb_username, first_seen_at);
+        """)
 
 
 def _ensure_column(
@@ -321,6 +337,39 @@ def record_provider(tmdb_id: int, provider_name: str) -> None:
         )
 
 
+def get_provider_snapshot_map(tmdb_ids: Iterable[int]) -> dict[int, set[str]]:
+    """Return seen provider names keyed by TMDB id for a batch of movies."""
+    ids = list(dict.fromkeys(tmdb_ids))
+    if not ids:
+        return {}
+
+    result: dict[int, set[str]] = {}
+    with _connect() as conn:
+        for chunk in _chunks(ids):
+            placeholders = ",".join("?" for _ in chunk)
+            rows = conn.execute(
+                "SELECT tmdb_id, provider_name FROM provider_snapshots "
+                f"WHERE tmdb_id IN ({placeholders})",
+                chunk,
+            ).fetchall()
+            for row in rows:
+                result.setdefault(row["tmdb_id"], set()).add(row["provider_name"])
+    return result
+
+
+def record_providers_many(records: Iterable[tuple[int, str]]) -> None:
+    now = _utc_now_iso()
+    rows = [(tmdb_id, provider_name, now) for tmdb_id, provider_name in records]
+    if not rows:
+        return
+    with _connect() as conn:
+        conn.executemany(
+            "INSERT OR IGNORE INTO provider_snapshots "
+            "(tmdb_id, provider_name, first_seen_at) VALUES (?, ?, ?)",
+            rows,
+        )
+
+
 # ---------- daily_recs ----------
 
 def record_daily_rec(tmdb_id: int, title: str) -> None:
@@ -393,6 +442,36 @@ def record_announced_movie(tmdb_id: int, title: str) -> None:
             "INSERT OR IGNORE INTO announced_movies (tmdb_id, title, first_seen_at) "
             "VALUES (?, ?, ?)",
             (tmdb_id, title, _utc_now_iso()),
+        )
+
+
+def get_announced_movie_ids(tmdb_ids: Iterable[int]) -> set[int]:
+    ids = list(dict.fromkeys(tmdb_ids))
+    if not ids:
+        return set()
+
+    announced: set[int] = set()
+    with _connect() as conn:
+        for chunk in _chunks(ids):
+            placeholders = ",".join("?" for _ in chunk)
+            rows = conn.execute(
+                f"SELECT tmdb_id FROM announced_movies WHERE tmdb_id IN ({placeholders})",
+                chunk,
+            ).fetchall()
+            announced.update(row["tmdb_id"] for row in rows)
+    return announced
+
+
+def record_announced_movies_many(records: Iterable[tuple[int, str]]) -> None:
+    now = _utc_now_iso()
+    rows = [(tmdb_id, title, now) for tmdb_id, title in records]
+    if not rows:
+        return
+    with _connect() as conn:
+        conn.executemany(
+            "INSERT OR IGNORE INTO announced_movies (tmdb_id, title, first_seen_at) "
+            "VALUES (?, ?, ?)",
+            rows,
         )
 
 
@@ -547,9 +626,6 @@ def get_overdue_active_rentals() -> list[dict]:
 def get_reminder_due_rentals() -> list[dict]:
     """Active rentals due within 12 hours that haven't been reminded yet."""
     now = datetime.now(timezone.utc)
-    window_end = now.replace(microsecond=0).isoformat().replace("+00:00", "") 
-    # Build the 12h-from-now boundary as an ISO string
-    from datetime import timedelta
     cutoff = (now + timedelta(hours=12)).isoformat()
     now_iso = now.isoformat()
     with _connect() as conn:
@@ -653,6 +729,23 @@ def has_seen_lb_activity(entry_key: str) -> bool:
         return row is not None
 
 
+def get_seen_lb_activity_keys(entry_keys: Iterable[str]) -> set[str]:
+    keys = list(dict.fromkeys(entry_keys))
+    if not keys:
+        return set()
+
+    seen: set[str] = set()
+    with _connect() as conn:
+        for chunk in _chunks(keys):
+            placeholders = ",".join("?" for _ in chunk)
+            rows = conn.execute(
+                f"SELECT entry_key FROM lb_activity_seen WHERE entry_key IN ({placeholders})",
+                chunk,
+            ).fetchall()
+            seen.update(row["entry_key"] for row in rows)
+    return seen
+
+
 def record_lb_activity_seen(
     entry_key: str,
     lb_username: str,
@@ -668,6 +761,28 @@ def record_lb_activity_seen(
             "ON CONFLICT(entry_key) DO UPDATE SET "
             "posted_at = COALESCE(lb_activity_seen.posted_at, excluded.posted_at)",
             (entry_key, lb_username, film_title, _utc_now_iso(), posted_at),
+        )
+
+
+def record_lb_activity_seen_many(
+    records: Iterable[tuple[str, str, str, bool]],
+) -> None:
+    now = _utc_now_iso()
+    rows = [
+        (entry_key, lb_username, film_title, now, now if posted else None)
+        for entry_key, lb_username, film_title, posted in records
+    ]
+    if not rows:
+        return
+
+    with _connect() as conn:
+        conn.executemany(
+            "INSERT INTO lb_activity_seen "
+            "(entry_key, lb_username, film_title, first_seen_at, posted_at) "
+            "VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(entry_key) DO UPDATE SET "
+            "posted_at = COALESCE(lb_activity_seen.posted_at, excluded.posted_at)",
+            rows,
         )
 
 

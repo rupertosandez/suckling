@@ -49,6 +49,10 @@ class SucklingBot(commands.Bot):
             await tmdb.close_session()
         except Exception as e:
             logger.log_exception("bot_close", e)
+        try:
+            await lb_module.close_session()
+        except Exception as e:
+            logger.log_exception("bot_close_letterboxd", e)
         await super().close()
 
 
@@ -195,6 +199,11 @@ async def _restart_process(delay_seconds: float = 1.0) -> None:
         logger.log_exception("restart_tmdb_close", e)
 
     try:
+        await lb_module.close_session()
+    except Exception as e:
+        logger.log_exception("restart_letterboxd_close", e)
+
+    try:
         os.execv(sys.executable, [sys.executable, *sys.argv])
     except Exception as e:
         logger.log_exception("restart_exec", e)
@@ -273,7 +282,7 @@ async def run_lb_activity_check(
             result["missing_channel"] = True
             return result
 
-    new_items = []
+    candidate_items = []
     for account in accounts:
         user_id = account["user_id"]
         lb_username = account["lb_username"]
@@ -287,10 +296,7 @@ async def run_lb_activity_check(
 
         for entry in entries:
             entry_key = _lb_activity_key(lb_username, entry)
-            if db.has_seen_lb_activity(entry_key):
-                continue
-
-            new_items.append({
+            candidate_items.append({
                 "entry_key": entry_key,
                 "user_id": user_id,
                 "lb_username": lb_username,
@@ -298,16 +304,25 @@ async def run_lb_activity_check(
                 "entry": entry,
             })
 
+    seen_keys = db.get_seen_lb_activity_keys(
+        item["entry_key"] for item in candidate_items
+    )
+    new_items = [
+        item for item in candidate_items
+        if item["entry_key"] not in seen_keys
+    ]
     result["new"] = len(new_items)
 
     if seed_only:
-        for item in new_items:
-            db.record_lb_activity_seen(
+        db.record_lb_activity_seen_many(
+            (
                 item["entry_key"],
                 item["lb_username"],
                 item["entry"].get("film_title", "Unknown"),
-                posted=False,
+                False,
             )
+            for item in new_items
+        )
         result["seeded"] = len(new_items)
         return result
 
@@ -339,13 +354,15 @@ async def run_lb_activity_check(
         )
         result["posted"] += 1
 
-    for item in skipped_items:
-        db.record_lb_activity_seen(
+    db.record_lb_activity_seen_many(
+        (
             item["entry_key"],
             item["lb_username"],
             item["entry"].get("film_title", "Unknown"),
-            posted=False,
+            False,
         )
+        for item in skipped_items
+    )
     result["skipped"] = len(skipped_items)
     return result
 

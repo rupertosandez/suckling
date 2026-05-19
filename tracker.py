@@ -232,10 +232,20 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
     candidate_items = list(candidates.items())
     for start in range(0, len(candidate_items), PROVIDER_CHECK_CONCURRENCY):
         batch = candidate_items[start:start + PROVIDER_CHECK_CONCURRENCY]
+        batch_movie_ids = [movie_id for movie_id, _title in batch]
+        seen_providers = db.get_provider_snapshot_map(batch_movie_ids)
+        announced_ids = (
+            set()
+            if result.is_first_run or is_first_announce_run
+            else db.get_announced_movie_ids(batch_movie_ids)
+        )
         checks = await asyncio.gather(
             *(_fetch_movie_provider_names(movie_id, title, result) for movie_id, title in batch),
             return_exceptions=True,
         )
+
+        provider_records: list[tuple[int, str]] = []
+        announce_records: list[tuple[int, str]] = []
 
         for (movie_id, title), check_result in zip(batch, checks):
             if isinstance(check_result, Exception):
@@ -244,11 +254,13 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
 
             provider_names, currently_streaming = check_result
 
-            newly_seen: list[str] = []
-            for provider_name in provider_names:
-                if not db.has_seen_provider(movie_id, provider_name):
-                    newly_seen.append(provider_name)
-                    db.record_provider(movie_id, provider_name)
+            known_provider_names = seen_providers.get(movie_id, set())
+            newly_seen = [
+                provider_name
+                for provider_name in provider_names
+                if provider_name not in known_provider_names
+            ]
+            provider_records.extend((movie_id, provider_name) for provider_name in newly_seen)
 
             # Skip everything during first-ever run (baseline only)
             if result.is_first_run:
@@ -256,15 +268,18 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
 
             # First announce-aware run: silently mark currently-streaming films as announced
             if is_first_announce_run and currently_streaming:
-                db.record_announced_movie(movie_id, title)
+                announce_records.append((movie_id, title))
                 continue
 
             # Normal flow: only announce if it has new providers AND hasn't been announced before
             if newly_seen:
-                if db.has_been_announced(movie_id):
+                if movie_id in announced_ids:
                     result.skipped_already_announced += 1
                 else:
                     result.announcements.append((movie_id, title, newly_seen))
+
+        db.record_providers_many(provider_records)
+        db.record_announced_movies_many(announce_records)
 
     print(f"[tracker] Scan complete. {len(result.announcements)} new announcement(s).")
     if result.skipped_already_announced > 0:
