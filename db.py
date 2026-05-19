@@ -1,4 +1,5 @@
 import sqlite3
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,6 +19,11 @@ LAST_UPDATE_ANNOUNCED_VERSION_KEY = "last_update_announced_version"
 def _utc_now_iso() -> str:
     """Current UTC time as an ISO-format string. Timezone-aware (yields +00:00 suffix)."""
     return datetime.now(timezone.utc).isoformat()
+
+
+def _normalize_watchlist_title(title: str) -> str:
+    """Normalize enough to avoid obvious duplicate imports without external lookups."""
+    return re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
 
 
 def _connect() -> sqlite3.Connection:
@@ -77,6 +83,24 @@ def init_db() -> None:
                 points     INTEGER NOT NULL DEFAULT 0,
                 wins       INTEGER NOT NULL DEFAULT 0,
                 last_win   TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS lb_accounts (
+                user_id     TEXT PRIMARY KEY,
+                lb_username TEXT NOT NULL,
+                linked_at   TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS watchlist (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    TEXT NOT NULL,
+                tmdb_id    INTEGER,
+                title      TEXT NOT NULL,
+                year       INTEGER,
+                poster_url TEXT,
+                added_at   TEXT NOT NULL,
+                source     TEXT NOT NULL DEFAULT 'manual',
+                UNIQUE(user_id, title, year)
             );
 
             CREATE TABLE IF NOT EXISTS rentals (
@@ -527,8 +551,7 @@ def get_late_fees_leaderboard(limit: int = 10) -> list[dict]:
         rows = conn.execute(
             "SELECT user_id, user_name, "
             "  SUM(late_fee_dollars) AS total_fees, "
-            "  COUNT(*) AS total_rentals, "
-            "  SUM(CASE WHEN late_fee_dollars > 0 THEN 1 ELSE 0 END) AS late_count "
+            "  COUNT(*) AS total_rentals "
             "FROM rentals "
             "WHERE status IN ('returned', 'active') "
             "GROUP BY user_id "
@@ -555,3 +578,108 @@ def get_all_active_rentals() -> list[dict]:
             "SELECT * FROM rentals WHERE status = 'active' ORDER BY rented_at ASC"
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+# ---------- lb_accounts ----------
+
+def link_lb_account(user_id: str, lb_username: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO lb_accounts (user_id, lb_username, linked_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(user_id) DO UPDATE SET lb_username = excluded.lb_username, "
+            "linked_at = excluded.linked_at",
+            (user_id, lb_username, _utc_now_iso()),
+        )
+
+
+def unlink_lb_account(user_id: str) -> bool:
+    with _connect() as conn:
+        cursor = conn.execute("DELETE FROM lb_accounts WHERE user_id = ?", (user_id,))
+        return cursor.rowcount > 0
+
+
+def get_lb_username(user_id: str) -> str | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT lb_username FROM lb_accounts WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        return row["lb_username"] if row else None
+
+
+def get_all_lb_accounts() -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT user_id, lb_username, linked_at FROM lb_accounts"
+        ).fetchall()
+        return [dict(row) for row in rows]
+# ---------- watchlist ----------
+
+def watchlist_add(
+    user_id: str,
+    title: str,
+    year: int | None,
+    tmdb_id: int | None = None,
+    poster_url: str | None = None,
+    source: str = "manual",
+) -> bool:
+    """Add a film to the user's watchlist. Returns True if added, False if already present."""
+    with _connect() as conn:
+        title_key = _normalize_watchlist_title(title)
+        rows = conn.execute(
+            "SELECT title, year FROM watchlist WHERE user_id = ?",
+            (user_id,),
+        ).fetchall()
+        for row in rows:
+            if row["year"] == year and _normalize_watchlist_title(row["title"]) == title_key:
+                return False
+
+        try:
+            conn.execute(
+                "INSERT INTO watchlist (user_id, tmdb_id, title, year, poster_url, added_at, source) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (user_id, tmdb_id, title, year, poster_url, _utc_now_iso(), source),
+            )
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+
+def watchlist_remove_by_id(entry_id: int, user_id: str) -> bool:
+    with _connect() as conn:
+        cursor = conn.execute(
+            "DELETE FROM watchlist WHERE id = ? AND user_id = ?", (entry_id, user_id)
+        )
+        return cursor.rowcount > 0
+
+
+def watchlist_remove_by_title(user_id: str, title_fragment: str) -> int:
+    """Remove entries matching a partial title (case-insensitive). Returns rows deleted."""
+    with _connect() as conn:
+        cursor = conn.execute(
+            "DELETE FROM watchlist WHERE user_id = ? AND title LIKE ?",
+            (user_id, f"%{title_fragment}%"),
+        )
+        return cursor.rowcount
+
+
+def get_watchlist(user_id: str) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM watchlist WHERE user_id = ? ORDER BY added_at DESC",
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_watchlist_count(user_id: str) -> int:
+    with _connect() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) AS c FROM watchlist WHERE user_id = ?", (user_id,)
+        ).fetchone()["c"]
+
+
+def watchlist_clear(user_id: str) -> int:
+    """Remove all entries from a user's watchlist. Returns rows deleted."""
+    with _connect() as conn:
+        cursor = conn.execute("DELETE FROM watchlist WHERE user_id = ?", (user_id,))
+        return cursor.rowcount

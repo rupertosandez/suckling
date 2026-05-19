@@ -16,7 +16,7 @@ quick about card for the bot.
 ## lookup & discovery
 
 ### `/suck <title> [year]`
-look up a movie. returns a card with the synopsis, director, runtime, and where to watch it (theaters, streaming). if the film is in the RB9 library, shows a 📼 **confirm rental** button.
+look up a movie. returns a card with the synopsis, director, runtime, and where to watch it (theaters, streaming). if the film is in the RB9 library, shows a 📼 **rent this** button.
 
 - `title` (required): the movie title to search for
 - `year` (optional): filter by release year if multiple matches exist
@@ -30,7 +30,7 @@ examples:
 ---
 
 ### `/roll [decade] [runtime]`
-get a random movie recommendation. filters are optional — leave blank for a fully random pick. if the film is in the RB9 library, shows a 📼 **confirm rental** button.
+get a random movie recommendation. filters are optional — leave blank for a fully random pick. if the film is in the RB9 library, shows a 📼 **rent this** button.
 
 - `decade` (optional): e.g. `1980s`, `2010s`
 - `runtime` (optional): `short` (under 90 min), `medium` (90-120 min), or `long` (over 120 min)
@@ -47,10 +47,10 @@ examples:
 commands that pull from the return by 9 plex library.
 
 ### `/rb9`
-picks a random movie from the library. returns title, summary, runtime, and poster. includes a 📼 **confirm rental** button.
+picks a random movie from the library. returns title, summary, runtime, and poster. includes a 📼 **rent this** button.
 
 ### `/rb9randomscene`
-a random film + a random backdrop image from it. includes a 📼 **confirm rental** button.
+a random film + a random backdrop image from it. includes a 📼 **rent this** button.
 
 ### `/rb9stats`
 overall library summary: total movie count, total runtime, year range, oldest film, newest film, most recently added, average rating.
@@ -249,6 +249,60 @@ the streaming feature only announces films hitting digital for the first time �
 - you can only have one active rental at a time
 - the 48-hour clock starts the moment you confirm — not when you start browsing
 - rent buttons on embeds time out after 2 minutes. the command is still there if you miss it
+
+---
+
+## letterboxd
+
+link your letterboxd account to see your activity and import your watchlist.
+
+### `/lb link <username>`
+connects your letterboxd account. the bot validates the account is public before saving.
+
+### `/lb unlink`
+removes your linked letterboxd account.
+
+### `/lb profile [user] [username]`
+shows recent diary entries - films watched, ratings, dates, and review snippets if you left one.
+
+- `user` (optional): a server member - uses their linked letterboxd account
+- `username` (optional): a raw letterboxd username (no discord account needed)
+- leave both blank to see your own
+
+### `/lb watchlist [user] [username]`
+browse a letterboxd watchlist. shows 5 films per page with:
+- **🎲 roll from this** - picks a random film and shows the full film card
+- **📥 import all** - adds the entire watchlist to your personal bot watchlist
+
+### `/lb group`
+shows what everyone in the server has been watching lately - aggregated recent diary activity across all linked members, sorted by date.
+
+### `/lb tastecheck [user] [username]`
+compares your linked letterboxd account against another account and gives a recent taste compatibility readout.
+
+- use discord members if they've linked accounts with `/lb link`
+- use a raw username to compare against anyone with a public letterboxd account
+- based on recent diary activity and public watchlists, not full lifetime letterboxd history
+
+---
+
+## personal watchlist
+
+a per-user film queue that lives in the bot. add films from anywhere and roll from it when you can't decide what to watch.
+
+### `/watchlist show`
+browse your watchlist. paginated (10 per page) with:
+- a dropdown to remove films from the current page
+- **🎲 roll from list** - picks a random film and shows the full film card with rent button if it's in the library
+
+### `/watchlist add <title> [year]`
+add a film by title. disambiguates if there are multiple matches.
+
+### `/watchlist remove <title>`
+remove films by partial title match. removes all matching entries.
+
+you can also add films directly from the **+ watchlist** button on any film card from `/suck`, `/roll`, `/rb9`, `/rb9randomscene`, or the daily rec.
+
 
 ---
 

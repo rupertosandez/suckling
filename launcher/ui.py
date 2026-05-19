@@ -150,6 +150,7 @@ class TrayUI:
 
         process_manager.add_state_callback(self.schedule_menu_refresh)
         process_manager.add_crash_callback(self.show_toast)
+        self.root.after(30_000, self._periodic_refresh)
 
     def run(self) -> None:
         self.icon.run_detached()
@@ -181,6 +182,12 @@ class TrayUI:
         self.icon.icon = self.icons[icon_key]
         self.icon.menu = self._build_menu()
         self.icon.update_menu()
+
+    def _periodic_refresh(self) -> None:
+        if self._quit_requested:
+            return
+        self.refresh_tray()
+        self.root.after(30_000, self._periodic_refresh)
 
     def show_toast(self, message: str, title: str = "sucklingbot") -> None:
         def _notify() -> None:
@@ -404,6 +411,8 @@ class TrayUI:
         hours, minutes = divmod(total_minutes, 60)
         if hours:
             return f"running for {hours}h {minutes}m"
+        if minutes == 0:
+            return "running for <1m"
         return f"running for {minutes}m"
 
     def _startup_label(self) -> str:

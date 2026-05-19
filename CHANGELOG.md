@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] - 2026-05-18
+
+### Added
+
+- **letterboxd integration** - link your letterboxd account and pull in your activity
+  - `/lb link <username>` - connects your letterboxd account (validates the feed before saving)
+  - `/lb unlink` - removes your linked account
+  - `/lb profile [user|username]` - shows recent diary entries with ratings, dates, and review snippets. accepts a discord mention (uses their linked lb account) or a raw lb username
+  - `/lb watchlist [user|username]` - paginated view of a letterboxd watchlist with roll and import buttons
+  - `/lb group` - aggregated recent watches across all linked server members
+  - `/lb tastecheck [user|username]` - compares your account against another account for recent taste compatibility using shared recent watches and public watchlist overlap
+
+- **personal watchlist** - a per-user film queue that lives in the bot
+  - `/watchlist show` - browse your list (paginated, with a remove dropdown and roll button)
+  - `/watchlist add <title> [year]` - add a film by title (disambiguates if needed)
+  - `/watchlist remove <title>` - remove films by partial title match
+  - **+ watchlist** button on all film card embeds - one-click add from `/suck`, `/roll`, `/rb9`, `/rb9randomscene`, and the daily rec
+
+- **rent this button** on `/suck`, `/roll`, `/rb9`, `/rb9randomscene`, and the daily rec - the 📼 button that was promised in v1.5.0 but never shipped
+
+- `letterboxd.py` - new module for async letterboxd parsing (diary + watchlist feeds)
+
+### Changed
+
+- `/suck` and `/roll` results now include a view with watchlist and (when available) rent buttons
+
+### Database
+
+- new `lb_accounts` table - discord user id to letterboxd username mapping
+- new `watchlist` table - per-user internal film queue (title, year, tmdb_id, source, poster)
+
 ## [1.9.0] - 2026-05-17
 
 ### Added
@@ -90,7 +121,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `/rentalstats [user]` — rental history and stats for yourself or any member: total rentals, on-time vs late count, total fees paid, currently renting (if applicable), and last 5 returns.
 - `/setreviews <forum_channel>` — admin-only. configures the forum channel for rental posts and auto-detects "rental" and "recommendation" forum tags. warns if either tag is missing.
 - `/cancelrental @user [reason]` — admin-only. cancels a user's active rental with no late fee, edits the forum thread to show a grey cancelled state, and DMs the user with the reason.
-- **rent button** on existing embeds — `/rb9`, `/rb9randomscene`, `/suck` (if in library), `/roll` (if in library), and daily rec (if in library) all show a 📼 `confirm rental` / `nevermind` button when the film is available in the Plex library. button-initiated rentals get 0 re-rolls since the user already chose a specific film.
+- **rent button** on existing embeds — `/rb9`, `/rb9randomscene`, `/suck` (if in library), `/roll` (if in library), and daily rec (if in library) all show a 📼 `rent this` button when the film is available in the Plex library. button-initiated rentals get 0 re-rolls since the user already chose a specific film.
 - **DM reminders** — bot DMs users when they have less than 12 hours left on a rental (once), and again when they go overdue (once).
 - `rental.py` — new module handling forum thread creation/editing, late fee calculation, overdue notification, and reminder DMs. takes `bot` as a parameter; does not import `bot.py`.
 - `rentals` table in `data/moviebot.db` — stores rental records with full lifecycle state (active, returned, cancelled), plex key snapshot, thread/message IDs, rating, thoughts, late fee, and notification flags.

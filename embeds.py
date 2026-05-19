@@ -5,6 +5,9 @@ import discord
 import tmdb
 import trivia_roulette
 
+MY_WATCHLIST_PAGE_SIZE = 10
+LB_WATCHLIST_PAGE_SIZE = 5
+
 
 SHUDDER_PROVIDER_NAME = "Shudder"
 SEERR_BASE_URL = "https://seerr.cajou.enyo.bysh.me"
@@ -174,17 +177,35 @@ def streaming_announcement_embed(details: dict, new_providers: list[str]) -> dis
     return embed
 
 
-def roll_embed(details: dict, providers: dict) -> discord.Embed:
+def roll_embed(
+    details: dict,
+    providers: dict,
+    plex_available: bool | None = None,
+) -> discord.Embed:
     """Embed for /roll - same content as movie_embed but with a fun preamble."""
-    embed = movie_embed(details, providers, in_theaters=False)
+    embed = movie_embed(
+        details,
+        providers,
+        in_theaters=False,
+        plex_available=plex_available,
+    )
     embed.title = f"🎲 {embed.title}"
     embed.color = 0x8B0000
     return embed
 
 
-def daily_rec_embed(details: dict, providers: dict) -> discord.Embed:
+def daily_rec_embed(
+    details: dict,
+    providers: dict,
+    plex_available: bool | None = None,
+) -> discord.Embed:
     """Embed for the daily horror recommendation."""
-    embed = movie_embed(details, providers, in_theaters=False)
+    embed = movie_embed(
+        details,
+        providers,
+        in_theaters=False,
+        plex_available=plex_available,
+    )
     embed.title = f"🩸 Today's Horror Pick: {embed.title}"
     embed.color = 0x8B0000
     return embed
@@ -786,4 +807,259 @@ def rental_stats_embed(history: list[dict], user_tag: str) -> discord.Embed:
         embed.add_field(name="recent returns", value="\n".join(lines), inline=False)
 
     embed.set_footer(text="from the return by 9 library")
+    return embed
+
+
+# ---------- letterboxd ----------
+
+_LB_COLOR = 0x00C030  # Letterboxd green
+
+
+def lb_profile_embed(lb_username: str, entries: list[dict], discord_tag: str | None = None) -> discord.Embed:
+    """
+    Recent Letterboxd diary entries for a user.
+    Shows up to 8 entries with ratings and watch dates.
+    """
+    lb_url = f"https://letterboxd.com/{lb_username}/"
+
+    embed = discord.Embed(
+        title=f"🎬 {lb_username}'s recent watches",
+        url=lb_url,
+        color=_LB_COLOR,
+    )
+
+    if not entries:
+        embed.description = "no diary entries found - the account might be empty or private."
+        return embed
+
+    lines = []
+    for entry in entries[:8]:
+        title = entry.get("film_title", "Unknown")
+        year = entry.get("year")
+        stars = entry.get("stars", "")
+        date = entry.get("watch_date", "")
+        rewatch = entry.get("rewatch", False)
+        link = entry.get("link", "")
+
+        year_str = f" ({year})" if year else ""
+        stars_str = f" {stars}" if stars else ""
+        rewatch_str = " ↩" if rewatch else ""
+        date_str = f" · {date}" if date else ""
+
+        if link:
+            line = f"[{title}{year_str}]({link}){stars_str}{rewatch_str}{date_str}"
+        else:
+            line = f"**{title}{year_str}**{stars_str}{rewatch_str}{date_str}"
+
+        review = entry.get("review")
+        if review:
+            line += f"\n-# *{review}*"
+
+        lines.append(line)
+
+    embed.description = "\n\n".join(lines)
+    embed.set_footer(text=f"letterboxd - {lb_username}")
+    return embed
+
+
+def lb_watchlist_embed(
+    lb_username: str,
+    films: list[dict],
+    page: int,
+    total_pages: int,
+) -> discord.Embed:
+    """Paginated view of a user's Letterboxd watchlist (5 per page)."""
+    lb_url = f"https://letterboxd.com/{lb_username}/watchlist/"
+    total = len(films)
+
+    embed = discord.Embed(
+        title=f"📋 {lb_username}'s letterboxd watchlist",
+        url=lb_url,
+        color=_LB_COLOR,
+    )
+
+    if not films:
+        embed.description = "watchlist is empty or private."
+        return embed
+
+    start = page * 5
+    page_films = films[start : start + 5]
+
+    lines = []
+    for film in page_films:
+        title = film.get("film_title", "Unknown")
+        year = film.get("year")
+        link = film.get("link", "")
+        year_str = f" ({year})" if year else ""
+
+        if link:
+            lines.append(f"[{title}{year_str}]({link})")
+        else:
+            lines.append(f"**{title}{year_str}**")
+
+    embed.description = "\n".join(lines)
+    embed.set_footer(text=f"{total} films - page {page + 1}/{total_pages} - letterboxd")
+    return embed
+
+
+def lb_group_embed(activity: list[dict]) -> discord.Embed:
+    """
+    Aggregated recent diary activity across all linked server members.
+    activity = list of {discord_tag, lb_username, entries: list[dict]}
+    """
+    embed = discord.Embed(
+        title="🎬 what everyone's been watching",
+        color=_LB_COLOR,
+    )
+
+    if not activity:
+        embed.description = (
+            "no linked letterboxd accounts yet. "
+            "use `/lb link <username>` to connect yours."
+        )
+        return embed
+
+    all_entries = []
+    for member in activity:
+        tag = member["discord_tag"]
+        lb_user = member["lb_username"]
+        for entry in member.get("entries", []):
+            all_entries.append({**entry, "_discord_tag": tag, "_lb_username": lb_user})
+
+    all_entries.sort(key=lambda e: e.get("watch_date", ""), reverse=True)
+
+    lines = []
+    for entry in all_entries[:15]:
+        title = entry.get("film_title", "Unknown")
+        year = entry.get("year")
+        stars = entry.get("stars", "")
+        link = entry.get("link", "")
+        tag = entry.get("_discord_tag", "")
+        date = entry.get("watch_date", "")
+
+        year_str = f" ({year})" if year else ""
+        stars_str = f" {stars}" if stars else ""
+        date_str = f" - {date}" if date else ""
+
+        if link:
+            film_str = f"[{title}{year_str}]({link})"
+        else:
+            film_str = f"**{title}{year_str}**"
+
+        lines.append(f"{film_str}{stars_str} - {tag}{date_str}")
+
+    embed.description = "\n".join(lines)
+    embed.set_footer(text="letterboxd - recent activity across linked members")
+    return embed
+
+
+def _rating_pair(left: dict) -> str:
+    left_stars = left.get("left_stars") or (str(left.get("left_rating")) if left.get("left_rating") else "-")
+    right_stars = left.get("right_stars") or (str(left.get("right_rating")) if left.get("right_rating") else "-")
+    return f"{left_stars} / {right_stars}"
+
+
+def _film_line(item: dict, include_ratings: bool = False) -> str:
+    title = item.get("title") or item.get("film_title") or "Unknown"
+    year = item.get("year")
+    link = item.get("link", "")
+    year_str = f" ({year})" if year else ""
+    film = f"[{title}{year_str}]({link})" if link else f"**{title}{year_str}**"
+    if include_ratings:
+        return f"{film} - {_rating_pair(item)}"
+    return film
+
+
+def lb_tastecheck_embed(payload: dict, watchlist_note: str | None = None) -> discord.Embed:
+    """Compatibility snapshot for /lb tastecheck."""
+    score = payload["score"]
+    label = payload["label"]
+    left = payload["label_a"]
+    right = payload["label_b"]
+
+    embed = discord.Embed(
+        title=f"🎞️ tastecheck: {left} x {right}",
+        description=f"**{score}% - {label}**",
+        color=_LB_COLOR,
+    )
+
+    stats = [
+        f"shared recent watches: **{payload['shared_count']}**",
+        f"rated overlap: **{payload['rated_overlap_count']}**",
+        f"shared watchlist wants: **{payload['shared_watchlist_count']}**",
+    ]
+    if payload.get("avg_diff") is not None:
+        stats.append(f"avg rating gap: **{payload['avg_diff']:.1f} stars**")
+    embed.add_field(name="readout", value="\n".join(stats), inline=False)
+
+    shared = payload.get("shared", [])
+    if shared:
+        lines = [_film_line(item, include_ratings=True) for item in shared[:5]]
+        embed.add_field(name="both recently watched", value="\n".join(lines), inline=False)
+    else:
+        embed.add_field(
+            name="both recently watched",
+            value="no overlap in the recent diary feeds.",
+            inline=False,
+        )
+
+    agreements = payload.get("agreements", [])
+    if agreements:
+        lines = [_film_line(item, include_ratings=True) for item in agreements[:3]]
+        embed.add_field(name="closest agreements", value="\n".join(lines), inline=False)
+
+    disagreements = payload.get("disagreements", [])
+    if disagreements:
+        lines = [_film_line(item, include_ratings=True) for item in disagreements[:3]]
+        embed.add_field(name="biggest splits", value="\n".join(lines), inline=False)
+
+    shared_watchlist = payload.get("shared_watchlist", [])
+    if shared_watchlist:
+        lines = [_film_line(item) for item in shared_watchlist[:8]]
+        embed.add_field(name="shared watchlist wants", value="\n".join(lines), inline=False)
+    elif watchlist_note:
+        embed.add_field(name="shared watchlist wants", value=watchlist_note, inline=False)
+
+    embed.set_footer(text="based on recent letterboxd activity and public watchlists")
+    return embed
+
+
+# ---------- personal watchlist ----------
+
+_WL_COLOR = 0x5865F2  # Discord blurple
+
+
+def mywatchlist_embed(
+    user_tag: str,
+    entries: list[dict],
+    page: int,
+    total_pages: int,
+    total_count: int,
+) -> discord.Embed:
+    """Paginated view of a user's personal internal watchlist."""
+    embed = discord.Embed(
+        title=f"📋 {user_tag}'s watchlist",
+        color=_WL_COLOR,
+    )
+
+    if not entries:
+        embed.description = (
+            "your watchlist is empty.\n\n"
+            "add films with `/watchlist add`, the **+ watchlist** button on any film card, "
+            "or import from letterboxd."
+        )
+        return embed
+
+    start = page * MY_WATCHLIST_PAGE_SIZE
+    page_entries = entries[start : start + MY_WATCHLIST_PAGE_SIZE]
+
+    lines = []
+    for entry in page_entries:
+        title = entry.get("title", "Unknown")
+        year = entry.get("year")
+        year_str = f" ({year})" if year else ""
+        lines.append(f"**{title}{year_str}**")
+
+    embed.description = "\n".join(lines)
+    embed.set_footer(text=f"{total_count} films - page {page + 1}/{total_pages}")
     return embed

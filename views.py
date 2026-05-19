@@ -7,6 +7,9 @@ import db
 import plex
 import rental as rental_module
 
+MY_WATCHLIST_PAGE_SIZE = 10
+LB_WATCHLIST_PAGE_SIZE = 5
+
 
 def _record_existing_providers(movie_id: int, providers: dict) -> list[str]:
     """
@@ -57,7 +60,8 @@ async def _build_track_response(movie_id: int, movie_title: str, movie_year: str
 class MovieSelect(discord.ui.Select):
     """Dropdown showing movie candidates for /watch disambiguation."""
 
-    def __init__(self, candidates: list[dict]):
+    def __init__(self, candidates: list[dict], bot: discord.Client | None = None):
+        self.bot = bot
         options = []
         for movie in candidates[:25]:
             title = movie.get("title", "Unknown")
@@ -99,15 +103,24 @@ class MovieSelect(discord.ui.Select):
         embed = embeds.movie_embed(
             details, providers, in_theaters=False, plex_available=plex_available
         )
-        await interaction.edit_original_response(content=None, embed=embed, view=None)
+        poster_url = tmdb.poster_url(details.get("poster_path"))
+        film_view = FilmCardView(
+            bot=self.bot,
+            title=details.get("title", ""),
+            year=plex_year,
+            tmdb_id=details.get("id"),
+            poster_url=poster_url,
+            plex_available=bool(plex_available),
+        ) if self.bot is not None else None
+        await interaction.edit_original_response(content=None, embed=embed, view=film_view)
 
 
 class MovieSelectView(discord.ui.View):
     """View wrapping MovieSelect for /watch."""
 
-    def __init__(self, candidates: list[dict]):
+    def __init__(self, candidates: list[dict], bot: discord.Client | None = None):
         super().__init__(timeout=60)
-        self.add_item(MovieSelect(candidates))
+        self.add_item(MovieSelect(candidates, bot=bot))
 
     async def on_timeout(self):
         for item in self.children:
@@ -181,6 +194,15 @@ class TrackSelectView(discord.ui.View):
 def _disable_view_items(view: discord.ui.View) -> None:
     for item in view.children:
         item.disabled = True
+
+
+async def _defer_component(interaction: discord.Interaction) -> bool:
+    """Acknowledge a component click; stale rapid-click interactions can be ignored."""
+    try:
+        await interaction.response.defer()
+        return True
+    except discord.NotFound:
+        return False
 
 
 async def _mark_view_processing(
@@ -520,3 +542,735 @@ class RentPickView(discord.ui.View):
 
     async def on_timeout(self):
         self.stop()
+
+
+# ---------- embed-level rent view ----------
+
+class EmbedRentView(discord.ui.View):
+    """
+    Confirm/cancel view for renting a specific film directly from a film card embed.
+    Used on /suck, /roll, /rb9, /rb9randomscene, and the daily rec.
+    No rerolls — the user already chose this film.
+    Accepts either a pre-loaded Plex movie dict (has rating_key) or
+    a title+year to look up on confirm.
+    """
+
+    def __init__(
+        self,
+        bot: discord.Client,
+        user_id: str,
+        user_name: str,
+        movie: dict | None = None,
+        title: str | None = None,
+        year: int | None = None,
+    ):
+        super().__init__(timeout=120)
+        self.bot = bot
+        self.user_id = user_id
+        self.user_name = user_name
+        self._movie = movie          # pre-loaded Plex dict, if available
+        self._title = title or (movie.get("title") if movie else None)
+        self._year = year or (movie.get("year") if movie else None)
+        self._processing = False
+
+        confirm_btn = discord.ui.Button(
+            label="confirm rental",
+            style=discord.ButtonStyle.success,
+            emoji="📼",
+        )
+        confirm_btn.callback = self._confirm
+
+        cancel_btn = discord.ui.Button(
+            label="nevermind",
+            style=discord.ButtonStyle.secondary,
+        )
+        cancel_btn.callback = self._cancel
+
+        self.add_item(confirm_btn)
+        self.add_item(cancel_btn)
+
+    async def _confirm(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await interaction.response.send_message(
+                "this rental isn't for you.", ephemeral=True
+            )
+            return
+        if not await _mark_view_processing(interaction, self, "checking the shelves..."):
+            return
+        self.stop()
+
+        # Resolve Plex movie dict if we only have title/year
+        movie = self._movie
+        if movie is None:
+            try:
+                movie = await plex.find_movie_by_title(self._title, year=self._year)
+            except plex.PlexError as e:
+                await interaction.edit_original_response(
+                    content=f"⚠️ couldn't reach the library right now: {e}",
+                    embed=None, view=None,
+                )
+                return
+
+        if movie is None:
+            await interaction.edit_original_response(
+                content=(
+                    f"⚠️ **{self._title}** doesn't seem to be in the library right now. "
+                    "try `/rent` for a random pick."
+                ),
+                embed=None, view=None,
+            )
+            return
+
+        existing = db.get_active_rental(self.user_id)
+        if existing:
+            title = existing.get("title", "a film")
+            await interaction.edit_original_response(
+                content=(
+                    f"you already have **{title}** checked out. "
+                    "use `/return` to return it first."
+                ),
+                embed=None, view=None,
+            )
+            return
+
+        await _confirm_rental(
+            interaction=interaction,
+            bot=self.bot,
+            movie=movie,
+            user_id=self.user_id,
+            user_name=self.user_name,
+            rerolls_used=0,
+            initiated_by="embed",
+        )
+
+    async def _cancel(self, interaction: discord.Interaction):
+        if not await _mark_view_processing(interaction, self, "canceling..."):
+            return
+        self.stop()
+        await interaction.edit_original_response(
+            content="no problem - come back when you're ready.",
+            embed=None, view=None,
+        )
+
+    async def on_timeout(self):
+        self.stop()
+
+
+# ---------- film card view ----------
+
+class FilmCardView(discord.ui.View):
+    """
+    Combined view attached to public film card embeds (/suck, /roll, /rb9, daily rec).
+    Always shows the watchlist button. Shows the rent button only when the film
+    is confirmed available in the Plex library.
+    """
+
+    def __init__(
+        self,
+        bot: discord.Client,
+        title: str,
+        year: int | None,
+        tmdb_id: int | None = None,
+        poster_url: str | None = None,
+        plex_available: bool = False,
+        plex_movie: dict | None = None,
+    ):
+        super().__init__(timeout=120)
+
+        self.add_item(AddToWatchlistButton(
+            title=title,
+            year=year,
+            tmdb_id=tmdb_id,
+            poster_url=poster_url,
+            source="button",
+        ))
+
+        if plex_available:
+            rent_btn = discord.ui.Button(
+                label="rent this",
+                style=discord.ButtonStyle.success,
+                emoji="📼",
+            )
+            _bot = bot
+            _title = title
+            _year = year
+            _plex_movie = plex_movie
+
+            async def rent_cb(interaction: discord.Interaction):
+                view = EmbedRentView(
+                    bot=_bot,
+                    user_id=str(interaction.user.id),
+                    user_name=str(interaction.user),
+                    movie=_plex_movie,
+                    title=_title,
+                    year=_year,
+                )
+                await interaction.response.send_message(
+                    f"📼 rent **{_title}**?",
+                    view=view,
+                    ephemeral=True,
+                )
+
+            rent_btn.callback = rent_cb
+            self.add_item(rent_btn)
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+
+class RentThisView(discord.ui.View):
+    """View for cards that should offer rental without re-adding to watchlist."""
+
+    def __init__(
+        self,
+        bot: discord.Client,
+        title: str,
+        year: int | None,
+        plex_movie: dict | None = None,
+    ):
+        super().__init__(timeout=120)
+
+        rent_btn = discord.ui.Button(
+            label="rent this",
+            style=discord.ButtonStyle.success,
+            emoji="📼",
+        )
+        _bot = bot
+        _title = title
+        _year = year
+        _plex_movie = plex_movie
+
+        async def rent_cb(interaction: discord.Interaction):
+            view = EmbedRentView(
+                bot=_bot,
+                user_id=str(interaction.user.id),
+                user_name=str(interaction.user),
+                movie=_plex_movie,
+                title=_title,
+                year=_year,
+            )
+            await interaction.response.send_message(
+                f"📼 rent **{_title}**?",
+                view=view,
+                ephemeral=True,
+            )
+
+        rent_btn.callback = rent_cb
+        self.add_item(rent_btn)
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+
+# ---------- watchlist button ----------
+
+class AddToWatchlistButton(discord.ui.Button):
+    """
+    A standalone button that can be added to any film card view.
+    Adds the film to the clicking user's internal watchlist.
+    Works with TMDB-sourced films (tmdb_id known) and Plex-sourced films
+    (tmdb_id=None, will attempt a TMDB search to resolve it).
+    """
+
+    def __init__(
+        self,
+        title: str,
+        year: int | None,
+        tmdb_id: int | None = None,
+        poster_url: str | None = None,
+        source: str = "button",
+    ):
+        super().__init__(
+            label="+ watchlist",
+            style=discord.ButtonStyle.secondary,
+            emoji="📋",
+        )
+        self.film_title = title
+        self.film_year = year
+        self.film_tmdb_id = tmdb_id
+        self.film_poster_url = poster_url
+        self.film_source = source
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        user_id = str(interaction.user.id)
+        resolved_tmdb_id = self.film_tmdb_id
+
+        # If no tmdb_id (e.g. Plex-sourced film), try to resolve via search
+        if resolved_tmdb_id is None:
+            try:
+                results = await tmdb.search_movie(self.film_title, year=self.film_year)
+                if results:
+                    resolved_tmdb_id = results[0]["id"]
+            except tmdb.TMDBError:
+                pass  # store without tmdb_id, roll will handle it
+
+        added = db.watchlist_add(
+            user_id=user_id,
+            title=self.film_title,
+            year=self.film_year,
+            tmdb_id=resolved_tmdb_id,
+            poster_url=self.film_poster_url,
+            source=self.film_source,
+        )
+
+        year_str = f" ({self.film_year})" if self.film_year else ""
+        if added:
+            await interaction.followup.send(
+                f"📋 added **{self.film_title}{year_str}** to your watchlist.",
+                ephemeral=True,
+            )
+        else:
+            await interaction.followup.send(
+                f"**{self.film_title}{year_str}** is already on your watchlist.",
+                ephemeral=True,
+            )
+
+
+# ---------- LB watchlist view ----------
+
+class LBWatchlistView(discord.ui.View):
+    """
+    Paginated view of a Letterboxd watchlist with prev/next,
+    a roll button (random pick -> TMDB film card), and an import button.
+    """
+
+    def __init__(
+        self,
+        bot: discord.Client,
+        lb_username: str,
+        films: list[dict],
+        requesting_user_id: str,
+        requesting_user_tag: str,
+    ):
+        super().__init__(timeout=120)
+        self.bot = bot
+        self.lb_username = lb_username
+        self.films = films
+        self.requesting_user_id = requesting_user_id
+        self.requesting_user_tag = requesting_user_tag
+        self.page = 0
+        self.total_pages = max(1, -(-len(films) // 5))  # ceil div
+        self._build_buttons()
+
+    def _build_buttons(self):
+        self.clear_items()
+
+        if self.page > 0:
+            prev_btn = discord.ui.Button(label="◀ prev", style=discord.ButtonStyle.secondary)
+            prev_btn.callback = self._prev
+            self.add_item(prev_btn)
+
+        if self.page < self.total_pages - 1:
+            next_btn = discord.ui.Button(label="next ▶", style=discord.ButtonStyle.secondary)
+            next_btn.callback = self._next
+            self.add_item(next_btn)
+
+        if self.films:
+            roll_btn = discord.ui.Button(
+                label="🎲 roll from this",
+                style=discord.ButtonStyle.primary,
+            )
+            roll_btn.callback = self._roll
+            self.add_item(roll_btn)
+
+            import_btn = discord.ui.Button(
+                label="📥 import all",
+                style=discord.ButtonStyle.success,
+            )
+            import_btn.callback = self._import
+            self.add_item(import_btn)
+
+    async def _prev(self, interaction: discord.Interaction):
+        self.page -= 1
+        self._build_buttons()
+        embed = embeds.lb_watchlist_embed(
+            self.lb_username, self.films, self.page, self.total_pages
+        )
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    async def _next(self, interaction: discord.Interaction):
+        self.page += 1
+        self._build_buttons()
+        embed = embeds.lb_watchlist_embed(
+            self.lb_username, self.films, self.page, self.total_pages
+        )
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    async def _roll(self, interaction: discord.Interaction):
+        import random
+        await interaction.response.defer()
+
+        pick = random.choice(self.films)
+        title = pick.get("film_title", "")
+        year = pick.get("year")
+
+        try:
+            results = await tmdb.search_movie(title, year=year)
+        except tmdb.TMDBError as e:
+            await interaction.followup.send(
+                f"⚠️ couldn't look up **{title}** on TMDB: {e}", ephemeral=True
+            )
+            return
+
+        if not results:
+            await interaction.followup.send(
+                f"⚠️ couldn't find **{title}** on TMDB. try a different roll.", ephemeral=True
+            )
+            return
+
+        top = results[0]
+        try:
+            details = await tmdb.get_movie_details(top["id"])
+            providers = await tmdb.get_watch_providers(top["id"], region="US")
+        except tmdb.TMDBError as e:
+            await interaction.followup.send(f"⚠️ TMDB error: {e}", ephemeral=True)
+            return
+
+        release_date = details.get("release_date") or ""
+        plex_year = int(release_date[:4]) if release_date[:4].isdigit() else None
+        plex_available = await plex.check_availability(details.get("title"), year=plex_year)
+
+        embed = embeds.movie_embed(details, providers, in_theaters=False, plex_available=plex_available)
+        embed.title = f"🎲 {embed.title}"
+
+        poster_url = tmdb.poster_url(details.get("poster_path"))
+        roll_view = discord.ui.View(timeout=120)
+        roll_view.add_item(AddToWatchlistButton(
+            title=details.get("title", title),
+            year=plex_year,
+            tmdb_id=top["id"],
+            poster_url=poster_url,
+            source="button",
+        ))
+        if plex_available:
+            rent_btn = discord.ui.Button(
+                label="rent this", style=discord.ButtonStyle.success, emoji="📼"
+            )
+            async def rent_cb(intr: discord.Interaction):
+                movie = await plex.find_movie_by_title(details.get("title"), year=plex_year)
+                if movie is None:
+                    await intr.response.send_message(
+                        "⚠️ couldn't find that film in the library right now.", ephemeral=True
+                    )
+                    return
+                view = EmbedRentView(bot=self.bot, movie=movie, user_id=str(intr.user.id), user_name=str(intr.user))
+                await intr.response.send_message(
+                    f"📼 rent **{movie['title']}**?", view=view, ephemeral=True
+                )
+            rent_btn.callback = rent_cb
+            roll_view.add_item(rent_btn)
+
+        await interaction.edit_original_response(embed=embed, view=roll_view, content=None)
+
+    async def _import(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        user_id = str(interaction.user.id)
+        added = 0
+        skipped = 0
+
+        for film in self.films:
+            ok = db.watchlist_add(
+                user_id=user_id,
+                title=film.get("film_title", ""),
+                year=film.get("year"),
+                tmdb_id=None,
+                poster_url=film.get("thumb"),
+                source="letterboxd",
+            )
+            if ok:
+                added += 1
+            else:
+                skipped += 1
+
+        parts = [f"📥 imported **{added}** film(s) from {self.lb_username}'s letterboxd watchlist."]
+        if skipped:
+            parts.append(f"{skipped} already on your watchlist and skipped.")
+        await interaction.followup.send(" ".join(parts), ephemeral=True)
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+
+
+# ---------- my watchlist view ----------
+
+class _RemoveSelect(discord.ui.Select):
+    """Dropdown to remove a film from the current page of the watchlist."""
+
+    def __init__(self, watchlist_view: "MyWatchlistView"):
+        self.watchlist_view = watchlist_view
+        start = watchlist_view.page * MY_WATCHLIST_PAGE_SIZE
+        page_entries = watchlist_view.entries[start : start + MY_WATCHLIST_PAGE_SIZE]
+
+        options = [
+            discord.SelectOption(
+                label=f"{e.get('title', '?')} ({e.get('year') or '?'})"[:100],
+                value=str(e["id"]),
+            )
+            for e in page_entries
+        ]
+        super().__init__(placeholder="remove a film...", options=options, row=0)
+
+    async def callback(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.watchlist_view.user_id:
+            await interaction.response.send_message(
+                "this isn't your watchlist.", ephemeral=True
+            )
+            return
+        if not await _defer_component(interaction):
+            return
+        entry_id = int(self.values[0])
+        db.watchlist_remove_by_id(entry_id, self.watchlist_view.user_id)
+        self.watchlist_view.entries = db.get_watchlist(self.watchlist_view.user_id)
+        self.watchlist_view.total_pages = max(
+            1,
+            -(-len(self.watchlist_view.entries) // MY_WATCHLIST_PAGE_SIZE),
+        )
+        if self.watchlist_view.page >= self.watchlist_view.total_pages:
+            self.watchlist_view.page = max(0, self.watchlist_view.total_pages - 1)
+        next_view = MyWatchlistView.for_page(
+            bot=self.watchlist_view.bot,
+            user_id=self.watchlist_view.user_id,
+            user_tag=self.watchlist_view.user_tag,
+            entries=self.watchlist_view.entries,
+            page=self.watchlist_view.page,
+        )
+        embed = embeds.mywatchlist_embed(
+            next_view.user_tag,
+            next_view.entries,
+            next_view.page,
+            next_view.total_pages,
+            len(next_view.entries),
+        )
+        self.watchlist_view.stop()
+        await interaction.edit_original_response(embed=embed, view=next_view)
+
+
+class MyWatchlistView(discord.ui.View):
+    """
+    Paginated view of the user's personal watchlist with prev/next,
+    a roll button, and a dropdown to remove films from the current page.
+    """
+
+    def __init__(
+        self,
+        bot: discord.Client,
+        user_id: str,
+        user_tag: str,
+        entries: list[dict],
+    ):
+        super().__init__(timeout=120)
+        self.bot = bot
+        self.user_id = user_id
+        self.user_tag = user_tag
+        self.entries = entries
+        self.page = 0
+        self.total_pages = max(1, -(-len(entries) // MY_WATCHLIST_PAGE_SIZE))
+        self._rebuild()
+
+    @classmethod
+    def for_page(
+        cls,
+        bot: discord.Client,
+        user_id: str,
+        user_tag: str,
+        entries: list[dict],
+        page: int,
+    ) -> "MyWatchlistView":
+        view = cls(bot=bot, user_id=user_id, user_tag=user_tag, entries=entries)
+        view.page = page
+        view._rebuild()
+        return view
+
+    def _rebuild(self):
+        self.clear_items()
+
+        # Row 0: remove dropdown (only if there are entries on this page)
+        start = self.page * MY_WATCHLIST_PAGE_SIZE
+        page_entries = self.entries[start : start + MY_WATCHLIST_PAGE_SIZE]
+        if page_entries:
+            self.add_item(_RemoveSelect(self))
+
+        # Row 1: navigation + roll
+        if self.page > 0:
+            prev_btn = discord.ui.Button(label="◀ prev", style=discord.ButtonStyle.secondary, row=1)
+            prev_btn.callback = self._prev
+            self.add_item(prev_btn)
+
+        if self.page < self.total_pages - 1:
+            next_btn = discord.ui.Button(label="next ▶", style=discord.ButtonStyle.secondary, row=1)
+            next_btn.callback = self._next
+            self.add_item(next_btn)
+
+        if self.entries:
+            roll_btn = discord.ui.Button(
+                label="🎲 roll from list", style=discord.ButtonStyle.primary, row=1
+            )
+            roll_btn.callback = self._roll
+            self.add_item(roll_btn)
+
+    async def _prev(self, interaction: discord.Interaction):
+        if not await _defer_component(interaction):
+            return
+        next_view = MyWatchlistView.for_page(
+            bot=self.bot,
+            user_id=self.user_id,
+            user_tag=self.user_tag,
+            entries=self.entries,
+            page=max(0, self.page - 1),
+        )
+        embed = embeds.mywatchlist_embed(
+            next_view.user_tag,
+            next_view.entries,
+            next_view.page,
+            next_view.total_pages,
+            len(next_view.entries),
+        )
+        self.stop()
+        await interaction.edit_original_response(embed=embed, view=next_view)
+
+    async def _next(self, interaction: discord.Interaction):
+        if not await _defer_component(interaction):
+            return
+        next_view = MyWatchlistView.for_page(
+            bot=self.bot,
+            user_id=self.user_id,
+            user_tag=self.user_tag,
+            entries=self.entries,
+            page=min(self.total_pages - 1, self.page + 1),
+        )
+        embed = embeds.mywatchlist_embed(
+            next_view.user_tag,
+            next_view.entries,
+            next_view.page,
+            next_view.total_pages,
+            len(next_view.entries),
+        )
+        self.stop()
+        await interaction.edit_original_response(embed=embed, view=next_view)
+
+    async def _roll(self, interaction: discord.Interaction):
+        import random
+        if not self.entries:
+            await interaction.response.send_message(
+                "your watchlist is empty.", ephemeral=True
+            )
+            return
+
+        await interaction.response.defer()
+        pick = random.choice(self.entries)
+        title = pick.get("title", "")
+        year = pick.get("year")
+        tmdb_id = pick.get("tmdb_id")
+
+        try:
+            if tmdb_id:
+                details = await tmdb.get_movie_details(tmdb_id)
+                providers = await tmdb.get_watch_providers(tmdb_id, region="US")
+            else:
+                results = await tmdb.search_movie(title, year=year)
+                if not results:
+                    await interaction.followup.send(
+                        f"⚠️ couldn't find **{title}** on TMDB.", ephemeral=True
+                    )
+                    return
+                details = await tmdb.get_movie_details(results[0]["id"])
+                providers = await tmdb.get_watch_providers(results[0]["id"], region="US")
+        except tmdb.TMDBError as e:
+            await interaction.followup.send(f"⚠️ TMDB error: {e}", ephemeral=True)
+            return
+
+        release_date = details.get("release_date") or ""
+        plex_year = int(release_date[:4]) if release_date[:4].isdigit() else None
+        plex_available = await plex.check_availability(details.get("title"), year=plex_year)
+
+        embed = embeds.movie_embed(details, providers, in_theaters=False, plex_available=plex_available)
+        embed.title = f"🎲 from your watchlist: {embed.title}"
+
+        roll_view = None
+        if plex_available:
+            roll_view = RentThisView(
+                bot=self.bot,
+                title=details.get("title", title),
+                year=plex_year,
+            )
+
+        await interaction.edit_original_response(embed=embed, view=roll_view, content=None)
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+
+# ---------- watchlist add disambiguation ----------
+
+class WatchlistAddSelect(discord.ui.Select):
+    """Dropdown to pick which film to add when /watchlist add returns multiple matches."""
+
+    def __init__(self, candidates: list[dict], user_id: str):
+        self.user_id = user_id
+        self._candidates_by_id = {str(m["id"]): m for m in candidates[:25]}
+
+        options = []
+        for movie in candidates[:25]:
+            title = movie.get("title", "Unknown")
+            release_date = movie.get("release_date", "")
+            year = release_date[:4] if release_date else "-"
+            overview = movie.get("overview") or ""
+            desc = overview[:80] + "..." if len(overview) > 80 else overview
+            options.append(
+                discord.SelectOption(
+                    label=f"{title} ({year})"[:100],
+                    description=desc[:100],
+                    value=str(movie["id"]),
+                )
+            )
+
+        super().__init__(placeholder="pick which one to add", options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await interaction.response.send_message(
+                "this isn't your command.", ephemeral=True
+            )
+            return
+
+        movie_id = int(self.values[0])
+        chosen = self._candidates_by_id.get(self.values[0], {})
+        title = chosen.get("title", "Unknown")
+        release_date = chosen.get("release_date") or ""
+        year = int(release_date[:4]) if release_date[:4].isdigit() else None
+        poster_url = tmdb.poster_url(chosen.get("poster_path"))
+
+        added = db.watchlist_add(
+            user_id=self.user_id,
+            title=title,
+            year=year,
+            tmdb_id=movie_id,
+            poster_url=poster_url,
+            source="manual",
+        )
+
+        year_str = f" ({year})" if year else ""
+        if added:
+            msg = f"📋 added **{title}{year_str}** to your watchlist."
+        else:
+            msg = f"**{title}{year_str}** is already on your watchlist."
+
+        await interaction.response.edit_message(content=msg, view=None)
+
+
+class WatchlistAddSelectView(discord.ui.View):
+    def __init__(self, candidates: list[dict], user_id: str):
+        super().__init__(timeout=60)
+        self.add_item(WatchlistAddSelect(candidates, user_id))
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
