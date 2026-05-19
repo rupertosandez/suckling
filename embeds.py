@@ -906,6 +906,15 @@ def rental_stats_embed(history: list[dict], user_tag: str) -> discord.Embed:
 _LB_COLOR = 0x00C030  # Letterboxd green
 
 
+def _lb_rating_text(entry: dict) -> str:
+    stars = entry.get("stars", "")
+    rating = entry.get("rating")
+    if rating is None:
+        return stars or "unrated"
+    rating_text = f"{rating:g}/5"
+    return f"{stars} ({rating_text})" if stars else rating_text
+
+
 def lb_profile_embed(lb_username: str, entries: list[dict], discord_tag: str | None = None) -> discord.Embed:
     """
     Recent Letterboxd diary entries for a user.
@@ -962,7 +971,6 @@ def lb_activity_embed(
     title = entry.get("film_title", "Unknown")
     year = entry.get("year")
     link = entry.get("link", "")
-    stars = entry.get("stars", "")
     watch_date = entry.get("watch_date", "")
     rewatch = entry.get("rewatch", False)
     review = entry.get("review")
@@ -971,20 +979,22 @@ def lb_activity_embed(
     year_str = f" ({year})" if year else ""
     who = discord_tag or lb_username
     embed = discord.Embed(
-        title=f"{who} watched {title}{year_str}",
+        title=f"{title}{year_str}",
         url=link or None,
+        description=f"**{who}** logged a watch on letterboxd.",
         color=_LB_COLOR,
     )
 
+    rating_text = _lb_rating_text(entry)
+    embed.add_field(name="stars awarded", value=rating_text, inline=True)
+
     details = []
-    if stars:
-        details.append(stars)
     if watch_date:
         details.append(watch_date)
     if rewatch:
         details.append("rewatch")
     if details:
-        embed.description = " - ".join(details)
+        embed.add_field(name="watch info", value=" - ".join(details), inline=True)
 
     if review:
         embed.add_field(name="review", value=f"*{review}*", inline=False)
@@ -1201,4 +1211,145 @@ def mywatchlist_embed(
 
     embed.description = "\n".join(lines)
     embed.set_footer(text=f"{total_count} films - page {page + 1}/{total_pages}")
+    return embed
+
+
+# ---------- macguffins ----------
+
+MACGUFFIN_PAGE_SIZE = 5
+
+_MACGUFFIN_COLORS = {
+    "common": 0xAAAAAA,
+    "rare": 0x4169E1,
+    "iconic": 0xFFD700,
+}
+
+_MACGUFFIN_TITLES = {
+    "common": "\U0001F4E6 macguffin acquired",
+    "rare": "\u2728 rare macguffin",
+    "iconic": "\U0001F31F ICONIC DROP \U0001F31F",
+}
+
+_MACGUFFIN_RARITIES = {
+    "common": "\u2B1C common",
+    "rare": "\U0001F535 rare",
+    "iconic": "\U0001F31F iconic",
+}
+
+
+def _macguffin_color(card: dict) -> int:
+    rarity = str(card.get("rarity", "common")).lower()
+    return _MACGUFFIN_COLORS.get(rarity, _MACGUFFIN_COLORS["common"])
+
+
+def _macguffin_description(card: dict) -> str:
+    emoji = card.get("emoji", "")
+    name = card.get("name", "unknown macguffin")
+    flavor = card.get("flavor", "")
+    return f"{emoji}\n\n### {name}\n*{flavor}*"
+
+
+def _macguffin_owner_text(owner_tag: str) -> str:
+    if owner_tag.startswith("@") or owner_tag.startswith("<@"):
+        return owner_tag
+    return f"@{owner_tag}"
+
+
+def _format_macguffin_acquired(value) -> str:
+    if not value:
+        return "unknown"
+    if isinstance(value, datetime):
+        acquired = value
+    else:
+        text = str(value)
+        try:
+            acquired = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return text
+    return acquired.strftime("%B %d, %Y").replace(" 0", " ", 1)
+
+
+def macguffin_drop_embed(
+    card: dict,
+    owner_tag: str,
+    claimed_count: int,
+    total_count: int,
+) -> discord.Embed:
+    """Public announcement for a newly claimed MacGuffin."""
+    rarity = str(card.get("rarity", "common")).lower()
+    embed = discord.Embed(
+        title=_MACGUFFIN_TITLES.get(rarity, _MACGUFFIN_TITLES["common"]),
+        description=_macguffin_description(card),
+        color=_macguffin_color(card),
+    )
+    embed.add_field(
+        name="RARITY",
+        value=_MACGUFFIN_RARITIES.get(rarity, rarity),
+        inline=True,
+    )
+    embed.add_field(name="FROM", value=card.get("source", "unknown"), inline=True)
+    embed.add_field(
+        name="CLAIMED BY",
+        value=_macguffin_owner_text(owner_tag),
+        inline=False,
+    )
+    embed.set_footer(text=f"macguffin {claimed_count} of {total_count} claimed")
+    return embed
+
+
+def macguffin_card_embed(card: dict, record: dict) -> discord.Embed:
+    """Single-card view for a user's MacGuffin inventory."""
+    rarity = str(card.get("rarity", "common")).lower()
+    embed = discord.Embed(
+        title=card.get("name", "unknown macguffin"),
+        description=_macguffin_description(card),
+        color=_macguffin_color(card),
+    )
+    embed.add_field(
+        name="RARITY",
+        value=_MACGUFFIN_RARITIES.get(rarity, rarity),
+        inline=True,
+    )
+    embed.add_field(name="FROM", value=card.get("source", "unknown"), inline=True)
+    embed.add_field(
+        name="ACQUIRED",
+        value=_format_macguffin_acquired(record.get("acquired_at")),
+        inline=True,
+    )
+    embed.add_field(
+        name="VIA",
+        value=record.get("acquired_via", "unknown"),
+        inline=True,
+    )
+    return embed
+
+
+def macguffin_list_embed(
+    user_tag: str,
+    cards: list[dict],
+    page: int,
+    total_pages: int,
+) -> discord.Embed:
+    """Paginated view of a user's MacGuffin collection."""
+    embed = discord.Embed(
+        title=f"{user_tag}'s macguffins",
+        color=0x5865F2,
+    )
+
+    total_count = len(cards)
+    if not cards:
+        embed.description = "you don't have any macguffins yet."
+        return embed
+
+    start = page * MACGUFFIN_PAGE_SIZE
+    page_cards = cards[start : start + MACGUFFIN_PAGE_SIZE]
+    lines = []
+    for card in page_cards:
+        emoji = card.get("emoji", "")
+        name = card.get("name", "unknown macguffin")
+        rarity = card.get("rarity", "unknown")
+        lines.append(f"{emoji} **{name}** - {rarity}")
+
+    embed.description = "\n".join(lines)
+    embed.set_footer(text=f"{total_count} macguffins - page {page + 1}/{total_pages}")
     return embed

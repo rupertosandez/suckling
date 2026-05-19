@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] - 2026-05-19
+
+### Added
+
+- **macguffins** - collectible, globally unique movie objects that drop when members return rentals.
+- `/claimguffin` - one free starter macguffin for each member.
+- `/myguffins` - private paginated collection view with per-card details.
+- `/giftguffin @user <card>` - gift one of your macguffins to another member.
+- `/adminguffins` - admin tool to view, add, move, remove, or randomly assign member macguffins.
+
 ## [2.2.0] - 2026-05-19
 
 ### Added

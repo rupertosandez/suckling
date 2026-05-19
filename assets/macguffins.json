@@ -1,0 +1,1034 @@
+[
+  {
+    "id": "one-ring",
+    "name": "the one ring",
+    "emoji": "💍",
+    "rarity": "iconic",
+    "source": "The Lord of the Rings: The Fellowship of the Ring (2001)",
+    "flavor": "one ring to rule them all. extremely light for something that corrupts absolutely."
+  },
+  {
+    "id": "lightsaber",
+    "name": "a lightsaber",
+    "emoji": "⚔️",
+    "rarity": "iconic",
+    "source": "Star Wars (1977)",
+    "flavor": "makes a very satisfying noise. should not be pointed at anyone you consider family."
+  },
+  {
+    "id": "freddys-glove",
+    "name": "freddy krueger's bladed glove",
+    "emoji": "🖐️",
+    "rarity": "iconic",
+    "source": "A Nightmare on Elm Street (1984)",
+    "flavor": "handmade, with love. do not wear to sleep."
+  },
+  {
+    "id": "pennywises-balloon",
+    "name": "pennywise's red balloon",
+    "emoji": "🎈",
+    "rarity": "iconic",
+    "source": "It (2017)",
+    "flavor": "they all float down here. do not follow it into the sewer drain."
+  },
+  {
+    "id": "elder-wand",
+    "name": "the elder wand",
+    "emoji": "🪄",
+    "rarity": "iconic",
+    "source": "Harry Potter and the Deathly Hallows Part 2 (2011)",
+    "flavor": "the most powerful wand ever made. previous owners have had a rough go of it."
+  },
+  {
+    "id": "holy-grail",
+    "name": "the holy grail",
+    "emoji": "🏆",
+    "rarity": "iconic",
+    "source": "Indiana Jones and the Last Crusade (1989)",
+    "flavor": "choose wisely. it's not the one with all the jewels."
+  },
+  {
+    "id": "delorean",
+    "name": "the delorean",
+    "emoji": "🚗",
+    "rarity": "iconic",
+    "source": "Back to the Future (1985)",
+    "flavor": "needs 1.21 gigawatts and a very long road. the doors go up, not out."
+  },
+  {
+    "id": "lament-configuration",
+    "name": "the lament configuration",
+    "emoji": "🧩",
+    "rarity": "iconic",
+    "source": "Hellraiser (1987)",
+    "flavor": "a puzzle box that opens doors to dimensions of experience beyond imagination. do not solve it."
+  },
+  {
+    "id": "necronomicon",
+    "name": "the necronomicon ex-mortis",
+    "emoji": "📕",
+    "rarity": "iconic",
+    "source": "Evil Dead (1981)",
+    "flavor": "bound in human flesh, inked in blood. not available at your local library."
+  },
+  {
+    "id": "aladdins-lamp",
+    "name": "aladdin's magic lamp",
+    "emoji": "🪔",
+    "rarity": "iconic",
+    "source": "Aladdin (1992)",
+    "flavor": "three wishes. no wishing for more wishes. phenomenal cosmic power, itty bitty living space."
+  },
+  {
+    "id": "jasons-mask",
+    "name": "jason's hockey mask",
+    "emoji": "🏒",
+    "rarity": "iconic",
+    "source": "Friday the 13th Part III (1982)",
+    "flavor": "not for hockey. never actually used for hockey. found near a lake."
+  },
+  {
+    "id": "myers-mask",
+    "name": "michael myers' mask",
+    "emoji": "😶",
+    "rarity": "iconic",
+    "source": "Halloween (1978)",
+    "flavor": "a william shatner mask, spray-painted white. whoever made it had no idea what they started."
+  },
+  {
+    "id": "ghostface-mask",
+    "name": "ghostface's mask",
+    "emoji": "👻",
+    "rarity": "iconic",
+    "source": "Scream (1996)",
+    "flavor": "what's your favorite scary movie? answer carefully."
+  },
+  {
+    "id": "leatherfaces-chainsaw",
+    "name": "leatherface's chainsaw",
+    "emoji": "🪚",
+    "rarity": "iconic",
+    "source": "The Texas Chain Saw Massacre (1974)",
+    "flavor": "well-used. do not ask what it has been used on."
+  },
+  {
+    "id": "chucky",
+    "name": "chucky",
+    "emoji": "🪆",
+    "rarity": "iconic",
+    "source": "Child's Play (1988)",
+    "flavor": "hi, i'm chucky. wanna play? the correct answer is no."
+  },
+  {
+    "id": "golden-ticket",
+    "name": "a golden ticket",
+    "emoji": "🎫",
+    "rarity": "iconic",
+    "source": "Willy Wonka & the Chocolate Factory (1971)",
+    "flavor": "pure imagination. comes with a factory tour you may not survive."
+  },
+  {
+    "id": "indys-fedora",
+    "name": "indy's fedora",
+    "emoji": "🎩",
+    "rarity": "iconic",
+    "source": "Raiders of the Lost Ark (1981)",
+    "flavor": "it belongs in a museum. (it does not belong in a museum.)"
+  },
+  {
+    "id": "cobbs-top",
+    "name": "cobb's spinning top",
+    "emoji": "🌀",
+    "rarity": "iconic",
+    "source": "Inception (2010)",
+    "flavor": "does it wobble? does it stop? nobody knows. not even the director."
+  },
+  {
+    "id": "proton-pack",
+    "name": "a proton pack",
+    "emoji": "🎒",
+    "rarity": "iconic",
+    "source": "Ghostbusters (1984)",
+    "flavor": "don't cross the streams. positively charged. extremely heavy. worth it."
+  },
+  {
+    "id": "ruby-slippers",
+    "name": "the ruby slippers",
+    "emoji": "👠",
+    "rarity": "iconic",
+    "source": "The Wizard of Oz (1939)",
+    "flavor": "there's no place like home. size 5B. clicking required."
+  },
+  {
+    "id": "flux-capacitor",
+    "name": "the flux capacitor",
+    "emoji": "⚡",
+    "rarity": "iconic",
+    "source": "Back to the Future (1985)",
+    "flavor": "1.21 gigawatts. the thing that makes time travel possible - apparently doc came up with it after hitting his head on a toilet."
+  },
+  {
+    "id": "briefcase",
+    "name": "the briefcase",
+    "emoji": "💼",
+    "rarity": "iconic",
+    "source": "Pulp Fiction (1994)",
+    "flavor": "nobody knows what's inside. the glow is warm and golden. some things are better left unopened."
+  },
+  {
+    "id": "the-suckling",
+    "name": "the suckling",
+    "emoji": "🍼",
+    "rarity": "iconic",
+    "source": "The Suckling (1990)",
+    "flavor": "a toxic-waste mutant with family issues and a very specific grudge. the rb9 mascot nobody asked for and everyone deserves."
+  },
+  {
+    "id": "annabelle",
+    "name": "annabelle the doll",
+    "emoji": "🎎",
+    "rarity": "rare",
+    "source": "The Conjuring (2013)",
+    "flavor": "allegedly just a vessel. does not move on its own. probably."
+  },
+  {
+    "id": "redrum-axe",
+    "name": "the redrum door axe",
+    "emoji": "🪓",
+    "rarity": "rare",
+    "source": "The Shining (1980)",
+    "flavor": "here's johnny. the door did not survive."
+  },
+  {
+    "id": "facehugger",
+    "name": "a xenomorph facehugger (preserved)",
+    "emoji": "🤢",
+    "rarity": "rare",
+    "source": "Alien (1979)",
+    "flavor": "hermetically sealed for your protection. do not open. do not even look at it too long."
+  },
+  {
+    "id": "the-ring-tape",
+    "name": "the vhs tape",
+    "emoji": "📼",
+    "rarity": "rare",
+    "source": "The Ring (2002)",
+    "flavor": "you will receive a phone call after viewing. do not view."
+  },
+  {
+    "id": "babadook-book",
+    "name": "the babadook pop-up book",
+    "emoji": "📚",
+    "rarity": "rare",
+    "source": "The Babadook (2014)",
+    "flavor": "dook dook dook. once you've read it, you can't make it go away. the pop-ups are surprisingly well-crafted."
+  },
+  {
+    "id": "handbook-recently-deceased",
+    "name": "handbook for the recently deceased",
+    "emoji": "📖",
+    "rarity": "rare",
+    "source": "Beetlejuice (1988)",
+    "flavor": "practical guide for the newly dead. the print is very small and the advice is worse."
+  },
+  {
+    "id": "ashs-chainsaw-hand",
+    "name": "ash's chainsaw hand",
+    "emoji": "🔩",
+    "rarity": "rare",
+    "source": "Evil Dead II (1987)",
+    "flavor": "groovy. self-attaching. requires no hand underneath."
+  },
+  {
+    "id": "red-swingline",
+    "name": "a red swingline stapler",
+    "emoji": "📎",
+    "rarity": "rare",
+    "source": "Office Space (1999)",
+    "flavor": "not the standard model. do not move it. do not touch it. he will burn the building down."
+  },
+  {
+    "id": "wilson",
+    "name": "wilson the volleyball",
+    "emoji": "🏐",
+    "rarity": "rare",
+    "source": "Cast Away (2000)",
+    "flavor": "a companion, a confidant, a best friend. handle with extreme care."
+  },
+  {
+    "id": "the-dudes-rug",
+    "name": "the dude's rug",
+    "emoji": "🟫",
+    "rarity": "rare",
+    "source": "The Big Lebowski (1998)",
+    "flavor": "it really tied the room together. the fact that it doesn't anymore is a genuine tragedy."
+  },
+  {
+    "id": "leg-lamp",
+    "name": "a leg lamp",
+    "emoji": "💡",
+    "rarity": "rare",
+    "source": "A Christmas Story (1983)",
+    "flavor": "a major award. fra-gi-le. must be italian."
+  },
+  {
+    "id": "tiny-stonehenge",
+    "name": "the stonehenge model",
+    "emoji": "🪨",
+    "rarity": "rare",
+    "source": "This Is Spinal Tap (1984)",
+    "flavor": "eighteen inches. the brief called for eighteen feet. this happens."
+  },
+  {
+    "id": "everlasting-gobstopper",
+    "name": "an everlasting gobstopper",
+    "emoji": "🍬",
+    "rarity": "rare",
+    "source": "Willy Wonka & the Chocolate Factory (1971)",
+    "flavor": "never gets any smaller. the flavor changes. do not bite."
+  },
+  {
+    "id": "self-lacing-nikes",
+    "name": "self-lacing nikes",
+    "emoji": "👟",
+    "rarity": "rare",
+    "source": "Back to the Future Part II (1989)",
+    "flavor": "auto-laces on command. arrived several years late but here they are."
+  },
+  {
+    "id": "buzz-lightyear",
+    "name": "buzz lightyear",
+    "emoji": "🚀",
+    "rarity": "rare",
+    "source": "Toy Story (1995)",
+    "flavor": "to infinity and beyond. not a flying toy. he falls with style."
+  },
+  {
+    "id": "burn-book",
+    "name": "the burn book",
+    "emoji": "📓",
+    "rarity": "rare",
+    "source": "Mean Girls (2004)",
+    "flavor": "contains secrets. do not let it fall into the wrong hands. all hands are the wrong hands."
+  },
+  {
+    "id": "golden-idol",
+    "name": "the golden idol",
+    "emoji": "🏺",
+    "rarity": "rare",
+    "source": "Raiders of the Lost Ark (1981)",
+    "flavor": "weighs exactly as much as a bag of sand, allegedly. this has never once worked out."
+  },
+  {
+    "id": "black-pearl-bottle",
+    "name": "the black pearl in a bottle",
+    "emoji": "⛵",
+    "rarity": "rare",
+    "source": "Pirates of the Caribbean: The Curse of the Black Pearl (2003)",
+    "flavor": "why is the rum gone. and why is the ship inside this bottle."
+  },
+  {
+    "id": "krabby-patty-formula",
+    "name": "the krabby patty secret formula",
+    "emoji": "🍔",
+    "rarity": "rare",
+    "source": "SpongeBob SquarePants (TV)",
+    "flavor": "the most guarded secret in bikini bottom. nobody has read it. everyone wants it."
+  },
+  {
+    "id": "slurm-can",
+    "name": "fry's can of slurm",
+    "emoji": "🥤",
+    "rarity": "rare",
+    "source": "Futurama (TV)",
+    "flavor": "highly addictive. the secret ingredient is best not investigated."
+  },
+  {
+    "id": "omnitrix",
+    "name": "the omnitrix",
+    "emoji": "⌚",
+    "rarity": "rare",
+    "source": "Ben 10 (TV)",
+    "flavor": "aliens inside a watch. attaches permanently. the timeout always happens at the worst possible moment."
+  },
+  {
+    "id": "magic-conch",
+    "name": "the magic conch shell",
+    "emoji": "🐚",
+    "rarity": "rare",
+    "source": "SpongeBob SquarePants (TV)",
+    "flavor": "all you have to do is ask. the answer is usually nothing. the answer is always correct."
+  },
+  {
+    "id": "frank-costume",
+    "name": "frank the bunny costume",
+    "emoji": "🐰",
+    "rarity": "rare",
+    "source": "Donnie Darko (2001)",
+    "flavor": "28 days, 6 hours, 42 minutes, 12 seconds. that is when the world will end. dress accordingly."
+  },
+  {
+    "id": "pale-man-eyeballs",
+    "name": "the pale man's eyeballs",
+    "emoji": "👁️",
+    "rarity": "rare",
+    "source": "Pan's Labyrinth (2006)",
+    "flavor": "placed in the hands to see. do not place them in your hands."
+  },
+  {
+    "id": "sevens-box",
+    "name": "se7en's box",
+    "emoji": "📦",
+    "rarity": "rare",
+    "source": "Se7en (1995)",
+    "flavor": "what's in the box. you don't want to know what's in the box."
+  },
+  {
+    "id": "poison-apple",
+    "name": "the poison apple",
+    "emoji": "🍎",
+    "rarity": "rare",
+    "source": "Snow White and the Seven Dwarfs (1937)",
+    "flavor": "one bite is all it takes. looks perfectly fine. smells perfectly fine. do not eat it."
+  },
+  {
+    "id": "witchs-broomstick",
+    "name": "the wicked witch's broomstick",
+    "emoji": "🧹",
+    "rarity": "rare",
+    "source": "The Wizard of Oz (1939)",
+    "flavor": "flies without a license. previously owned. the previous owner did not survive the acquisition."
+  },
+  {
+    "id": "room-237-key",
+    "name": "the room 237 key",
+    "emoji": "🗝️",
+    "rarity": "rare",
+    "source": "The Shining (1980)",
+    "flavor": "wendy, i'm home. do not use this key."
+  },
+  {
+    "id": "regans-pea-soup",
+    "name": "regan's pea soup bowl",
+    "emoji": "🥣",
+    "rarity": "common",
+    "source": "The Exorcist (1973)",
+    "flavor": "the head spins, the soup flies. do not eat the contents."
+  },
+  {
+    "id": "overlook-typewriter",
+    "name": "the overlook typewriter",
+    "emoji": "⌨️",
+    "rarity": "common",
+    "source": "The Shining (1980)",
+    "flavor": "all work and no play makes jack a dull boy. the ribbon needs replacing."
+  },
+  {
+    "id": "black-lodge-coffee",
+    "name": "a black lodge coffee cup",
+    "emoji": "☕",
+    "rarity": "common",
+    "source": "Twin Peaks: Fire Walk with Me (1992)",
+    "flavor": "damn fine coffee. consumed in a place that does not follow normal rules of space or time."
+  },
+  {
+    "id": "sams-burlap-mask",
+    "name": "sam's burlap sack mask",
+    "emoji": "🎃",
+    "rarity": "common",
+    "source": "Trick 'r Treat (2007)",
+    "flavor": "homemade. do not remove the mask. sam is very particular about the mask."
+  },
+  {
+    "id": "carries-prom-dress",
+    "name": "carrie's prom dress",
+    "emoji": "👗",
+    "rarity": "common",
+    "source": "Carrie (1976)",
+    "flavor": "they're all gonna laugh at you. they did. it did not go well for them."
+  },
+  {
+    "id": "chestburster-jar",
+    "name": "a chestburster (in a jar)",
+    "emoji": "🫙",
+    "rarity": "common",
+    "source": "Alien (1979)",
+    "flavor": "hermetically sealed. pre-emergence. do not shake."
+  },
+  {
+    "id": "they-live-sunglasses",
+    "name": "a pair of sunglasses",
+    "emoji": "🕶️",
+    "rarity": "common",
+    "source": "They Live (1988)",
+    "flavor": "obey. consume. marry and reproduce. put them on and see the world as it really is."
+  },
+  {
+    "id": "ss-georgie",
+    "name": "the s.s. georgie",
+    "emoji": "🚢",
+    "rarity": "common",
+    "source": "It (2017)",
+    "flavor": "a paper boat. sailed once, not recovered. do not follow it into the storm drain."
+  },
+  {
+    "id": "tiffany-doll",
+    "name": "tiffany the bride doll",
+    "emoji": "💍",
+    "rarity": "common",
+    "source": "Bride of Chucky (1998)",
+    "flavor": "she came back. she always comes back."
+  },
+  {
+    "id": "gizmo",
+    "name": "gizmo the mogwai",
+    "emoji": "🐱",
+    "rarity": "common",
+    "source": "Gremlins (1984)",
+    "flavor": "bright light, bright light. no water. no food after midnight. these are not suggestions."
+  },
+  {
+    "id": "dont-feed-sign",
+    "name": "a do not feed after midnight sign",
+    "emoji": "🚫",
+    "rarity": "common",
+    "source": "Gremlins (1984)",
+    "flavor": "the most important sign in any kitchen. nobody followed the rules. look how that turned out."
+  },
+  {
+    "id": "sams-lollipop",
+    "name": "sam's lollipop",
+    "emoji": "🍭",
+    "rarity": "common",
+    "source": "Trick 'r Treat (2007)",
+    "flavor": "candy is just candy until sam gives it to you."
+  },
+  {
+    "id": "beetlejuice-jacket",
+    "name": "beetlejuice's striped suit jacket",
+    "emoji": "🧥",
+    "rarity": "common",
+    "source": "Beetlejuice (1988)",
+    "flavor": "black and white stripes. say his name three times to see if it fits. do not say his name three times."
+  },
+  {
+    "id": "get-out-teacup",
+    "name": "a get out teacup and spoon",
+    "emoji": "🫖",
+    "rarity": "common",
+    "source": "Get Out (2017)",
+    "flavor": "the stirring puts you somewhere else. do not follow the sound."
+  },
+  {
+    "id": "cornetto",
+    "name": "a cornetto",
+    "emoji": "🍦",
+    "rarity": "common",
+    "source": "Shaun of the Dead (2004)",
+    "flavor": "everything's going to be fine. there's a cornetto involved."
+  },
+  {
+    "id": "shauns-cricket-bat",
+    "name": "shaun's bloody cricket bat",
+    "emoji": "🏏",
+    "rarity": "common",
+    "source": "Shaun of the Dead (2004)",
+    "flavor": "used on exactly the kind of things a cricket bat should not be used on."
+  },
+  {
+    "id": "boomstick",
+    "name": "the boomstick",
+    "emoji": "💥",
+    "rarity": "common",
+    "source": "Army of Darkness (1992)",
+    "flavor": "this is my boomstick. shop smart, shop s-mart."
+  },
+  {
+    "id": "silver-bullet",
+    "name": "wolfman's silver bullet",
+    "emoji": "🔫",
+    "rarity": "common",
+    "source": "The Wolf Man (1941)",
+    "flavor": "the only thing that works. one shot, one chance. keep it somewhere you'll remember."
+  },
+  {
+    "id": "holy-water-vial",
+    "name": "a vial of holy water",
+    "emoji": "💧",
+    "rarity": "common",
+    "source": "The Exorcist (1973)",
+    "flavor": "blessed by a priest. useful in a number of situations you'd rather not be in."
+  },
+  {
+    "id": "wooden-stake",
+    "name": "a wooden stake",
+    "emoji": "🪵",
+    "rarity": "common",
+    "source": "Dracula (1931)",
+    "flavor": "hand-sharpened. single use. do not show up without a plan."
+  },
+  {
+    "id": "suspiria-shoes",
+    "name": "a pair of red ballet shoes",
+    "emoji": "🩰",
+    "rarity": "common",
+    "source": "Suspiria (1977)",
+    "flavor": "the color is deliberate. the dance does not end well."
+  },
+  {
+    "id": "jazz-flute",
+    "name": "ron burgundy's jazz flute",
+    "emoji": "🎷",
+    "rarity": "common",
+    "source": "Anchorman: The Legend of Ron Burgundy (2004)",
+    "flavor": "i'm kind of a big deal. the solo is real and it is committed."
+  },
+  {
+    "id": "sex-panther",
+    "name": "a bottle of sex panther cologne",
+    "emoji": "🐆",
+    "rarity": "common",
+    "source": "Anchorman: The Legend of Ron Burgundy (2004)",
+    "flavor": "60% of the time, it works every time. made with actual bits of panther."
+  },
+  {
+    "id": "coconut-halves",
+    "name": "a pair of coconut halves",
+    "emoji": "🥥",
+    "rarity": "common",
+    "source": "Monty Python and the Holy Grail (1975)",
+    "flavor": "clip clop clip clop. the horse budget did not survive pre-production."
+  },
+  {
+    "id": "sloths-baby-ruth",
+    "name": "sloth's baby ruth",
+    "emoji": "🍫",
+    "rarity": "common",
+    "source": "The Goonies (1985)",
+    "flavor": "hey you guys. the bar has been through things. handle with care."
+  },
+  {
+    "id": "buddy-spaghetti",
+    "name": "buddy the elf's syrup spaghetti",
+    "emoji": "🍝",
+    "rarity": "common",
+    "source": "Elf (2003)",
+    "flavor": "the four food groups: candy, candy canes, candy corns, and syrup. this is all four at once."
+  },
+  {
+    "id": "reeses-pieces",
+    "name": "a bag of reese's pieces",
+    "emoji": "🍬",
+    "rarity": "common",
+    "source": "E.T. the Extra-Terrestrial (1982)",
+    "flavor": "made first contact possible. the most important candy in cinema history."
+  },
+  {
+    "id": "box-of-chocolates",
+    "name": "forrest gump's box of chocolates",
+    "emoji": "🍫",
+    "rarity": "common",
+    "source": "Forrest Gump (1994)",
+    "flavor": "life is like a box of chocolates. you never know what you're gonna get. some flavors are not great."
+  },
+  {
+    "id": "royale-with-cheese",
+    "name": "a royale with cheese",
+    "emoji": "🍔",
+    "rarity": "common",
+    "source": "Pulp Fiction (1994)",
+    "flavor": "what do they call a quarter pounder with cheese in paris? this. they call it this."
+  },
+  {
+    "id": "glass-slipper",
+    "name": "a glass slipper",
+    "emoji": "👡",
+    "rarity": "common",
+    "source": "Cinderella (1950)",
+    "flavor": "fits exactly one person in the entire kingdom. impractical. effective."
+  },
+  {
+    "id": "forky",
+    "name": "forky",
+    "emoji": "🍴",
+    "rarity": "common",
+    "source": "Toy Story 4 (2019)",
+    "flavor": "i am not a toy. i am trash. made from a spork and pipe cleaners. deeply confused about existence."
+  },
+  {
+    "id": "mr-potato-head",
+    "name": "mr. potato head",
+    "emoji": "🥔",
+    "rarity": "common",
+    "source": "Toy Story (1995)",
+    "flavor": "all parts detachable. comes with several sets of eyes. there is no actual potato involved."
+  },
+  {
+    "id": "lembas-bread",
+    "name": "a loaf of lembas bread",
+    "emoji": "🍞",
+    "rarity": "common",
+    "source": "The Lord of the Rings: The Fellowship of the Ring (2001)",
+    "flavor": "one small bite will fill the stomach of a grown man. most people eat the whole loaf anyway."
+  },
+  {
+    "id": "hitchhikers-towel",
+    "name": "a hitchhiker's towel",
+    "emoji": "🏖️",
+    "rarity": "common",
+    "source": "The Hitchhiker's Guide to the Galaxy (2005)",
+    "flavor": "the most massively useful thing an interstellar hitchhiker can have. don't panic."
+  },
+  {
+    "id": "babel-fish",
+    "name": "a babel fish",
+    "emoji": "🐟",
+    "rarity": "common",
+    "source": "The Hitchhiker's Guide to the Galaxy (2005)",
+    "flavor": "insert into ear to understand any language in the universe. small, yellow, leech-like, and profoundly consequential."
+  },
+  {
+    "id": "stay-puft-figurine",
+    "name": "a stay puft marshmallow man figurine",
+    "emoji": "🤍",
+    "rarity": "common",
+    "source": "Ghostbusters (1984)",
+    "flavor": "the most harmless thing ray could think of. this did not work out."
+  },
+  {
+    "id": "hoverboard",
+    "name": "marty's hoverboard",
+    "emoji": "🛹",
+    "rarity": "common",
+    "source": "Back to the Future Part II (1989)",
+    "flavor": "does not work on water. unless you have power. this one does not have power."
+  },
+  {
+    "id": "orange-life-vest",
+    "name": "the orange life vest",
+    "emoji": "🧡",
+    "rarity": "common",
+    "source": "Back to the Future (1985)",
+    "flavor": "worn once, briefly, in 1955. the future's fashion sense has not aged well."
+  },
+  {
+    "id": "shark-tooth-necklace",
+    "name": "the shark tooth necklace",
+    "emoji": "🦷",
+    "rarity": "common",
+    "source": "Jaws (1975)",
+    "flavor": "you're gonna need a bigger boat. the tooth came off something that definitely required one."
+  },
+  {
+    "id": "rosebud",
+    "name": "the sled named rosebud",
+    "emoji": "🛷",
+    "rarity": "common",
+    "source": "Citizen Kane (1941)",
+    "flavor": "the meaning of a man's entire life, reduced to one word. it was the sled."
+  },
+  {
+    "id": "dorothy-basket",
+    "name": "dorothy's picnic basket",
+    "emoji": "🧺",
+    "rarity": "common",
+    "source": "The Wizard of Oz (1939)",
+    "flavor": "toto was in here at some point. carried through a tornado. still functional."
+  },
+  {
+    "id": "mary-poppins-umbrella",
+    "name": "mary poppins' umbrella",
+    "emoji": "☂️",
+    "rarity": "common",
+    "source": "Mary Poppins (1964)",
+    "flavor": "practically perfect in every way. the parrot handle has opinions."
+  },
+  {
+    "id": "mary-poppins-bag",
+    "name": "mary poppins' carpet bag",
+    "emoji": "👜",
+    "rarity": "common",
+    "source": "Mary Poppins (1964)",
+    "flavor": "contains a coat rack, a lamp, a hat stand, and a large mirror. bigger on the inside."
+  },
+  {
+    "id": "black-knight-helmet",
+    "name": "the black knight's helmet",
+    "emoji": "⚔️",
+    "rarity": "common",
+    "source": "Monty Python and the Holy Grail (1975)",
+    "flavor": "'tis but a scratch. comes with the confidence of someone who has clearly lost."
+  },
+  {
+    "id": "moon-boots",
+    "name": "napoleon dynamite's moon boots",
+    "emoji": "👢",
+    "rarity": "common",
+    "source": "Napoleon Dynamite (2004)",
+    "flavor": "skills. you need skills. the boots arrived before the skills did."
+  },
+  {
+    "id": "vote-pedro-shirt",
+    "name": "the vote for pedro shirt",
+    "emoji": "👕",
+    "rarity": "common",
+    "source": "Napoleon Dynamite (2004)",
+    "flavor": "vote for pedro. pedro offers you his protection."
+  },
+  {
+    "id": "burgundy-scotch",
+    "name": "ron burgundy's scotch glass",
+    "emoji": "🥃",
+    "rarity": "common",
+    "source": "Anchorman: The Legend of Ron Burgundy (2004)",
+    "flavor": "scotchy scotch scotch. i love scotch. it's so good."
+  },
+  {
+    "id": "sex-panther-display",
+    "name": "the sex panther display box",
+    "emoji": "🖼️",
+    "rarity": "common",
+    "source": "Anchorman: The Legend of Ron Burgundy (2004)",
+    "flavor": "a fine display case for a fine cologne. the velvet lining still carries the scent."
+  },
+  {
+    "id": "orange-tux",
+    "name": "lloyd christmas' orange tuxedo",
+    "emoji": "🤵",
+    "rarity": "common",
+    "source": "Dumb and Dumber (1994)",
+    "flavor": "the most confident fashion choice in cinema. wore it to a black tie event. not invited back."
+  },
+  {
+    "id": "blue-tux",
+    "name": "harry dunne's blue tuxedo",
+    "emoji": "🎩",
+    "rarity": "common",
+    "source": "Dumb and Dumber (1994)",
+    "flavor": "the matching counterpart to the orange. these two belong together."
+  },
+  {
+    "id": "waynes-cap",
+    "name": "wayne's world cap",
+    "emoji": "🧢",
+    "rarity": "common",
+    "source": "Wayne's World (1992)",
+    "flavor": "not worthy. excellent."
+  },
+  {
+    "id": "garths-drumsticks",
+    "name": "garth's drumsticks",
+    "emoji": "🥁",
+    "rarity": "common",
+    "source": "Wayne's World (1992)",
+    "flavor": "party on, garth. he plays fife in the marching band and also these."
+  },
+  {
+    "id": "dudes-white-russian",
+    "name": "the dude's white russian",
+    "emoji": "🥛",
+    "rarity": "common",
+    "source": "The Big Lebowski (1998)",
+    "flavor": "kahlua, vodka, cream. the dude abides. this is a beverage."
+  },
+  {
+    "id": "bowling-ball-bag",
+    "name": "a bowling ball bag",
+    "emoji": "🎳",
+    "rarity": "common",
+    "source": "The Big Lebowski (1998)",
+    "flavor": "contains a bowling ball. unless it doesn't. that's kind of the whole thing."
+  },
+  {
+    "id": "ferris-vest",
+    "name": "ferris bueller's vest",
+    "emoji": "🧣",
+    "rarity": "common",
+    "source": "Ferris Bueller's Day Off (1986)",
+    "flavor": "life moves pretty fast. if you don't stop and look around once in a while, you could miss it. also this vest."
+  },
+  {
+    "id": "camerons-jersey",
+    "name": "cameron's red wings jersey",
+    "emoji": "🏒",
+    "rarity": "common",
+    "source": "Ferris Bueller's Day Off (1986)",
+    "flavor": "cameron is so uptight. but the jersey is genuinely cool."
+  },
+  {
+    "id": "zissou-beanie",
+    "name": "the zissou red beanie",
+    "emoji": "🎿",
+    "rarity": "common",
+    "source": "The Life Aquatic with Steve Zissou (2004)",
+    "flavor": "team zissou. the jaguar shark took someone he loved. the beanie remained."
+  },
+  {
+    "id": "pageant-crown",
+    "name": "the little miss sunshine pageant crown",
+    "emoji": "👑",
+    "rarity": "common",
+    "source": "Little Miss Sunshine (2006)",
+    "flavor": "olive just wanted to be in the pageant. she was in the pageant. it was memorable."
+  },
+  {
+    "id": "wall-e-plant-boot",
+    "name": "wall-e's plant boot",
+    "emoji": "🌱",
+    "rarity": "common",
+    "source": "WALL-E (2008)",
+    "flavor": "found growing in an old boot. the last living plant on earth, kept alive by a very small robot."
+  },
+  {
+    "id": "carls-pin",
+    "name": "carl's grape soda pin",
+    "emoji": "📌",
+    "rarity": "common",
+    "source": "Up (2009)",
+    "flavor": "adventure is out there. this pin meant everything to two people and now it means everything to you."
+  },
+  {
+    "id": "pizza-planet-cup",
+    "name": "a pizza planet cup",
+    "emoji": "🍕",
+    "rarity": "common",
+    "source": "Toy Story (1995)",
+    "flavor": "a collector's item from pizza planet. buzz lightyear may have been found nearby."
+  },
+  {
+    "id": "andys-cowboy-hat",
+    "name": "andy's cowboy hat",
+    "emoji": "🤠",
+    "rarity": "common",
+    "source": "Toy Story (1995)",
+    "flavor": "reach for the sky. woody wore it first. andy wore it once and then left it in a box for years."
+  },
+  {
+    "id": "barbie-pink-hat",
+    "name": "barbie's pink cowboy hat",
+    "emoji": "🩷",
+    "rarity": "common",
+    "source": "Barbie (2023)",
+    "flavor": "you are kenough. the hat is also kenough."
+  },
+  {
+    "id": "ken-sign",
+    "name": "ken's mojo dojo casa house sign",
+    "emoji": "🏠",
+    "rarity": "common",
+    "source": "Barbie (2023)",
+    "flavor": "it's a mojo dojo. it's also a casa. it's a house. the name covers all the bases."
+  },
+  {
+    "id": "orange-mocha-frappuccino",
+    "name": "an orange mocha frappuccino cup",
+    "emoji": "🧋",
+    "rarity": "common",
+    "source": "Zoolander (2001)",
+    "flavor": "orange mocha frappuccino! a beverage that launched a thousand bad decisions."
+  },
+  {
+    "id": "homers-donut",
+    "name": "homer's emergency donut",
+    "emoji": "🍩",
+    "rarity": "common",
+    "source": "The Simpsons Movie (2007)",
+    "flavor": "mmm, forbidden donut. kept for emergencies. every emergency has required it."
+  },
+  {
+    "id": "duff-beer",
+    "name": "a can of duff beer",
+    "emoji": "🍺",
+    "rarity": "common",
+    "source": "The Simpsons (TV)",
+    "flavor": "can't get enough of that wonderful duff."
+  },
+  {
+    "id": "barts-slingshot",
+    "name": "bart's slingshot",
+    "emoji": "🎯",
+    "rarity": "common",
+    "source": "The Simpsons (TV)",
+    "flavor": "eat my shorts. responsible for a number of broken windows."
+  },
+  {
+    "id": "cheesy-poofs",
+    "name": "cartman's bag of cheesy poofs",
+    "emoji": "🧀",
+    "rarity": "common",
+    "source": "South Park (TV)",
+    "flavor": "oh my god. cheesy poofs."
+  },
+  {
+    "id": "kenny-hood",
+    "name": "kenny's orange hood",
+    "emoji": "🧡",
+    "rarity": "common",
+    "source": "South Park (TV)",
+    "flavor": "he dies a lot. the hood always comes back."
+  },
+  {
+    "id": "benders-can",
+    "name": "bender's empty beer can",
+    "emoji": "🥫",
+    "rarity": "common",
+    "source": "Futurama (TV)",
+    "flavor": "bite my shiny metal can. empty. has been empty for some time."
+  },
+  {
+    "id": "spongebob-ripped-pants",
+    "name": "spongebob's ripped pants",
+    "emoji": "👖",
+    "rarity": "common",
+    "source": "SpongeBob SquarePants (TV)",
+    "flavor": "he ripped his pants. everyone thought it was funny. then they thought it was less funny."
+  },
+  {
+    "id": "patricks-wallet",
+    "name": "patrick's wallet",
+    "emoji": "👛",
+    "rarity": "common",
+    "source": "SpongeBob SquarePants (TV)",
+    "flavor": "mayo is not an instrument. the wallet contents remain unclear."
+  },
+  {
+    "id": "arnolds-banana-costume",
+    "name": "arnold's banana costume",
+    "emoji": "🍌",
+    "rarity": "common",
+    "source": "Hey Arnold! (TV)",
+    "flavor": "hey arnold. the football head wore this once. it was a situation."
+  },
+  {
+    "id": "tommy-screwdriver",
+    "name": "tommy pickles' screwdriver",
+    "emoji": "🔧",
+    "rarity": "common",
+    "source": "Rugrats (TV)",
+    "flavor": "a baby with a screwdriver. everything is an adventure. the adults are not aware."
+  },
+  {
+    "id": "propane-tank",
+    "name": "hank hill's propane tank",
+    "emoji": "🔥",
+    "rarity": "common",
+    "source": "King of the Hill (TV)",
+    "flavor": "i sell propane and propane accessories. this is propane. it is a quality product."
+  },
+  {
+    "id": "baby-driver-mask",
+    "name": "a halloween mask (heist edition)",
+    "emoji": "👺",
+    "rarity": "common",
+    "source": "Baby Driver (2017)",
+    "flavor": "a cheap halloween store copy. worn once during a heist. the original is considerably more famous."
+  },
+  {
+    "id": "billy-puppet",
+    "name": "billy the puppet",
+    "emoji": "🤡",
+    "rarity": "common",
+    "source": "Saw (2004)",
+    "flavor": "i want to play a game. the tricycle is not included."
+  }
+]

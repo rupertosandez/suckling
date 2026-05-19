@@ -5,6 +5,7 @@
 
 # persistent state and logs
 data/
+local-docs/
 *.db
 *.sqlite
 *.sqlite3

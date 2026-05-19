@@ -134,6 +134,33 @@ your full rental history and stats: total rentals, on-time vs late, total fees, 
 
 ---
 
+## macguffins
+
+collectible movie objects. every macguffin is unique - once someone claims one, it is out of the pool.
+
+macguffins can drop when you `/return` a rental. the drop posts publicly in the channel.
+
+### `/claimguffin`
+claim your one free starter macguffin.
+
+the drop posts publicly in the channel, so everyone can see what you pulled.
+
+---
+
+### `/myguffins`
+browse your macguffin collection. private to you.
+
+shows 5 at a time, with a **view** button for each card.
+
+---
+
+### `/giftguffin @user <card>`
+gift one of your macguffins to another member.
+
+the card leaves your collection and moves to theirs. partial card names are fine as long as the bot can tell which one you mean.
+
+---
+
 ## tracking
 
 ### `/track <title> [year]`
@@ -327,6 +354,14 @@ cancel a user's active rental. no late fee applied. edits the forum thread to a 
 
 ### `/assignrental @user <title> [year]`
 assign an rb9 library rental to a user. creates the rental record, opens the review forum thread, and DMs the user with the due date.
+
+### `/adminguffins <action> @user [card]`
+view or edit a member's macguffins.
+
+- `view`: shows the member's current collection
+- `add`: adds a macguffin by name or id; if someone else has it, moves it
+- `remove`: removes a macguffin from that member's collection
+- `random`: assigns the member a random unclaimed macguffin
 
 ### `/setannouncements <channel>`
 set the channel where streaming announcements post. the bot needs send-message and embed-link permissions in the chosen channel.

@@ -107,6 +107,14 @@ def _media_thumb(item: ET.Element) -> str | None:
     return el.get("url") if el is not None else None
 
 
+def _description_image(html: str) -> str | None:
+    """Extract the first image URL from an RSS description."""
+    match = re.search(r"<img\b[^>]*>", html, flags=re.IGNORECASE)
+    if not match:
+        return None
+    return _html_attr(match.group(0), "src")
+
+
 def _plain_text(html: str) -> str:
     """Strip HTML tags from a string."""
     return re.sub(r"<[^>]+>", "", html).strip()
@@ -182,10 +190,9 @@ def _parse_diary_xml(xml_text: str) -> list[dict]:
         link_el = item.find("link")
         link = (link_el.text or "").strip() if link_el is not None else ""
 
-        thumb = _media_thumb(item)
-
         desc_el = item.find("description")
         desc_html = (desc_el.text or "") if desc_el is not None else ""
+        thumb = _media_thumb(item) or _description_image(desc_html)
         review = _plain_text(desc_html)
         if len(review) > 150:
             review = review[:147].rstrip() + "..."

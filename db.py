@@ -120,6 +120,18 @@ def init_db() -> None:
                 UNIQUE(user_id, title, year)
             );
 
+            CREATE TABLE IF NOT EXISTS macguffins (
+                macguffin_id   TEXT PRIMARY KEY,
+                owner_id       TEXT NOT NULL,
+                owner_tag      TEXT NOT NULL,
+                acquired_at    TEXT NOT NULL,
+                acquired_via   TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS macguffin_free_claims (
+                user_id  TEXT PRIMARY KEY
+            );
+
             CREATE TABLE IF NOT EXISTS rentals (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id          TEXT NOT NULL,
@@ -892,3 +904,113 @@ def watchlist_clear(user_id: str) -> int:
     with _connect() as conn:
         cursor = conn.execute("DELETE FROM watchlist WHERE user_id = ?", (user_id,))
         return cursor.rowcount
+
+
+# ---------- macguffins ----------
+
+def get_claimed_macguffin_ids() -> set[str]:
+    """Return the set of all macguffin IDs that have been claimed by anyone."""
+    with _connect() as conn:
+        rows = conn.execute("SELECT macguffin_id FROM macguffins").fetchall()
+        return {row["macguffin_id"] for row in rows}
+
+
+def macguffin_is_claimed(macguffin_id: str) -> bool:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM macguffins WHERE macguffin_id = ?", (macguffin_id,)
+        ).fetchone()
+        return row is not None
+
+
+def claim_macguffin(
+    macguffin_id: str,
+    owner_id: str,
+    owner_tag: str,
+    acquired_via: str,
+) -> None:
+    """Insert a new macguffin ownership record."""
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO macguffins (macguffin_id, owner_id, owner_tag, acquired_at, acquired_via) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (macguffin_id, owner_id, owner_tag, _utc_now_iso(), acquired_via),
+        )
+
+
+def get_macguffin_inventory(user_id: str) -> list[dict]:
+    """Return all macguffins owned by a user, most recently acquired first."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT macguffin_id, owner_id, owner_tag, acquired_at, acquired_via "
+            "FROM macguffins WHERE owner_id = ? ORDER BY acquired_at DESC",
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_macguffin_record(macguffin_id: str) -> dict | None:
+    """Return the ownership record for a macguffin, if claimed."""
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT macguffin_id, owner_id, owner_tag, acquired_at, acquired_via "
+            "FROM macguffins WHERE macguffin_id = ?",
+            (macguffin_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def user_owns_macguffin(user_id: str, macguffin_id: str) -> bool:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM macguffins WHERE owner_id = ? AND macguffin_id = ?",
+            (user_id, macguffin_id),
+        ).fetchone()
+        return row is not None
+
+
+def transfer_macguffin(
+    macguffin_id: str,
+    new_owner_id: str,
+    new_owner_tag: str,
+) -> bool:
+    """Transfer a macguffin to a new owner. Returns True if the row was updated."""
+    with _connect() as conn:
+        cursor = conn.execute(
+            "UPDATE macguffins SET owner_id = ?, owner_tag = ?, acquired_via = 'gift' "
+            "WHERE macguffin_id = ?",
+            (new_owner_id, new_owner_tag, macguffin_id),
+        )
+        return cursor.rowcount > 0
+
+
+def remove_macguffin(macguffin_id: str, owner_id: str | None = None) -> bool:
+    """Delete a macguffin ownership record. Optionally require the current owner."""
+    with _connect() as conn:
+        if owner_id is None:
+            cursor = conn.execute(
+                "DELETE FROM macguffins WHERE macguffin_id = ?",
+                (macguffin_id,),
+            )
+        else:
+            cursor = conn.execute(
+                "DELETE FROM macguffins WHERE macguffin_id = ? AND owner_id = ?",
+                (macguffin_id, owner_id),
+            )
+        return cursor.rowcount > 0
+
+
+def has_used_free_claim(user_id: str) -> bool:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM macguffin_free_claims WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        return row is not None
+
+
+def record_free_claim_used(user_id: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO macguffin_free_claims (user_id) VALUES (?)",
+            (user_id,),
+        )

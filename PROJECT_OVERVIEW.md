@@ -1,7 +1,7 @@
 # Sucklingbot Project Overview
 
 **Last updated:** May 19, 2026
-**Current version:** 2.1.0
+**Current version:** 2.3.0
 **Maintainer:** rupertosandez (GitHub)
 
 ---
@@ -38,7 +38,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 
 ### Video Store Rental System
 - **`/rent`** - Rent a random film (48-hour window, 2 re-rolls, permanent exclusion of past rentals)
-- **`/return <rating> <recommend> [thoughts]`** - Return rental + post review to forum
+- **`/return <rating> <recommend> [thoughts]`** - Return rental + post review to forum + roll a MacGuffin drop
 - **`/extend`** - Extend active rental by 24 hours (once per rental)
 - **`/myrental`** - Current rental status with live countdown
 - **`/latefees`** - Late fee leaderboard (cosmetic $1/day)
@@ -46,6 +46,13 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - **`/setreviews <forum_channel>`** - Admin: configure review forum
 - **`/cancelrental @user [reason]`** - Admin: cancel rental with no fee
 - **`/assignrental @user <title> [year]`** - Admin: assign specific rental to user
+
+### MacGuffins
+- **Drop on `/return`** - Globally unique collectible movie objects awarded after successful rental returns
+- **`/claimguffin`** - One free starter MacGuffin per member
+- **`/myguffins`** - Private paginated collection view with card details
+- **`/giftguffin @user <card>`** - Gift a MacGuffin from your collection to another member
+- **`/adminguffins <action> @user [card]`** - Admin: view, add, move, remove, or randomly assign member MacGuffins
 
 ### Games
 - **`/guess [difficulty]`** - Poster/still guessing (1 pt easy, 2 pts hard, 60s timer)
@@ -62,7 +69,9 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - **Feature toggles:** `/toggle feature:streaming-announcements enabled:False` etc.
 - **Manual triggers:** `/checknow` (dry-run), `/checknowlive` (post live), `/dailynow`, `/lbactivitynow`
 
-### Utilities
+### Admin / Utilities
+- **`/botstatus`** - Admin dashboard: version, uptime, latency, cache, channels, toggles, rental/LB counts, setup warnings
+- **`/lblinked [page]`** - Paginated list of linked Letterboxd accounts (admin)
 - **`/info`** - Bot info card
 - **`/ping`** - Health check (latency)
 - **`/version`** - Current bot version
@@ -83,6 +92,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `plex.py` | Plex library connection, random pick, stats (async wrapper around plexapi) |
 | `db.py` | SQLite schema, CRUD helpers (18KB) |
 | `rental.py` | Rental lifecycle: forum threads, late fees, DMs, overdue checks |
+| `macguffin.py` | MacGuffin card loading, validation, drops, and transfers |
 | `tracker.py` | 9am streaming check: detects new providers, announces to Discord |
 | `picker.py` | Random film candidate pool (~1000 films) + filtering (decade, runtime) |
 | `embeds.py` | Discord embed builders (26KB, heavily formatted responses) |
@@ -96,7 +106,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `logger.py` | File logging (data/bot.log, 1MB rotating) |
 | `launcher.py` | Windows system tray launcher wrapper |
 | `launcher/` | Tray UI, subprocess mgmt, auto-updates, state persistence |
-| `version.py` | Version constant (currently 2.1.0) |
+| `version.py` | Version constant (currently 2.3.0) |
 
 ### Design Patterns
 
@@ -127,6 +137,8 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `lb_activity_seen` | Letterboxd diary entries already seeded or posted |
 | `watchlist` | Per-user personal film queues |
 | `rentals` | Full rental lifecycle (status, plex key, thread IDs, rating, late fee, notifications) |
+| `macguffins` | Globally unique MacGuffin ownership records |
+| `macguffin_free_claims` | One-time free claim tracking per user |
 
 ### Scheduled Jobs (APScheduler)
 
@@ -138,6 +150,21 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 Auto-posting jobs can be toggled with `/toggle` without losing configuration.
 
 ---
+
+## Key Recent Changes (v2.3.0 - May 19)
+
+**MacGuffins**
+- Successful `/return` commands now drop a globally unique collectible MacGuffin and announce it in-channel
+- `/claimguffin`, `/myguffins`, and `/giftguffin` add starter claims, private collections, and member-to-member gifting
+- `/adminguffins` lets admins view, add, move, remove, or randomly assign member MacGuffins
+- MacGuffin cards are loaded from `assets/macguffins.json` and owned through SQLite records
+
+## Key Recent Changes (v2.2.0 - May 19)
+
+**Admin dashboard and Letterboxd account management**
+- `/botstatus` — admin dashboard showing version, uptime, latency, cache size, configured channels, auto-posting toggles, tracked film count, linked Letterboxd accounts, active/overdue rentals, and setup warnings
+- `/lblinked [page]` — paginated list of linked Letterboxd accounts with Discord member, LB profile, and linked date
+- Letterboxd activity posting now only pulls entries from the last 60 minutes, preventing old unseen diary entries from flooding the channel on catchup runs
 
 ## Key Recent Changes (v2.1.0 - May 19)
 
@@ -166,11 +193,12 @@ Auto-posting jobs can be toggled with `/toggle` without losing configuration.
 sucklingbot/
 ├── bot.py                    # Main entry, commands, scheduler
 ├── config.py                 # .env → config constants
-├── version.py                # VERSION = "2.1.0"
+├── version.py                # VERSION = "2.3.0"
 ├── tmdb.py                   # TMDB API wrapper (cached, deduped, backoff)
 ├── plex.py                   # Plex library async wrapper
 ├── db.py                      # SQLite CRUD
 ├── rental.py                 # Rental system, forum threads, late fees, DMs
+├── macguffin.py              # MacGuffin card pool, drops, transfers
 ├── tracker.py                # 9am streaming check
 ├── picker.py                 # Random candidate pool + filters
 ├── embeds.py                 # Discord embed builders
@@ -202,7 +230,8 @@ sucklingbot/
 │   ├── quotes.json          # /play quotes
 │   ├── emoji.json           # /play emoji descriptions
 │   ├── taglines.json        # /play taglines
-│   └── trivia.json          # /play trivia facts
+│   ├── trivia.json          # /play trivia facts
+│   └── macguffins.json      # MacGuffin card definitions
 └── data/                     # Persistent state (gitignored)
     ├── moviebot.db          # SQLite database
     └── bot.log              # Error log (1MB rotating)

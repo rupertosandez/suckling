@@ -9,6 +9,7 @@ import rental as rental_module
 
 MY_WATCHLIST_PAGE_SIZE = 10
 LB_WATCHLIST_PAGE_SIZE = 5
+MACGUFFIN_PAGE_SIZE = 5
 
 
 def _record_existing_providers(movie_id: int, providers: dict) -> list[str]:
@@ -1270,6 +1271,207 @@ class WatchlistAddSelectView(discord.ui.View):
     def __init__(self, candidates: list[dict], user_id: str):
         super().__init__(timeout=60)
         self.add_item(WatchlistAddSelect(candidates, user_id))
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+
+# ---------- macguffin views ----------
+
+class MacGuffinListView(discord.ui.View):
+    """Paginated MacGuffin inventory with one view button per visible card."""
+
+    def __init__(
+        self,
+        user_id: str,
+        user_tag: str,
+        cards: list[dict],
+        bot: discord.Client,
+    ):
+        super().__init__(timeout=120)
+        self.user_id = user_id
+        self.user_tag = user_tag
+        self.cards = cards
+        self.bot = bot
+        self.page = 0
+        self.total_pages = max(1, -(-len(cards) // MACGUFFIN_PAGE_SIZE))
+        self._rebuild()
+
+    @classmethod
+    def for_page(
+        cls,
+        user_id: str,
+        user_tag: str,
+        cards: list[dict],
+        bot: discord.Client,
+        page: int,
+    ) -> "MacGuffinListView":
+        view = cls(user_id=user_id, user_tag=user_tag, cards=cards, bot=bot)
+        view.page = page
+        view._rebuild()
+        return view
+
+    def _rebuild(self):
+        self.clear_items()
+
+        start = self.page * MACGUFFIN_PAGE_SIZE
+        page_cards = self.cards[start : start + MACGUFFIN_PAGE_SIZE]
+        for card in page_cards:
+            label = f"{card.get('emoji', '')} view".strip()
+            button = discord.ui.Button(
+                label=label[:80],
+                style=discord.ButtonStyle.secondary,
+                row=0,
+            )
+
+            async def callback(
+                interaction: discord.Interaction,
+                selected_card: dict = card,
+            ):
+                await self._show_card(interaction, selected_card)
+
+            button.callback = callback
+            self.add_item(button)
+
+        if self.page > 0:
+            prev_btn = discord.ui.Button(
+                label="prev",
+                style=discord.ButtonStyle.secondary,
+                row=1,
+            )
+            prev_btn.callback = self._prev
+            self.add_item(prev_btn)
+
+        if self.page < self.total_pages - 1:
+            next_btn = discord.ui.Button(
+                label="next",
+                style=discord.ButtonStyle.secondary,
+                row=1,
+            )
+            next_btn.callback = self._next
+            self.add_item(next_btn)
+
+    async def _guard_user(self, interaction: discord.Interaction) -> bool:
+        if str(interaction.user.id) == self.user_id:
+            return True
+        await interaction.response.send_message(
+            "this isn't your collection.", ephemeral=True
+        )
+        return False
+
+    async def _show_card(self, interaction: discord.Interaction, card: dict):
+        if not await self._guard_user(interaction):
+            return
+        if not await _defer_component(interaction):
+            return
+        view = MacGuffinCardView(
+            user_id=self.user_id,
+            user_tag=self.user_tag,
+            cards=self.cards,
+            page=self.page,
+            bot=self.bot,
+        )
+        embed = embeds.macguffin_card_embed(card, card)
+        self.stop()
+        await interaction.edit_original_response(embed=embed, view=view)
+
+    async def _prev(self, interaction: discord.Interaction):
+        if not await self._guard_user(interaction):
+            return
+        if not await _defer_component(interaction):
+            return
+        next_view = MacGuffinListView.for_page(
+            user_id=self.user_id,
+            user_tag=self.user_tag,
+            cards=self.cards,
+            bot=self.bot,
+            page=max(0, self.page - 1),
+        )
+        embed = embeds.macguffin_list_embed(
+            next_view.user_tag,
+            next_view.cards,
+            next_view.page,
+            next_view.total_pages,
+        )
+        self.stop()
+        await interaction.edit_original_response(embed=embed, view=next_view)
+
+    async def _next(self, interaction: discord.Interaction):
+        if not await self._guard_user(interaction):
+            return
+        if not await _defer_component(interaction):
+            return
+        next_view = MacGuffinListView.for_page(
+            user_id=self.user_id,
+            user_tag=self.user_tag,
+            cards=self.cards,
+            bot=self.bot,
+            page=min(self.total_pages - 1, self.page + 1),
+        )
+        embed = embeds.macguffin_list_embed(
+            next_view.user_tag,
+            next_view.cards,
+            next_view.page,
+            next_view.total_pages,
+        )
+        self.stop()
+        await interaction.edit_original_response(embed=embed, view=next_view)
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+
+class MacGuffinCardView(discord.ui.View):
+    """Single MacGuffin card view with a back button to the inventory page."""
+
+    def __init__(
+        self,
+        user_id: str,
+        user_tag: str,
+        cards: list[dict],
+        page: int,
+        bot: discord.Client,
+    ):
+        super().__init__(timeout=120)
+        self.user_id = user_id
+        self.user_tag = user_tag
+        self.cards = cards
+        self.page = page
+        self.bot = bot
+
+        back_btn = discord.ui.Button(
+            label="back",
+            style=discord.ButtonStyle.secondary,
+            row=0,
+        )
+        back_btn.callback = self._back
+        self.add_item(back_btn)
+
+    async def _back(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await interaction.response.send_message(
+                "this isn't your collection.", ephemeral=True
+            )
+            return
+        if not await _defer_component(interaction):
+            return
+        list_view = MacGuffinListView.for_page(
+            user_id=self.user_id,
+            user_tag=self.user_tag,
+            cards=self.cards,
+            bot=self.bot,
+            page=self.page,
+        )
+        embed = embeds.macguffin_list_embed(
+            list_view.user_tag,
+            list_view.cards,
+            list_view.page,
+            list_view.total_pages,
+        )
+        self.stop()
+        await interaction.edit_original_response(embed=embed, view=list_view)
 
     async def on_timeout(self):
         for item in self.children:
