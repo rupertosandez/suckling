@@ -8,8 +8,10 @@ import config
 
 ANNOUNCEMENT_CHANNEL_KEY = "announcement_channel_id"
 DAILY_REC_CHANNEL_KEY = "daily_rec_channel_id"
+LB_ACTIVITY_CHANNEL_KEY = "lb_activity_channel_id"
 ANNOUNCEMENTS_ENABLED_KEY = "announcements_enabled"
 DAILY_REC_ENABLED_KEY = "daily_rec_enabled"
+LB_ACTIVITY_ENABLED_KEY = "lb_activity_enabled"
 REVIEWS_CHANNEL_KEY = "reviews_channel_id"
 RENTAL_TAG_KEY = "rental_tag_id"
 RECOMMENDATION_TAG_KEY = "recommendation_tag_id"
@@ -89,6 +91,14 @@ def init_db() -> None:
                 user_id     TEXT PRIMARY KEY,
                 lb_username TEXT NOT NULL,
                 linked_at   TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS lb_activity_seen (
+                entry_key   TEXT PRIMARY KEY,
+                lb_username TEXT NOT NULL,
+                film_title  TEXT NOT NULL,
+                first_seen_at TEXT NOT NULL,
+                posted_at   TEXT
             );
 
             CREATE TABLE IF NOT EXISTS watchlist (
@@ -185,6 +195,15 @@ def set_daily_rec_channel_id(channel_id: int) -> None:
     set_setting(DAILY_REC_CHANNEL_KEY, str(channel_id))
 
 
+def get_lb_activity_channel_id() -> int | None:
+    raw = get_setting(LB_ACTIVITY_CHANNEL_KEY)
+    return int(raw) if raw else None
+
+
+def set_lb_activity_channel_id(channel_id: int) -> None:
+    set_setting(LB_ACTIVITY_CHANNEL_KEY, str(channel_id))
+
+
 def is_announcements_enabled() -> bool:
     raw = get_setting(ANNOUNCEMENTS_ENABLED_KEY)
     if raw is None:
@@ -205,6 +224,17 @@ def is_daily_rec_enabled() -> bool:
 
 def set_daily_rec_enabled(enabled: bool) -> None:
     set_setting(DAILY_REC_ENABLED_KEY, "1" if enabled else "0")
+
+
+def is_lb_activity_enabled() -> bool:
+    raw = get_setting(LB_ACTIVITY_ENABLED_KEY)
+    if raw is None:
+        return False
+    return raw == "1"
+
+
+def set_lb_activity_enabled(enabled: bool) -> None:
+    set_setting(LB_ACTIVITY_ENABLED_KEY, "1" if enabled else "0")
 
 
 def get_reviews_channel_id() -> int | None:
@@ -612,6 +642,35 @@ def get_all_lb_accounts() -> list[dict]:
             "SELECT user_id, lb_username, linked_at FROM lb_accounts"
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+def has_seen_lb_activity(entry_key: str) -> bool:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM lb_activity_seen WHERE entry_key = ?",
+            (entry_key,),
+        ).fetchone()
+        return row is not None
+
+
+def record_lb_activity_seen(
+    entry_key: str,
+    lb_username: str,
+    film_title: str,
+    posted: bool = False,
+) -> None:
+    posted_at = _utc_now_iso() if posted else None
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO lb_activity_seen "
+            "(entry_key, lb_username, film_title, first_seen_at, posted_at) "
+            "VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(entry_key) DO UPDATE SET "
+            "posted_at = COALESCE(lb_activity_seen.posted_at, excluded.posted_at)",
+            (entry_key, lb_username, film_title, _utc_now_iso(), posted_at),
+        )
+
+
 # ---------- watchlist ----------
 
 def watchlist_add(

@@ -277,11 +277,14 @@ browse a letterboxd watchlist. shows 5 films per page with:
 ### `/lb group`
 shows what everyone in the server has been watching lately - aggregated recent diary activity across all linked members, sorted by date.
 
-### `/lb tastecheck [user] [username]`
-compares your linked letterboxd account against another account and gives a recent taste compatibility readout.
+linked accounts can also appear in the server's letterboxd activity channel if admins have enabled it.
+
+### `/lb tastecheck [a_user] [b_user] [a_username] [b_username]`
+compares two letterboxd accounts and gives a recent taste compatibility readout.
 
 - use discord members if they've linked accounts with `/lb link`
-- use a raw username to compare against anyone with a public letterboxd account
+- use raw usernames to compare anyone with public letterboxd accounts
+- pick one target for side a and one target for side b
 - based on recent diary activity and public watchlists, not full lifetime letterboxd history
 
 ---
@@ -325,10 +328,13 @@ set the channel where streaming announcements post. the bot needs send-message a
 ### `/setdaily <channel>`
 set the channel where the daily recommendation posts (at noon).
 
+### `/setlbactivity <channel>`
+set the channel where new diary entries from linked letterboxd accounts post. when you run this, the bot seeds the current feeds first so old watches do not flood the channel.
+
 ### `/toggle <feature> <enabled>`
 enable or disable an auto-posting feature without removing the channel setting.
 
-- `feature`: `streaming announcements` or `daily recommendation`
+- `feature`: `streaming announcements`, `daily recommendation`, or `letterboxd activity`
 - `enabled`: `True` or `False`
 
 ### `/checknow`
@@ -339,6 +345,9 @@ manually trigger the streaming check **and post** announcements live. use sparin
 
 ### `/dailynow`
 manually trigger today's daily recommendation post.
+
+### `/lbactivitynow [post]`
+manually check linked letterboxd activity. by default this is a dry run and only reports how many new entries it found. set `post:True` to post new entries to the configured activity channel.
 
 ### `/cachestats [clear]`
 show the size of the in-memory cache. pass `clear:True` to wipe both the tmdb cache and the random-pick pool (useful if data feels stale).

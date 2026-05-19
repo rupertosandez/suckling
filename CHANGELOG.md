@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-05-19
+
+### Added
+
+- **letterboxd activity feed** - admins can set a channel where new diary entries from linked members are posted automatically
+  - `/setlbactivity <channel>` - sets the channel, seeds current feeds, and enables activity posting without dumping old watches
+  - `/lbactivitynow [post]` - checks linked account activity manually; dry-run by default, live posts when `post:true`
+  - `/toggle letterboxd activity <enabled>` - pauses or resumes the hourly activity feed
+
+### Changed
+
+- `/lb tastecheck` now compares any two Discord members or raw Letterboxd usernames instead of requiring one side to be you.
+
 ## [2.0.0] - 2026-05-18
 
 ### Added
@@ -15,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - `/lb profile [user|username]` - shows recent diary entries with ratings, dates, and review snippets. accepts a discord mention (uses their linked lb account) or a raw lb username
   - `/lb watchlist [user|username]` - paginated view of a letterboxd watchlist with roll and import buttons
   - `/lb group` - aggregated recent watches across all linked server members
-  - `/lb tastecheck [user|username]` - compares your account against another account for recent taste compatibility using shared recent watches and public watchlist overlap
+  - `/lb tastecheck` - compares two accounts for recent taste compatibility using shared recent watches and public watchlist overlap
 
 - **personal watchlist** - a per-user film queue that lives in the bot
   - `/watchlist show` - browse your list (paginated, with a remove dropdown and roll button)

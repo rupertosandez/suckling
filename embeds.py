@@ -862,6 +862,48 @@ def lb_profile_embed(lb_username: str, entries: list[dict], discord_tag: str | N
     return embed
 
 
+def lb_activity_embed(
+    lb_username: str,
+    entry: dict,
+    discord_tag: str | None = None,
+) -> discord.Embed:
+    """Single Letterboxd diary entry for the auto-posting activity feed."""
+    title = entry.get("film_title", "Unknown")
+    year = entry.get("year")
+    link = entry.get("link", "")
+    stars = entry.get("stars", "")
+    watch_date = entry.get("watch_date", "")
+    rewatch = entry.get("rewatch", False)
+    review = entry.get("review")
+    thumb = entry.get("thumb")
+
+    year_str = f" ({year})" if year else ""
+    who = discord_tag or lb_username
+    embed = discord.Embed(
+        title=f"{who} watched {title}{year_str}",
+        url=link or None,
+        color=_LB_COLOR,
+    )
+
+    details = []
+    if stars:
+        details.append(stars)
+    if watch_date:
+        details.append(watch_date)
+    if rewatch:
+        details.append("rewatch")
+    if details:
+        embed.description = " - ".join(details)
+
+    if review:
+        embed.add_field(name="review", value=f"*{review}*", inline=False)
+
+    if thumb:
+        embed.set_thumbnail(url=thumb)
+    embed.set_footer(text=f"letterboxd - {lb_username}")
+    return embed
+
+
 def lb_watchlist_embed(
     lb_username: str,
     films: list[dict],
@@ -953,9 +995,13 @@ def lb_group_embed(activity: list[dict]) -> discord.Embed:
     return embed
 
 
-def _rating_pair(left: dict) -> str:
-    left_stars = left.get("left_stars") or (str(left.get("left_rating")) if left.get("left_rating") else "-")
-    right_stars = left.get("right_stars") or (str(left.get("right_rating")) if left.get("right_rating") else "-")
+def _rating_pair(left: dict) -> str | None:
+    left_stars = left.get("left_stars") or (str(left.get("left_rating")) if left.get("left_rating") else "")
+    right_stars = left.get("right_stars") or (str(left.get("right_rating")) if left.get("right_rating") else "")
+    if not left_stars and not right_stars:
+        return None
+    left_stars = left_stars or "unrated"
+    right_stars = right_stars or "unrated"
     return f"{left_stars} / {right_stars}"
 
 
@@ -966,7 +1012,9 @@ def _film_line(item: dict, include_ratings: bool = False) -> str:
     year_str = f" ({year})" if year else ""
     film = f"[{title}{year_str}]({link})" if link else f"**{title}{year_str}**"
     if include_ratings:
-        return f"{film} - {_rating_pair(item)}"
+        ratings = _rating_pair(item)
+        if ratings:
+            return f"{film} - {ratings}"
     return film
 
 

@@ -31,6 +31,7 @@ import rental as rental_module
 import letterboxd as lb_module
 
 MY_WATCHLIST_PAGE_SIZE = 10
+LB_ACTIVITY_POST_LIMIT = 20
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -210,6 +211,163 @@ async def _scheduled_rental_check():
         print(f"[scheduler] Rental check failed: {e}")
 
 
+def _lb_activity_key(lb_username: str, entry: dict) -> str:
+    link = entry.get("link")
+    if link:
+        return link
+    title = entry.get("film_title") or "Unknown"
+    year = entry.get("year") or ""
+    watch_date = entry.get("watch_date") or ""
+    return f"{lb_username}:{title}:{year}:{watch_date}".lower()
+
+
+async def _activity_channel() -> discord.abc.Messageable | None:
+    channel_id = db.get_lb_activity_channel_id()
+    if not channel_id:
+        return None
+
+    channel = bot.get_channel(channel_id)
+    if channel is not None:
+        return channel
+
+    try:
+        return await bot.fetch_channel(channel_id)
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException) as e:
+        logger.log_exception("lb_activity_fetch_channel", e)
+        return None
+
+
+def _member_label(user_id: str, lb_username: str) -> str:
+    guild = bot.get_guild(config.GUILD_ID)
+    if guild is None:
+        return lb_username
+    try:
+        member = guild.get_member(int(user_id))
+    except ValueError:
+        member = None
+    return member.display_name if member else lb_username
+
+
+async def run_lb_activity_check(
+    *,
+    post: bool,
+    seed_only: bool = False,
+    limit: int = LB_ACTIVITY_POST_LIMIT,
+) -> dict:
+    accounts = db.get_all_lb_accounts()
+    result = {
+        "accounts": len(accounts),
+        "fetched": 0,
+        "new": 0,
+        "posted": 0,
+        "seeded": 0,
+        "skipped": 0,
+        "errors": 0,
+        "missing_channel": False,
+    }
+
+    channel = None
+    if post and not seed_only:
+        channel = await _activity_channel()
+        if channel is None:
+            result["missing_channel"] = True
+            return result
+
+    new_items = []
+    for account in accounts:
+        user_id = account["user_id"]
+        lb_username = account["lb_username"]
+        try:
+            entries = await lb_module.get_diary(lb_username)
+            result["fetched"] += 1
+        except lb_module.LetterboxdError as e:
+            result["errors"] += 1
+            print(f"[letterboxd-activity] Failed to fetch {lb_username}: {e}")
+            continue
+
+        for entry in entries:
+            entry_key = _lb_activity_key(lb_username, entry)
+            if db.has_seen_lb_activity(entry_key):
+                continue
+
+            new_items.append({
+                "entry_key": entry_key,
+                "user_id": user_id,
+                "lb_username": lb_username,
+                "discord_tag": _member_label(user_id, lb_username),
+                "entry": entry,
+            })
+
+    result["new"] = len(new_items)
+
+    if seed_only:
+        for item in new_items:
+            db.record_lb_activity_seen(
+                item["entry_key"],
+                item["lb_username"],
+                item["entry"].get("film_title", "Unknown"),
+                posted=False,
+            )
+        result["seeded"] = len(new_items)
+        return result
+
+    if not post:
+        return result
+
+    new_items.sort(key=lambda item: item["entry"].get("watch_date", ""))
+    post_items = new_items[:limit]
+    skipped_items = new_items[limit:]
+
+    for item in post_items:
+        embed = embeds.lb_activity_embed(
+            item["lb_username"],
+            item["entry"],
+            discord_tag=item["discord_tag"],
+        )
+        try:
+            await channel.send(embed=embed)
+        except discord.HTTPException as e:
+            result["errors"] += 1
+            logger.log_exception("lb_activity_post", e)
+            continue
+
+        db.record_lb_activity_seen(
+            item["entry_key"],
+            item["lb_username"],
+            item["entry"].get("film_title", "Unknown"),
+            posted=True,
+        )
+        result["posted"] += 1
+
+    for item in skipped_items:
+        db.record_lb_activity_seen(
+            item["entry_key"],
+            item["lb_username"],
+            item["entry"].get("film_title", "Unknown"),
+            posted=False,
+        )
+    result["skipped"] = len(skipped_items)
+    return result
+
+
+async def _scheduled_lb_activity_check():
+    if not db.is_lb_activity_enabled():
+        print("[scheduler] Letterboxd activity skipped - disabled")
+        return
+    try:
+        result = await run_lb_activity_check(post=True)
+        if result["missing_channel"]:
+            print("[scheduler] Letterboxd activity skipped - no channel set")
+        elif result["posted"] or result["skipped"]:
+            print(
+                "[scheduler] Letterboxd activity posted "
+                f"{result['posted']} new entry/entries, skipped {result['skipped']}"
+            )
+    except Exception as e:
+        logger.log_exception("scheduled_lb_activity_check", e)
+        print(f"[scheduler] Letterboxd activity check failed: {e}")
+
+
 @bot.event
 async def on_ready():
     global _bot_loop
@@ -237,10 +395,15 @@ async def on_ready():
             _scheduled_rental_check, trigger="interval", hours=1,
             id="rental_check", replace_existing=True,
         )
+        scheduler.add_job(
+            _scheduled_lb_activity_check, trigger="interval", hours=1,
+            id="lb_activity_check", replace_existing=True,
+        )
         scheduler.start()
         print("[scheduler] Daily tracker check scheduled for 9:00 local time")
         print("[scheduler] Daily horror recommendation scheduled for 12:00 local time")
         print("[scheduler] Rental overdue/reminder check scheduled hourly")
+        print("[scheduler] Letterboxd activity check scheduled hourly")
 
     # Warm Plex in the background so the first /rb9 or /rent call does not pay
     # the full library scan cost. Errors are logged but never block startup.
@@ -491,6 +654,46 @@ async def set_daily(interaction: discord.Interaction, channel: discord.TextChann
     await interaction.response.send_message(
         f"✅ Daily horror recommendations will now post in {channel.mention} at noon.",
         ephemeral=True,
+    )
+
+
+@bot.tree.command(
+    name="setlbactivity",
+    description="Set the channel where linked Letterboxd activity posts (admin only)",
+)
+@app_commands.describe(channel="The channel to post Letterboxd activity in")
+@app_commands.default_permissions(manage_guild=True)
+async def set_lb_activity(interaction: discord.Interaction, channel: discord.TextChannel):
+    perms = channel.permissions_for(interaction.guild.me)
+    if not perms.send_messages or not perms.embed_links:
+        await interaction.response.send_message(
+            f"I don't have permission to send messages or embeds in {channel.mention}. "
+            "Please grant me those permissions first.",
+            ephemeral=True,
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    db.set_lb_activity_channel_id(channel.id)
+    seed_result = await run_lb_activity_check(post=False, seed_only=True)
+    db.set_lb_activity_enabled(True)
+    await interaction.followup.send(
+        f"Letterboxd activity will now post in {channel.mention}.\n"
+        "I seeded the current feeds first so old watches won't spam the channel: "
+        f"{_lb_activity_summary(seed_result)}",
+        ephemeral=True,
+    )
+
+
+def _lb_activity_summary(result: dict) -> str:
+    if result.get("missing_channel"):
+        return "no letterboxd activity channel is set yet."
+    return (
+        f"checked **{result['fetched']}/{result['accounts']}** linked account(s), "
+        f"found **{result['new']}** new entry/entries, "
+        f"posted **{result['posted']}**, "
+        f"seeded **{result['seeded']}**, "
+        f"skipped **{result['skipped']}**."
     )
 
 
@@ -1607,6 +1810,7 @@ async def restart_command(interaction: discord.Interaction):
 @app_commands.choices(feature=[
     app_commands.Choice(name="streaming announcements", value="announcements"),
     app_commands.Choice(name="daily recommendation", value="daily"),
+    app_commands.Choice(name="letterboxd activity", value="lb_activity"),
 ])
 @app_commands.default_permissions(manage_guild=True)
 async def toggle(
@@ -1614,6 +1818,29 @@ async def toggle(
     feature: app_commands.Choice[str],
     enabled: bool,
 ):
+    if feature.value == "lb_activity":
+        await interaction.response.defer(ephemeral=True)
+        channel_id = db.get_lb_activity_channel_id()
+        if enabled and not channel_id:
+            db.set_lb_activity_enabled(False)
+            await interaction.followup.send(
+                "No Letterboxd activity channel is set yet. Use `/setlbactivity` first.",
+                ephemeral=True,
+            )
+            return
+
+        seed_note = ""
+        if enabled:
+            seed_result = await run_lb_activity_check(post=False, seed_only=True)
+            seed_note = f" Seeded current feeds first: {_lb_activity_summary(seed_result)}"
+
+        db.set_lb_activity_enabled(enabled)
+        await interaction.followup.send(
+            f"{'Enabled' if enabled else 'Disabled'} **letterboxd activity**.{seed_note}",
+            ephemeral=True,
+        )
+        return
+
     if feature.value == "announcements":
         db.set_announcements_enabled(enabled)
         channel_id = db.get_announcement_channel_id()
@@ -1691,6 +1918,29 @@ async def dailynow(interaction: discord.Interaction):
 
 
 @bot.tree.command(
+    name="lbactivitynow",
+    description="Manually check linked Letterboxd activity (admin only)",
+)
+@app_commands.describe(post="True to post new activity; false only reports the count")
+@app_commands.default_permissions(manage_guild=True)
+async def lbactivitynow(interaction: discord.Interaction, post: bool = False):
+    if post and not db.get_lb_activity_channel_id():
+        await interaction.response.send_message(
+            "No Letterboxd activity channel is set. Use `/setlbactivity` first.",
+            ephemeral=True,
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+    result = await run_lb_activity_check(post=post)
+    verb = "Posted" if post else "Dry run complete"
+    await interaction.followup.send(
+        f"{verb}. {_lb_activity_summary(result)}",
+        ephemeral=True,
+    )
+
+
+@bot.tree.command(
     name="cachestats",
     description="Show cache size and optionally clear it (admin only)",
 )
@@ -1749,6 +1999,26 @@ def _resolve_lb_target(
             "you haven't linked a letterboxd account yet. use `/lb link <username>` to connect one.",
         )
     return lb_user, interaction.user.display_name, None
+
+
+def _resolve_explicit_lb_target(
+    user: discord.Member | None,
+    username: str | None,
+    label: str,
+) -> tuple[str | None, str | None, str | None]:
+    if user is not None and username is not None:
+        return None, None, f"pick either `{label}_user` or `{label}_username`, not both."
+
+    if user is not None:
+        lb_user = db.get_lb_username(str(user.id))
+        if not lb_user:
+            return None, None, f"**{user.display_name}** hasn't linked a letterboxd account."
+        return lb_user, user.display_name, None
+
+    if username is not None:
+        return username, username, None
+
+    return None, None, f"pick `{label}_user` or `{label}_username`."
 
 
 def _tastecheck_payload(
@@ -2039,30 +2309,26 @@ async def lb_group_cmd(interaction: discord.Interaction):
     description="compare recent letterboxd taste between two people",
 )
 @app_commands.describe(
-    user="server member to compare against",
-    username="or enter a letterboxd username directly",
+    a_user="first server member",
+    b_user="second server member",
+    a_username="or enter the first letterboxd username directly",
+    b_username="or enter the second letterboxd username directly",
 )
 async def lb_tastecheck(
     interaction: discord.Interaction,
-    user: discord.Member | None = None,
-    username: str | None = None,
+    a_user: discord.Member | None = None,
+    b_user: discord.Member | None = None,
+    a_username: str | None = None,
+    b_username: str | None = None,
 ):
     await interaction.response.defer()
 
-    if user is not None and username is not None:
-        await interaction.followup.send("pick either `user` or `username`, not both.")
-        return
-
-    lb_a, label_a, err = _resolve_lb_target(interaction, None, None)
+    lb_a, label_a, err = _resolve_explicit_lb_target(a_user, a_username, "a")
     if err:
         await interaction.followup.send(err)
         return
 
-    if user is None and username is None:
-        await interaction.followup.send("pick someone to tastecheck against with `user` or `username`.")
-        return
-
-    lb_b, label_b, err = _resolve_lb_target(interaction, user, username)
+    lb_b, label_b, err = _resolve_explicit_lb_target(b_user, b_username, "b")
     if err:
         await interaction.followup.send(err)
         return

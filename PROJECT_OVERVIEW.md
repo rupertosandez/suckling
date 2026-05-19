@@ -1,7 +1,7 @@
 # Sucklingbot Project Overview
 
-**Last updated:** May 18, 2026  
-**Current version:** 2.0.0  
+**Last updated:** May 19, 2026
+**Current version:** 2.1.0
 **Maintainer:** rupertosandez (GitHub)
 
 ---
@@ -27,7 +27,8 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - **`/lb profile [user] [username]`** - Recent diary activity
 - **`/lb watchlist [user] [username]`** - Browse, roll from, or import a Letterboxd watchlist
 - **`/lb group`** - Recent linked-member Letterboxd activity
-- **`/lb tastecheck [user] [username]`** - Recent taste compatibility check
+- **`/lb tastecheck`** - Recent taste compatibility check between any two accounts
+- **Letterboxd activity feed** - Optional auto-post channel for linked members' new diary entries
 - **`/watchlist show/add/remove`** - Per-user private film queue with roll/remove controls
 
 ### Return by 9 Library (Plex-backed)
@@ -57,8 +58,9 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 ### Auto-Posting (admin-configurable)
 - **Daily recommendations** - Noon, random pick from TMDB
 - **Streaming announcements** - 9am, new digital availability (first-time only, re-promotion prevention)
+- **Letterboxd activity** - Hourly check for new diary entries from linked accounts
 - **Feature toggles:** `/toggle feature:streaming-announcements enabled:False` etc.
-- **Manual triggers:** `/checknow` (dry-run), `/checknowlive` (post live), `/dailynow`
+- **Manual triggers:** `/checknow` (dry-run), `/checknowlive` (post live), `/dailynow`, `/lbactivitynow`
 
 ### Utilities
 - **`/info`** - Bot info card
@@ -94,7 +96,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `logger.py` | File logging (data/bot.log, 1MB rotating) |
 | `launcher.py` | Windows system tray launcher wrapper |
 | `launcher/` | Tray UI, subprocess mgmt, auto-updates, state persistence |
-| `version.py` | Version constant (currently 2.0.0) |
+| `version.py` | Version constant (currently 2.1.0) |
 
 ### Design Patterns
 
@@ -122,6 +124,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `guess_scores` | Poster/still guessing leaderboard |
 | `six_scores` | Six degrees leaderboard |
 | `lb_accounts` | Discord user to Letterboxd username links |
+| `lb_activity_seen` | Letterboxd diary entries already seeded or posted |
 | `watchlist` | Per-user personal film queues |
 | `rentals` | Full rental lifecycle (status, plex key, thread IDs, rating, late fee, notifications) |
 
@@ -130,10 +133,19 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - **9:00 AM** - `tracker.run_check()` - Streaming availability scan + announcements
 - **12:00 PM** - Daily recommendation pick + post
 - **Every hour** - `rental_check()` - Overdue DMs (once) + 12-hour reminders (once)
+- **Every hour** - `lb_activity_check()` - New linked-member Letterboxd diary posts
 
-All three can be toggled with `/toggle` without losing configuration.
+Auto-posting jobs can be toggled with `/toggle` without losing configuration.
 
 ---
+
+## Key Recent Changes (v2.1.0 - May 19)
+
+**Letterboxd activity and tastecheck**
+- Added an optional channel for new diary activity from linked Letterboxd accounts
+- `/setlbactivity` seeds current feeds before enabling so old watches do not spam the channel
+- `/lbactivitynow` lets admins dry-run or post a manual activity check
+- `/lb tastecheck` now compares any two Discord members or raw Letterboxd usernames
 
 ## Key Recent Changes (v2.0.0 - May 18)
 
@@ -154,7 +166,7 @@ All three can be toggled with `/toggle` without losing configuration.
 sucklingbot/
 ├── bot.py                    # Main entry, commands, scheduler
 ├── config.py                 # .env → config constants
-├── version.py                # VERSION = "2.0.0"
+├── version.py                # VERSION = "2.1.0"
 ├── tmdb.py                   # TMDB API wrapper (cached, deduped, backoff)
 ├── plex.py                   # Plex library async wrapper
 ├── db.py                      # SQLite CRUD
