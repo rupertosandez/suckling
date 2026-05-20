@@ -66,6 +66,7 @@ class AdminCog(commands.Cog):
         daily_channel_id = db.get_daily_rec_channel_id()
         lb_activity_channel_id = db.get_lb_activity_channel_id()
         reviews_channel_id = db.get_reviews_channel_id()
+        rental_request_channel_id = db.get_rental_request_channel_id()
 
         announcements_enabled = db.is_announcements_enabled()
         daily_rec_enabled = db.is_daily_rec_enabled()
@@ -80,6 +81,8 @@ class AdminCog(commands.Cog):
             warnings.append("letterboxd activity is on, but no channel is set")
         if not reviews_channel_id:
             warnings.append("rental reviews forum is not set")
+        if not rental_request_channel_id:
+            warnings.append("rental recommendation request channel is not set")
 
         status = {
             "version": version.VERSION,
@@ -91,6 +94,7 @@ class AdminCog(commands.Cog):
             "active_rental_count": db.active_rental_count(),
             "overdue_rental_count": db.overdue_active_rental_count(),
             "reviews_channel": _admin_channel_label(reviews_channel_id),
+            "rental_request_channel": _admin_channel_label(rental_request_channel_id),
             "announcement_channel": _admin_channel_label(announcement_channel_id),
             "daily_channel": _admin_channel_label(daily_channel_id),
             "lb_activity_channel": _admin_channel_label(lb_activity_channel_id),

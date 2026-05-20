@@ -15,6 +15,7 @@ ANNOUNCEMENTS_ENABLED_KEY = "announcements_enabled"
 DAILY_REC_ENABLED_KEY = "daily_rec_enabled"
 LB_ACTIVITY_ENABLED_KEY = "lb_activity_enabled"
 REVIEWS_CHANNEL_KEY = "reviews_channel_id"
+RENTAL_REQUEST_CHANNEL_KEY = "rental_request_channel_id"
 RENTAL_TAG_KEY = "rental_tag_id"
 RECOMMENDATION_TAG_KEY = "recommendation_tag_id"
 LAST_UPDATE_ANNOUNCED_VERSION_KEY = "last_update_announced_version"
@@ -281,6 +282,15 @@ def get_reviews_channel_id() -> int | None:
 
 def set_reviews_channel_id(channel_id: int) -> None:
     set_setting(REVIEWS_CHANNEL_KEY, str(channel_id))
+
+
+def get_rental_request_channel_id() -> int | None:
+    raw = get_setting(RENTAL_REQUEST_CHANNEL_KEY)
+    return int(raw) if raw else None
+
+
+def set_rental_request_channel_id(channel_id: int) -> None:
+    set_setting(RENTAL_REQUEST_CHANNEL_KEY, str(channel_id))
 
 
 def get_rental_tag_id() -> int | None:
@@ -570,6 +580,54 @@ def get_active_rental(user_id: str) -> dict | None:
             (user_id,),
         ).fetchone()
         return dict(row) if row else None
+
+
+def get_active_rentals(user_id: str) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM rentals WHERE user_id = ? AND status = 'active' "
+            "ORDER BY rented_at ASC",
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_active_rental_count_for_user(user_id: str) -> int:
+    with _connect() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) AS c FROM rentals WHERE user_id = ? AND status = 'active'",
+            (user_id,),
+        ).fetchone()["c"]
+
+
+def get_active_rental_by_id(user_id: str, rental_id: int) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM rentals "
+            "WHERE id = ? AND user_id = ? AND status = 'active'",
+            (rental_id, user_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def find_active_rental(user_id: str, query: str) -> list[dict]:
+    query = (query or "").strip()
+    if not query:
+        return []
+
+    if query.isdigit():
+        rental = get_active_rental_by_id(user_id, int(query))
+        return [rental] if rental else []
+
+    pattern = f"%{query}%"
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM rentals "
+            "WHERE user_id = ? AND status = 'active' AND title LIKE ? "
+            "ORDER BY rented_at ASC",
+            (user_id, pattern),
+        ).fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_rental_by_id(rental_id: int) -> dict | None:

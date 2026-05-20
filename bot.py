@@ -4,6 +4,7 @@ import signal
 import sys
 import threading
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 import discord
 from discord.ext import commands
@@ -69,9 +70,39 @@ bot = SucklingBot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
 _shutdown_started = False
 _bot_loop: asyncio.AbstractEventLoop | None = None
+_instance_lock_handle = None
 
 
 UPDATE_ANNOUNCEMENT_CHANNEL_ID = 1446966452669255761
+
+
+def _acquire_instance_lock() -> bool:
+    """Prevent multiple bot processes from logging in with the same token."""
+    global _instance_lock_handle
+
+    config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    lock_path = Path(config.DATA_DIR) / "bot.instance.lock"
+    handle = lock_path.open("a+", encoding="utf-8")
+
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        return False
+
+    handle.seek(0)
+    handle.truncate()
+    handle.write(str(os.getpid()))
+    handle.flush()
+    _instance_lock_handle = handle
+    return True
 
 
 async def _shutdown_from_signal(signal_name: str) -> None:
@@ -582,6 +613,9 @@ bot.suckling_lb_activity_summary = _lb_activity_summary
 
 if __name__ == "__main__":
     logger.setup_logging()
+    if not _acquire_instance_lock():
+        print("[startup] another sucklingbot instance is already running; exiting")
+        sys.exit(0)
     print(f"[startup] sucklingbot v{version.VERSION}")
     db.init_db()
     print("Database initialized")

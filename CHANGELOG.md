@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.2] - 2026-05-20
+
+### Added
+
+- `/rent` now starts with a rental path menu: roll random, pick a movie yourself, or ask an admin for a recommendation.
+- Members can now have up to 3 active rentals at once.
+- `/return`, `/extend`, and `/myrental` now support multiple active rentals by showing or accepting rental ids.
+- `/setrentalrequests` lets admins choose where rental recommendation requests post.
+
+### Changed
+
+- Randomly rolled rentals now have boosted rare/iconic macguffin drop odds when returned.
+- Admin-assigned rentals are tracked as admin recommendations.
+- Watchlist buttons now respond more safely to expired clicks and keep personal watchlist controls owner-only.
+
 ## [2.3.1] - 2026-05-20
 
 ### Changed

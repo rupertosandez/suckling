@@ -197,13 +197,31 @@ def _disable_view_items(view: discord.ui.View) -> None:
         item.disabled = True
 
 
-async def _defer_component(interaction: discord.Interaction) -> bool:
+async def _defer_component(
+    interaction: discord.Interaction,
+    *,
+    ephemeral: bool = False,
+) -> bool:
     """Acknowledge a component click; stale rapid-click interactions can be ignored."""
     try:
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=ephemeral)
         return True
     except discord.NotFound:
         return False
+
+
+async def _send_component_denied(
+    interaction: discord.Interaction,
+    message: str,
+) -> None:
+    """Send a best-effort ephemeral denial for component clicks."""
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message, ephemeral=True)
+    except discord.NotFound:
+        pass
 
 
 async def _mark_view_processing(
@@ -239,6 +257,15 @@ async def _confirm_rental(
     """
     now = datetime.now(timezone.utc)
     due_at = rental_module.compute_due_at(now)
+
+    active_count = _active_rental_count_for_user(user_id)
+    if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
+        await interaction.edit_original_response(
+            content=_active_rental_limit_message(active_count),
+            embed=None,
+            view=None,
+        )
+        return
 
     # Check reviews channel is configured before committing
     reviews_channel_id = db.get_reviews_channel_id()
@@ -298,10 +325,93 @@ async def _confirm_rental(
     await interaction.edit_original_response(content=confirm_text, embed=None, view=None)
 
 
+def _active_rental_limit_message(active_count: int) -> str:
+    return (
+        f"you already have **{active_count}** active rentals. "
+        "return one before checking out another."
+    )
+
+
+def _active_rental_count_for_user(user_id: str) -> int:
+    return len(db.get_active_rentals(user_id))
+
+
+class PickOwnRentalModal(discord.ui.Modal, title="pick a rental"):
+    """Modal for choosing a specific rb9 library title from the /rent flow."""
+
+    title_input = discord.ui.TextInput(
+        label="movie title",
+        placeholder="e.g. Thief",
+        max_length=100,
+    )
+    year_input = discord.ui.TextInput(
+        label="year (optional)",
+        placeholder="e.g. 1981",
+        required=False,
+        max_length=4,
+    )
+
+    def __init__(self, bot: discord.Client, user_id: str, user_name: str):
+        super().__init__()
+        self.bot = bot
+        self.user_id = user_id
+        self.user_name = user_name
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        active_count = _active_rental_count_for_user(self.user_id)
+        if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
+            await interaction.followup.send(
+                _active_rental_limit_message(active_count), ephemeral=True
+            )
+            return
+
+        if not db.get_reviews_channel_id():
+            await interaction.followup.send(
+                "⚠️ the reviews forum hasn't been configured yet. "
+                "ask an admin to run `/setreviews` first.",
+                ephemeral=True,
+            )
+            return
+
+        year_text = str(self.year_input.value or "").strip()
+        year = int(year_text) if year_text.isdigit() else None
+        title = str(self.title_input.value).strip()
+
+        try:
+            movie = await plex.find_movie_by_title(title, year=year)
+        except plex.PlexError as e:
+            await interaction.followup.send(
+                f"⚠️ couldn't reach the library right now: {e}", ephemeral=True
+            )
+            return
+
+        if movie is None:
+            year_note = f" ({year})" if year else ""
+            await interaction.followup.send(
+                f"couldn't find **{title}{year_note}** in the rb9 library.",
+                ephemeral=True,
+            )
+            return
+
+        view = EmbedRentView(
+            bot=self.bot,
+            user_id=self.user_id,
+            user_name=self.user_name,
+            movie=movie,
+            initiated_by="selected",
+        )
+        await interaction.followup.send(
+            f"📼 rent **{movie['title']} ({movie.get('year', '?')})**?",
+            view=view,
+            ephemeral=True,
+        )
+
+
 class RentWarningView(discord.ui.View):
     """
-    Step 1 of /rent: shown before any film is revealed. Gives the user
-    a chance to bail before committing to the rental flow.
+    Step 1 of /rent: lets the user choose how to start a rental.
     """
 
     def __init__(self, bot: discord.Client, user_id: str, user_name: str):
@@ -311,18 +421,38 @@ class RentWarningView(discord.ui.View):
         self.user_name = user_name
         self._processing = False
 
-        async def start_cb(interaction: discord.Interaction):
-            await self._start(interaction)
+        async def random_cb(interaction: discord.Interaction):
+            await self._start_random(interaction)
+
+        async def pick_cb(interaction: discord.Interaction):
+            await self._pick_own(interaction)
+
+        async def admin_cb(interaction: discord.Interaction):
+            await self._ask_admin(interaction)
 
         async def cancel_cb(interaction: discord.Interaction):
             await self._cancel(interaction)
 
-        start_btn = discord.ui.Button(
-            label="start rental",
+        random_btn = discord.ui.Button(
+            label="roll random",
             style=discord.ButtonStyle.success,
+            emoji="🎲",
+        )
+        random_btn.callback = random_cb
+
+        pick_btn = discord.ui.Button(
+            label="pick a movie",
+            style=discord.ButtonStyle.primary,
             emoji="📼",
         )
-        start_btn.callback = start_cb
+        pick_btn.callback = pick_cb
+
+        admin_btn = discord.ui.Button(
+            label="ask an admin",
+            style=discord.ButtonStyle.secondary,
+            emoji="💬",
+        )
+        admin_btn.callback = admin_cb
 
         cancel_btn = discord.ui.Button(
             label="nevermind",
@@ -330,24 +460,21 @@ class RentWarningView(discord.ui.View):
         )
         cancel_btn.callback = cancel_cb
 
-        self.add_item(start_btn)
+        self.add_item(random_btn)
+        self.add_item(pick_btn)
+        self.add_item(admin_btn)
         self.add_item(cancel_btn)
 
-    async def _start(self, interaction: discord.Interaction):
+    async def _start_random(self, interaction: discord.Interaction):
         if not await _mark_view_processing(interaction, self, "checking the shelves..."):
             return
 
         self.stop()
 
-        # Check for existing active rental
-        existing = db.get_active_rental(self.user_id)
-        if existing:
-            title = existing.get("title", "a film")
+        active_count = _active_rental_count_for_user(self.user_id)
+        if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.edit_original_response(
-                content=(
-                    f"you already have **{title}** checked out. "
-                    "use `/return` to return it before renting something new."
-                ),
+                content=_active_rental_limit_message(active_count),
                 embed=None,
                 view=None,
             )
@@ -400,6 +527,63 @@ class RentWarningView(discord.ui.View):
         )
         embed = embeds.rental_offer_embed(movie, is_last_reroll=False)
         await interaction.edit_original_response(embed=embed, view=pick_view, content=None)
+
+    async def _pick_own(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await _send_component_denied(interaction, "this rental isn't for you.")
+            return
+        await interaction.response.send_modal(
+            PickOwnRentalModal(
+                bot=self.bot,
+                user_id=self.user_id,
+                user_name=self.user_name,
+            )
+        )
+
+    async def _ask_admin(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await _send_component_denied(interaction, "this rental isn't for you.")
+            return
+        if not await _mark_view_processing(interaction, self, "sending request..."):
+            return
+
+        self.stop()
+
+        active_count = _active_rental_count_for_user(self.user_id)
+        if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
+            await interaction.edit_original_response(
+                content=_active_rental_limit_message(active_count),
+                embed=None,
+                view=None,
+            )
+            return
+
+        request_channel = None
+        request_channel_id = db.get_rental_request_channel_id()
+        if request_channel_id:
+            request_channel = self.bot.get_channel(request_channel_id)
+            if request_channel is None:
+                try:
+                    request_channel = await self.bot.fetch_channel(request_channel_id)
+                except (discord.NotFound, discord.Forbidden):
+                    request_channel = None
+        request_channel = request_channel or interaction.channel
+
+        if request_channel is not None:
+            try:
+                await request_channel.send(
+                    f"📼 **rental recommendation request**\n"
+                    f"{interaction.user.mention} wants an admin pick. "
+                    "use `/assignrental` to assign something from rb9."
+                )
+            except discord.HTTPException:
+                pass
+
+        await interaction.edit_original_response(
+            content="request sent. an admin can assign you a rental when they have a pick.",
+            embed=None,
+            view=None,
+        )
 
     async def _cancel(self, interaction: discord.Interaction):
         if not await _mark_view_processing(interaction, self, "canceling rental..."):
@@ -476,7 +660,7 @@ class RentPickView(discord.ui.View):
             user_id=self.user_id,
             user_name=self.user_name,
             rerolls_used=self.rerolls_used,
-            initiated_by="command",
+            initiated_by="random",
         )
 
     async def _reroll(self, interaction: discord.Interaction):
@@ -524,7 +708,7 @@ class RentPickView(discord.ui.View):
                 user_id=self.user_id,
                 user_name=self.user_name,
                 rerolls_used=new_rerolls_used,
-                initiated_by="command",
+                initiated_by="random",
             )
         else:
             # Show the next pick with updated buttons
@@ -564,6 +748,7 @@ class EmbedRentView(discord.ui.View):
         movie: dict | None = None,
         title: str | None = None,
         year: int | None = None,
+        initiated_by: str = "selected",
     ):
         super().__init__(timeout=120)
         self.bot = bot
@@ -572,6 +757,7 @@ class EmbedRentView(discord.ui.View):
         self._movie = movie          # pre-loaded Plex dict, if available
         self._title = title or (movie.get("title") if movie else None)
         self._year = year or (movie.get("year") if movie else None)
+        self.initiated_by = initiated_by
         self._processing = False
 
         confirm_btn = discord.ui.Button(
@@ -622,14 +808,10 @@ class EmbedRentView(discord.ui.View):
             )
             return
 
-        existing = db.get_active_rental(self.user_id)
-        if existing:
-            title = existing.get("title", "a film")
+        active_count = _active_rental_count_for_user(self.user_id)
+        if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.edit_original_response(
-                content=(
-                    f"you already have **{title}** checked out. "
-                    "use `/return` to return it first."
-                ),
+                content=_active_rental_limit_message(active_count),
                 embed=None, view=None,
             )
             return
@@ -641,7 +823,7 @@ class EmbedRentView(discord.ui.View):
             user_id=self.user_id,
             user_name=self.user_name,
             rerolls_used=0,
-            initiated_by="embed",
+            initiated_by=self.initiated_by,
         )
 
     async def _cancel(self, interaction: discord.Interaction):
@@ -795,7 +977,8 @@ class AddToWatchlistButton(discord.ui.Button):
         self.film_source = source
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        if not await _defer_component(interaction, ephemeral=True):
+            return
 
         user_id = str(interaction.user.id)
         resolved_tmdb_id = self.film_tmdb_id
@@ -886,24 +1069,34 @@ class LBWatchlistView(discord.ui.View):
             self.add_item(import_btn)
 
     async def _prev(self, interaction: discord.Interaction):
+        if not await _defer_component(interaction):
+            return
         self.page -= 1
         self._build_buttons()
         embed = embeds.lb_watchlist_embed(
             self.lb_username, self.films, self.page, self.total_pages
         )
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.edit_original_response(embed=embed, view=self)
 
     async def _next(self, interaction: discord.Interaction):
+        if not await _defer_component(interaction):
+            return
         self.page += 1
         self._build_buttons()
         embed = embeds.lb_watchlist_embed(
             self.lb_username, self.films, self.page, self.total_pages
         )
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.edit_original_response(embed=embed, view=self)
 
     async def _roll(self, interaction: discord.Interaction):
         import random
-        await interaction.response.defer()
+        if not await _defer_component(interaction):
+            return
+        if not self.films:
+            await interaction.followup.send(
+                "that watchlist is empty.", ephemeral=True
+            )
+            return
 
         pick = random.choice(self.films)
         title = pick.get("film_title", "")
@@ -952,14 +1145,16 @@ class LBWatchlistView(discord.ui.View):
                 label="rent this", style=discord.ButtonStyle.success, emoji="📼"
             )
             async def rent_cb(intr: discord.Interaction):
+                if not await _defer_component(intr, ephemeral=True):
+                    return
                 movie = await plex.find_movie_by_title(details.get("title"), year=plex_year)
                 if movie is None:
-                    await intr.response.send_message(
+                    await intr.followup.send(
                         "⚠️ couldn't find that film in the library right now.", ephemeral=True
                     )
                     return
                 view = EmbedRentView(bot=self.bot, movie=movie, user_id=str(intr.user.id), user_name=str(intr.user))
-                await intr.response.send_message(
+                await intr.followup.send(
                     f"📼 rent **{movie['title']}**?", view=view, ephemeral=True
                 )
             rent_btn.callback = rent_cb
@@ -968,7 +1163,8 @@ class LBWatchlistView(discord.ui.View):
         await interaction.edit_original_response(embed=embed, view=roll_view, content=None)
 
     async def _import(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        if not await _defer_component(interaction, ephemeral=True):
+            return
 
         user_id = str(interaction.user.id)
         added = 0
@@ -1020,9 +1216,7 @@ class _RemoveSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.watchlist_view.user_id:
-            await interaction.response.send_message(
-                "this isn't your watchlist.", ephemeral=True
-            )
+            await _send_component_denied(interaction, "this isn't your watchlist.")
             return
         if not await _defer_component(interaction):
             return
@@ -1116,7 +1310,15 @@ class MyWatchlistView(discord.ui.View):
             roll_btn.callback = self._roll
             self.add_item(roll_btn)
 
+    async def _ensure_owner(self, interaction: discord.Interaction) -> bool:
+        if str(interaction.user.id) == self.user_id:
+            return True
+        await _send_component_denied(interaction, "this isn't your watchlist.")
+        return False
+
     async def _prev(self, interaction: discord.Interaction):
+        if not await self._ensure_owner(interaction):
+            return
         if not await _defer_component(interaction):
             return
         next_view = MyWatchlistView.for_page(
@@ -1137,6 +1339,8 @@ class MyWatchlistView(discord.ui.View):
         await interaction.edit_original_response(embed=embed, view=next_view)
 
     async def _next(self, interaction: discord.Interaction):
+        if not await self._ensure_owner(interaction):
+            return
         if not await _defer_component(interaction):
             return
         next_view = MyWatchlistView.for_page(
@@ -1158,13 +1362,14 @@ class MyWatchlistView(discord.ui.View):
 
     async def _roll(self, interaction: discord.Interaction):
         import random
+        if not await self._ensure_owner(interaction):
+            return
         if not self.entries:
-            await interaction.response.send_message(
-                "your watchlist is empty.", ephemeral=True
-            )
+            await _send_component_denied(interaction, "your watchlist is empty.")
             return
 
-        await interaction.response.defer()
+        if not await _defer_component(interaction):
+            return
         pick = random.choice(self.entries)
         title = pick.get("title", "")
         year = pick.get("year")

@@ -14,29 +14,97 @@ import rental as rental_module
 import views
 
 
+def _format_active_rental_options(rentals: list[dict]) -> str:
+    lines = []
+    for rental in rentals:
+        try:
+            due = datetime.fromisoformat(rental.get("due_at", ""))
+            due_text = f"due <t:{int(due.timestamp())}:R>"
+        except (ValueError, TypeError):
+            due_text = "due time unknown"
+        lines.append(
+            f"`{rental['id']}` - **{rental.get('title', 'unknown')}** "
+            f"({rental.get('year') or '?'}) - {due_text}"
+        )
+    return "\n".join(lines)
+
+
+def _active_rental_limit_message(rentals: list[dict]) -> str:
+    active_count = len(rentals)
+    message = (
+        f"you already have **{active_count}** active rentals. "
+        "return one before checking out another."
+    )
+    if rentals:
+        message += f"\n\n{_format_active_rental_options(rentals)}"
+    return message
+
+
+def _macguffin_weights_for_rental(rental: dict) -> dict[str, int] | None:
+    if rental.get("initiated_by") in ("random", "command"):
+        return {"common": 50, "rare": 40, "iconic": 10}
+    return None
+
+
+async def _resolve_active_rental_for_command(
+    interaction: discord.Interaction,
+    rental_query: str | None,
+) -> dict | None:
+    user_id = str(interaction.user.id)
+    active = db.get_active_rentals(user_id)
+
+    if not active:
+        await interaction.followup.send(
+            "you don't have an active rental. use `/rent` to grab something.",
+            ephemeral=True,
+        )
+        return None
+
+    if rental_query:
+        matches = db.find_active_rental(user_id, rental_query)
+        if len(matches) == 1:
+            return matches[0]
+        if matches:
+            await interaction.followup.send(
+                "that matched more than one active rental:\n"
+                f"{_format_active_rental_options(matches)}\n\n"
+                "try again with the rental id.",
+                ephemeral=True,
+            )
+            return None
+        await interaction.followup.send(
+            f"couldn't find an active rental matching **{rental_query}**.",
+            ephemeral=True,
+        )
+        return None
+
+    if len(active) == 1:
+        return active[0]
+
+    await interaction.followup.send(
+        "which rental?\n"
+        f"{_format_active_rental_options(active)}\n\n"
+        "run the command again with the rental id or part of the title.",
+        ephemeral=True,
+    )
+    return None
+
+
 class RentalsCog(commands.Cog):
     """Video store rental commands and rental admin tools."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="rent", description="rent a random movie from the rb9 library — 48 hours to watch it")
+    @app_commands.command(name="rent", description="rent from rb9 - roll random, pick one, or ask an admin")
     async def rent(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
 
-        existing = db.get_active_rental(user_id)
-        if existing:
-            title = existing.get("title", "a film")
-            due_at_iso = existing.get("due_at", "")
-            try:
-                due = datetime.fromisoformat(due_at_iso)
-                due_ts = int(due.timestamp())
-                due_str = f" (due <t:{due_ts}:R>)"
-            except (ValueError, TypeError):
-                due_str = ""
+        active_rentals = db.get_active_rentals(user_id)
+        active_count = len(active_rentals)
+        if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.response.send_message(
-                f"you already have **{title}** checked out{due_str}. "
-                "use `/return` to return it before renting something new.",
+                _active_rental_limit_message(active_rentals),
                 ephemeral=True,
             )
             return
@@ -47,11 +115,13 @@ class RentalsCog(commands.Cog):
             user_name=str(interaction.user),
         )
         await interaction.response.send_message(
-            "📼 **heads up before you rent**\n\n"
-            "once you confirm a rental, the 48-hour clock starts immediately. "
-            "you can re-roll up to **2 times** if you get something you've seen, "
-            "but after that the film is locked in.\n\n"
-            "ready to grab something from the shelf?",
+            "📼 **choose your rental path**\n\n"
+            f"you currently have **{active_count}/"
+            f"{rental_module.MAX_ACTIVE_RENTALS_PER_USER}** rentals active. "
+            "once a rental is confirmed, the 48-hour clock starts immediately.\n\n"
+            "**roll random** gives you up to 2 rerolls and boosted macguffin odds "
+            "when you return it. **pick a movie** lets you choose from rb9. "
+            "**ask an admin** posts a recommendation request.",
             view=warning_view,
             ephemeral=True,
         )
@@ -61,6 +131,7 @@ class RentalsCog(commands.Cog):
         recommend="would you recommend this to the group?",
         rating="your rating out of 10 (optional)",
         thoughts="your review (optional but encouraged)",
+        rental="rental id or part of the title, if you have more than one active rental",
     )
     async def return_film(
         self,
@@ -68,6 +139,7 @@ class RentalsCog(commands.Cog):
         recommend: bool,
         rating: int | None = None,
         thoughts: str | None = None,
+        rental: str | None = None,
     ):
         await interaction.response.defer(ephemeral=True)
 
@@ -79,20 +151,16 @@ class RentalsCog(commands.Cog):
             )
             return
 
-        rental = db.get_active_rental(user_id)
-        if not rental:
-            await interaction.followup.send(
-                "you don't have an active rental. use `/rent` to grab something.",
-                ephemeral=True,
-            )
+        rental_record = await _resolve_active_rental_for_command(interaction, rental)
+        if not rental_record:
             return
 
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
-        late_fee = rental_module.compute_late_fee(rental["due_at"], now_iso)
+        late_fee = rental_module.compute_late_fee(rental_record["due_at"], now_iso)
 
         db.mark_rental_returned(
-            rental_id=rental["id"],
+            rental_id=rental_record["id"],
             returned_at=now_iso,
             rating=rating,
             thoughts=thoughts,
@@ -100,10 +168,10 @@ class RentalsCog(commands.Cog):
             late_fee_dollars=late_fee,
         )
 
-        updated_rental = db.get_rental_by_id(rental["id"])
+        updated_rental = db.get_rental_by_id(rental_record["id"])
         await rental_module.edit_thread_returned(self.bot, updated_rental)
 
-        title = rental.get("title", "your film")
+        title = rental_record.get("title", "your film")
         late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
         rec_note = "recommended" if recommend else "not recommended"
         rating_note = f"rating: {rating}/10, " if rating is not None else ""
@@ -118,7 +186,8 @@ class RentalsCog(commands.Cog):
                 macguffin_module.drop_macguffin,
                 user_id,
                 str(interaction.user),
-                "return",
+                f"return:{rental_record.get('initiated_by', 'selected')}",
+                _macguffin_weights_for_rental(rental_record),
             )
             claimed = await asyncio.to_thread(db.get_claimed_macguffin_ids)
             total = len(macguffin_module.CARDS)
@@ -137,34 +206,40 @@ class RentalsCog(commands.Cog):
     @app_commands.command(name="myrental", description="check your current rental and time remaining")
     async def myrental(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
-        rental = db.get_active_rental(user_id)
+        rentals = db.get_active_rentals(user_id)
 
-        if not rental:
+        if not rentals:
             await interaction.response.send_message(
                 "you don't have anything checked out right now. use `/rent` to grab something.",
                 ephemeral=True,
             )
             return
 
-        embed = embeds.rental_status_embed(rental)
+        embed = (
+            embeds.rental_status_embed(rentals[0])
+            if len(rentals) == 1
+            else embeds.rental_status_list_embed(
+                rentals,
+                str(interaction.user),
+                rental_module.MAX_ACTIVE_RENTALS_PER_USER,
+            )
+        )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @app_commands.command(name="extend", description="extend your active rental by 24 hours")
-    async def extend(self, interaction: discord.Interaction):
-        user_id = str(interaction.user.id)
-        rental = db.get_active_rental(user_id)
-        if not rental:
-            await interaction.response.send_message(
-                "you don't have an active rental to extend.",
-                ephemeral=True,
-            )
+    @app_commands.command(name="extend", description="extend an active rental by 24 hours")
+    @app_commands.describe(
+        rental="rental id or part of the title, if you have more than one active rental",
+    )
+    async def extend(self, interaction: discord.Interaction, rental: str | None = None):
+        await interaction.response.defer(ephemeral=True)
+        rental_record = await _resolve_active_rental_for_command(interaction, rental)
+        if not rental_record:
             return
 
-        await interaction.response.defer(ephemeral=True)
         _, message = await rental_module.extend_rental(
             bot=self.bot,
-            user_id=user_id,
-            rental_id=rental["id"],
+            user_id=str(interaction.user.id),
+            rental_id=rental_record["id"],
         )
         await interaction.followup.send(message, ephemeral=True)
 
@@ -243,11 +318,37 @@ class RentalsCog(commands.Cog):
         )
 
     @app_commands.command(
+        name="setrentalrequests",
+        description="set where admin rental recommendation requests post (admin only)",
+    )
+    @app_commands.describe(channel="the channel where rental recommendation requests should post")
+    @app_commands.default_permissions(manage_guild=True)
+    async def set_rental_requests(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel,
+    ):
+        perms = channel.permissions_for(interaction.guild.me)
+        if not perms.send_messages:
+            await interaction.response.send_message(
+                f"⚠️ i need **send messages** permission in {channel.mention}.",
+                ephemeral=True,
+            )
+            return
+
+        db.set_rental_request_channel_id(channel.id)
+        await interaction.response.send_message(
+            f"✅ rental recommendation requests will post in {channel.mention}.",
+            ephemeral=True,
+        )
+
+    @app_commands.command(
         name="cancelrental",
         description="cancel a user's active rental with no late fee (admin only)",
     )
     @app_commands.describe(
         user="the user whose rental to cancel",
+        rental="rental id or part of the title, if they have more than one active rental",
         reason="optional reason (shown in the forum thread)",
     )
     @app_commands.default_permissions(manage_guild=True)
@@ -255,29 +356,49 @@ class RentalsCog(commands.Cog):
         self,
         interaction: discord.Interaction,
         user: discord.Member,
+        rental: str | None = None,
         reason: str | None = None,
     ):
         await interaction.response.defer(ephemeral=True)
 
-        rental = db.get_active_rental(str(user.id))
-        if not rental:
+        active = db.get_active_rentals(str(user.id))
+        if not active:
             await interaction.followup.send(
                 f"**{user}** doesn't have an active rental.", ephemeral=True
             )
             return
+        if rental:
+            matches = db.find_active_rental(str(user.id), rental)
+        else:
+            matches = active
+        if not matches:
+            await interaction.followup.send(
+                f"couldn't find an active rental for **{user}** matching **{rental}**.",
+                ephemeral=True,
+            )
+            return
+        if len(matches) != 1:
+            await interaction.followup.send(
+                f"which rental for **{user}**?\n"
+                f"{_format_active_rental_options(matches)}\n\n"
+                "try again with the rental id.",
+                ephemeral=True,
+            )
+            return
+        rental_record = matches[0]
 
-        db.cancel_rental_by_id(rental["id"])
-        await rental_module.edit_thread_cancelled(self.bot, rental, reason)
+        db.cancel_rental_by_id(rental_record["id"])
+        await rental_module.edit_thread_cancelled(self.bot, rental_record, reason)
 
         reason_str = f" reason: {reason}" if reason else ""
         await rental_module._send_dm(
             self.bot,
             str(user.id),
-            f"📼 your rental of **{rental['title']}** was cancelled by an admin.{reason_str}",
+            f"📼 your rental of **{rental_record['title']}** was cancelled by an admin.{reason_str}",
         )
 
         await interaction.followup.send(
-            f"✅ cancelled **{rental['title']}** for **{user}**.{reason_str}",
+            f"✅ cancelled **{rental_record['title']}** for **{user}**.{reason_str}",
             ephemeral=True,
         )
 
@@ -300,10 +421,12 @@ class RentalsCog(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
 
-        existing = db.get_active_rental(str(user.id))
-        if existing:
+        active_rentals = db.get_active_rentals(str(user.id))
+        active_count = len(active_rentals)
+        if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.followup.send(
-                f"**{user}** already has **{existing['title']}** checked out.",
+                f"**{user}** already has **{active_count}** active rentals.\n\n"
+                f"{_format_active_rental_options(active_rentals)}",
                 ephemeral=True,
             )
             return
@@ -341,7 +464,7 @@ class RentalsCog(commands.Cog):
             rented_at=now.isoformat(),
             due_at=due_at.isoformat(),
             rerolls_used=0,
-            initiated_by="admin",
+            initiated_by="admin_recommended",
         )
 
         thread_ok = await rental_module.create_forum_thread(

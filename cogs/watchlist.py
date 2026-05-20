@@ -120,14 +120,16 @@ class WatchlistCog(commands.Cog):
     @watchlist_group.command(name="remove", description="remove a film from your watchlist by title")
     @app_commands.describe(title="part of the film title to remove")
     async def watchlist_remove_cmd(self, interaction: discord.Interaction, title: str):
+        await interaction.response.defer(ephemeral=True)
+
         count = db.watchlist_remove_by_title(str(interaction.user.id), title)
         if count:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"\U0001f5d1\ufe0f removed **{count}** film(s) matching \"{title}\" from your watchlist.",
                 ephemeral=True,
             )
         else:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"no films matching \"{title}\" found in your watchlist.",
                 ephemeral=True,
             )

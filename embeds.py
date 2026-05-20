@@ -553,6 +553,7 @@ def bot_status_embed(status: dict) -> discord.Embed:
         name="channels",
         value=(
             f"reviews: {status['reviews_channel']}\n"
+            f"rental requests: {status['rental_request_channel']}\n"
             f"streaming: {status['announcement_channel']}\n"
             f"daily rec: {status['daily_channel']}\n"
             f"lb activity: {status['lb_activity_channel']}"
@@ -822,6 +823,35 @@ def rental_status_embed(rental: dict) -> discord.Embed:
     return embed
 
 
+def rental_status_list_embed(
+    rentals: list[dict],
+    user_tag: str,
+    max_active: int,
+) -> discord.Embed:
+    """Shown by /myrental when a user has multiple active rentals."""
+    embed = discord.Embed(
+        title=f"📼 active rentals - {user_tag}",
+        color=0xE5A00D,
+    )
+
+    lines = []
+    for rental in rentals:
+        title = rental.get("title", "Unknown")
+        year = rental.get("year") or "?"
+        try:
+            due = datetime.fromisoformat(rental.get("due_at", ""))
+            due_str = f"<t:{int(due.timestamp())}:R>"
+        except (ValueError, TypeError):
+            due_str = "due time unknown"
+        lines.append(f"`{rental['id']}` **{title} ({year})** - {due_str}")
+
+    embed.description = "\n".join(lines)
+    embed.set_footer(
+        text=f"{len(rentals)}/{max_active} active - use rental id with /return or /extend"
+    )
+    return embed
+
+
 def late_fees_embed(rows: list[dict]) -> discord.Embed:
     """Leaderboard of accumulated late fees."""
     if not rows:
@@ -881,13 +911,15 @@ def rental_stats_embed(history: list[dict], user_tag: str) -> discord.Embed:
         embed.add_field(name="total late fees", value=f"${total_fees:.2f}", inline=True)
 
     if active:
-        r = active[0]
-        try:
-            due = datetime.fromisoformat(r["due_at"])
-            due_ts = int(due.timestamp())
-            active_str = f"{r['title']} - due <t:{due_ts}:R>"
-        except (ValueError, TypeError):
-            active_str = r["title"]
+        active_lines = []
+        for r in active[:5]:
+            try:
+                due = datetime.fromisoformat(r["due_at"])
+                due_ts = int(due.timestamp())
+                active_lines.append(f"- **{r['title']}** - due <t:{due_ts}:R>")
+            except (ValueError, TypeError):
+                active_lines.append(f"- **{r['title']}**")
+        active_str = "\n".join(active_lines)
         embed.add_field(name="currently renting", value=active_str, inline=False)
 
     # Last 5 returned

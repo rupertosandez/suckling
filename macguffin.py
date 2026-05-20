@@ -88,23 +88,30 @@ def _available_cards(claimed_ids: set[str]) -> dict[str, list[dict]]:
     return available
 
 
-def _roll_rarity(excluded: set[str] | None = None) -> str | None:
+def _roll_rarity(
+    excluded: set[str] | None = None,
+    weights: dict[str, int] | None = None,
+) -> str | None:
     excluded = excluded or set()
+    weights = weights or RARITY_WEIGHTS
     rarities = [rarity for rarity in RARITY_WEIGHTS if rarity not in excluded]
     if not rarities:
         return None
-    weights = [RARITY_WEIGHTS[rarity] for rarity in rarities]
-    return random.choices(rarities, weights=weights, k=1)[0]
+    rarity_weights = [weights.get(rarity, RARITY_WEIGHTS[rarity]) for rarity in rarities]
+    return random.choices(rarities, weights=rarity_weights, k=1)[0]
 
 
-def _pick_card(claimed_ids: set[str]) -> dict:
+def _pick_card(
+    claimed_ids: set[str],
+    weights: dict[str, int] | None = None,
+) -> dict:
     available = _available_cards(claimed_ids)
     if not any(available.values()):
         raise MacGuffinPoolEmpty("all macguffins have been claimed")
 
     excluded: set[str] = set()
     while len(excluded) < len(RARITY_WEIGHTS):
-        rolled = _roll_rarity(excluded)
+        rolled = _roll_rarity(excluded, weights=weights)
         if rolled is None:
             break
         for rarity in [rolled, *RARITY_FALLBACK[rolled]]:
@@ -117,7 +124,12 @@ def _pick_card(claimed_ids: set[str]) -> dict:
     raise MacGuffinPoolEmpty("all macguffins have been claimed")
 
 
-def drop_macguffin(user_id: str, user_tag: str, via: str) -> dict:
+def drop_macguffin(
+    user_id: str,
+    user_tag: str,
+    via: str,
+    rarity_weights: dict[str, int] | None = None,
+) -> dict:
     """Claim one random unowned MacGuffin for a user and return its card dict."""
     _ensure_loaded()
 
@@ -125,7 +137,7 @@ def drop_macguffin(user_id: str, user_tag: str, via: str) -> dict:
     # with a fresh claimed set a few times before surfacing the DB error.
     for _ in range(5):
         claimed_ids = db.get_claimed_macguffin_ids()
-        card = _pick_card(claimed_ids)
+        card = _pick_card(claimed_ids, weights=rarity_weights)
         try:
             db.claim_macguffin(card["id"], user_id, user_tag, via)
             return dict(card)
@@ -133,7 +145,7 @@ def drop_macguffin(user_id: str, user_tag: str, via: str) -> dict:
             continue
 
     claimed_ids = db.get_claimed_macguffin_ids()
-    card = _pick_card(claimed_ids)
+    card = _pick_card(claimed_ids, weights=rarity_weights)
     db.claim_macguffin(card["id"], user_id, user_tag, via)
     return dict(card)
 
