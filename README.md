@@ -138,38 +138,52 @@ then optionally toggle features off if you want them disabled:
 
 ```
 sucklingbot/
-├── bot.py              main entry, command definitions, scheduler
-├── config.py           loads .env, exposes config constants
-├── version.py          version constant
-├── tmdb.py             tmdb api wrapper + caching
-├── embeds.py           discord embed builders
-├── views.py            discord ui components (dropdowns, rental views)
-├── db.py               sqlite schema and helpers
-├── rental.py           rental lifecycle: forum threads, late fees, DMs
-├── tracker.py          daily streaming-availability scan
-├── picker.py           random film candidate pool + filtering
-├── imageops.py         poster cropping for /guess
-├── game.py             /guess round state
-├── sixdegrees.py       /six round state, chain parsing, validation
-├── trivia_roulette.py  /play round state, json asset loading, matching
-├── plex.py             plex connection, random pick, library stats
-├── cache.py            in-memory ttl cache
-├── logger.py           file logging setup
-├── launcher.py         desktop launcher entry point
-├── launcher/           tray app, subprocess manager, updates, state
-├── launch.vbs          no-console launcher for windows
-├── launch.bat          visible terminal launcher for troubleshooting
-├── requirements.txt    python dependencies
-├── COMMANDS.md         user-facing command reference
-├── CHANGELOG.md        release history
-├── README.md           this file
-├── .env                secrets (gitignored)
-├── assets/             curated trivia roulette content (committed)
+├── bot.py                    runtime entry, scheduler, message routing
+├── cogs/                     slash command groups
+│   ├── admin.py              admin dashboard, toggles, manual checks
+│   ├── discovery.py          /suck, /roll, daily recommendations
+│   ├── games.py              /guess, /play, /six, leaderboards
+│   ├── letterboxd.py         /lb commands
+│   ├── macguffins.py         macguffin commands
+│   ├── meta.py               bot info commands
+│   ├── rb9.py                rb9 library commands
+│   ├── rentals.py            rental commands and admin tools
+│   ├── tracking.py           streaming watchlist setup and tracking
+│   └── watchlist.py          personal watchlist commands
+├── config.py                 loads .env, exposes config constants
+├── version.py                version constant
+├── tmdb.py                   tmdb api wrapper + caching
+├── embeds.py                 discord embed builders
+├── views.py                  discord ui components (dropdowns, rental views)
+├── db.py                     sqlite schema and helpers
+├── rental.py                 rental lifecycle: forum threads, late fees, DMs
+├── macguffin.py              macguffin card pool, drops, transfers
+├── tracker.py                daily streaming-availability scan
+├── picker.py                 random film candidate pool + filtering
+├── imageops.py               poster cropping for /guess
+├── game.py                   /guess round state
+├── sixdegrees.py             /six round state, chain parsing, validation
+├── trivia_roulette.py        /play round state, json asset loading, matching
+├── letterboxd.py             letterboxd diary/watchlist integration
+├── plex.py                   plex connection, random pick, library stats
+├── cache.py                  in-memory ttl cache
+├── logger.py                 file logging setup
+├── launcher.py               desktop launcher entry point
+├── launcher/                 tray app, subprocess manager, updates, state
+├── launch.vbs                no-console launcher for windows
+├── launch.bat                visible terminal launcher for troubleshooting
+├── requirements.txt          python dependencies
+├── COMMANDS.md               user-facing command reference
+├── CHANGELOG.md              release history
+├── README.md                 this file
+├── .env                      secrets (gitignored)
+├── assets/                   curated game content (committed)
 │   ├── quotes.json
 │   ├── emoji.json
 │   ├── taglines.json
-│   └── trivia.json
-└── data/               persistent state (gitignored)
+│   ├── trivia.json
+│   └── macguffins.json
+└── data/                     persistent state (gitignored)
     ├── moviebot.db
     └── bot.log
 ```
@@ -178,7 +192,8 @@ sucklingbot/
 
 ## architecture notes
 
-- `bot.py` is the only file that imports discord.py command/event decorators. everything else is plain async python.
+- `bot.py` owns runtime setup, scheduled jobs, startup/shutdown handling, and message routing.
+- slash commands live in `cogs/`, grouped by feature area and loaded during startup.
 - `rental.py` never imports `bot.py` — takes `bot: discord.Client` as a parameter, same pattern as `tracker.py`.
 - `tmdb.py` uses the cache transparently — pass `force=True` to bypass when fresh data is needed.
 - `tracker.py` uses `force=True` everywhere because it needs fresh data to detect changes.
