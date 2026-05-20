@@ -420,5 +420,395 @@
     "aliases": [
       "sewage baby"
     ]
+  },
+  {
+    "answer": "Rosemary's Baby",
+    "year": 1968,
+    "prompt": "The director made his Hollywood debut with this film, anchoring its supernatural paranoia in a real Manhattan apartment building rather than a soundstage."
+  },
+  {
+    "answer": "The Omen",
+    "year": 1976,
+    "prompt": "The production became notorious for a string of misfortunes and freak accidents that fueled long-running rumors of a cursed shoot, including a serious in-flight incident involving the lead actor's plane."
+  },
+  {
+    "answer": "Friday the 13th",
+    "year": 1980,
+    "prompt": "The killer's now-iconic hockey mask did not actually appear until the third entry in the franchise. The original feature concealed the killer's face in a much simpler way."
+  },
+  {
+    "answer": "A Nightmare on Elm Street",
+    "year": 1984,
+    "prompt": "The writer-director drew the premise from real newspaper accounts of young men dying in their sleep after suffering vivid, recurring nightmares."
+  },
+  {
+    "answer": "Poltergeist",
+    "year": 1982,
+    "prompt": "The crew used real human skeletons in some practical effects because they were cheaper than convincing prop replicas, a detail later tied to on-set superstition about the production."
+  },
+  {
+    "answer": "The Thing",
+    "year": 1982,
+    "prompt": "Its grotesque creature effects were designed and built over more than a year by a young effects artist who worked at such an intense pace that he was hospitalized by the end."
+  },
+  {
+    "answer": "An American Werewolf in London",
+    "year": 1981,
+    "prompt": "The film's lengthy on-camera transformation sequence helped its makeup designer win the very first Academy Award given in a newly created category for makeup work."
+  },
+  {
+    "answer": "The Babadook",
+    "year": 2014,
+    "prompt": "The first-time feature director had earlier developed the project's central figure in a short film, which she used to help raise the money for this full-length adaptation."
+  },
+  {
+    "answer": "The Witch",
+    "year": 2015,
+    "prompt": "Much of the film's stylized period dialogue was assembled from journals, court records, and other primary sources from 17th-century New England."
+  },
+  {
+    "answer": "It Follows",
+    "year": 2014,
+    "prompt": "The film's setting is deliberately period-ambiguous, mixing midcentury cars and old televisions with modern devices to give its suburban Detroit landscape a dreamlike, untethered feel."
+  },
+  {
+    "answer": "Saw",
+    "year": 2004,
+    "prompt": "The original feature was shot in roughly eighteen days on a tight budget, with the filmmakers using a single grimy bathroom set for most of the runtime."
+  },
+  {
+    "answer": "The Ring",
+    "year": 2002,
+    "prompt": "This American breakthrough was an English-language remake of a Japanese horror hit from a few years earlier and helped open the door for a long wave of similar adaptations."
+  },
+  {
+    "answer": "28 Days Later",
+    "year": 2002,
+    "prompt": "The film's empty London streets were captured in short early-morning windows on lightweight digital cameras, giving the apocalypse a raw documentary feel that bigger formats couldn't easily match."
+  },
+  {
+    "answer": "Candyman",
+    "year": 1992,
+    "prompt": "The lead actor performed several key scenes with real bees, even letting them swarm around his face, with a protective device used to keep them out of his mouth between takes."
+  },
+  {
+    "answer": "The Cabin in the Woods",
+    "year": 2011,
+    "prompt": "The film was finished years before it actually reached theaters, delayed by the bankruptcy of its original studio and shelved despite enthusiastic early buzz."
+  },
+  {
+    "answer": "The Conjuring",
+    "year": 2013,
+    "prompt": "The story draws on case files compiled by a husband-and-wife pair of self-described paranormal investigators whose archive went on to anchor a sprawling franchise."
+  },
+  {
+    "answer": "Hereditary",
+    "year": 2018,
+    "prompt": "The director leaned heavily on elaborate miniature work tied to a key character's hobby, blurring the line between handcraft and the larger dollhouse-like structure of the film itself."
+  },
+  {
+    "answer": "Midsommar",
+    "year": 2019,
+    "prompt": "Although the story is set in Sweden, the production filmed in Hungary during a stretch of near-constant summer daylight, helping create the movie's eerie always-bright atmosphere."
+  },
+  {
+    "answer": "Us",
+    "year": 2019,
+    "prompt": "The director cast its lead in dual roles and developed a whole physical vocabulary of jerky, animal-like movement for the underground doppelgangers to mark them apart from their above-ground counterparts."
+  },
+  {
+    "answer": "The Shining",
+    "year": 1980,
+    "prompt": "The director was notorious for demanding extreme numbers of takes, with one famously emotional staircase scene reportedly pushed well past a hundred attempts before he was satisfied."
+  },
+  {
+    "answer": "The Exorcist",
+    "year": 1973,
+    "prompt": "To capture authentic shivers, the bedroom set was refrigerated for many sequences, leaving cast members breathing visible condensation on camera."
+  },
+  {
+    "answer": "Nosferatu",
+    "year": 1922,
+    "prompt": "This silent vampire film borrowed so heavily from a famous Gothic novel that the author's widow sued and won, ordering all copies destroyed. The film survived only because a few prints had already escaped."
+  },
+  {
+    "answer": "Hellraiser",
+    "year": 1987,
+    "prompt": "A British author known for visceral short fiction made his directorial debut with this film, adapting his own novella about pleasure, pain, and a sinister puzzle box."
+  },
+  {
+    "answer": "Child's Play",
+    "year": 1988,
+    "prompt": "The killer doll was brought to life through a combination of puppetry, animatronic heads, and on-set rigs that required a full team of performers to operate from just out of frame."
+  },
+  {
+    "answer": "Suspiria",
+    "year": 1977,
+    "prompt": "The Italian director shot in saturated reds and greens using a nearly obsolete color printing process, giving the film an almost storybook palette that has been impossible for later restorations to fully replicate."
+  },
+  {
+    "answer": "Don't Look Now",
+    "year": 1973,
+    "prompt": "The film's Venice locations and fragmented editing helped make this grief-soaked supernatural thriller a long-standing reference point for atmospheric horror filmmaking."
+  },
+  {
+    "answer": "The Wicker Man",
+    "year": 1973,
+    "prompt": "Many of the supporting roles in this folk horror film were filled by residents of remote Scottish locations, lending the islanders' rituals a strange, lived-in authenticity."
+  },
+  {
+    "answer": "A Quiet Place",
+    "year": 2018,
+    "prompt": "Most of the dialogue in this horror feature is rendered in sign language, requiring on-set interpreters and shaping how every set piece could be staged."
+  },
+  {
+    "answer": "Smile",
+    "year": 2022,
+    "prompt": "The breakout horror hit was expanded from the director's own short film, which had been built around a single unnerving facial expression."
+  },
+  {
+    "answer": "Pearl",
+    "year": 2022,
+    "prompt": "Shot back-to-back with another period horror film during pandemic restrictions in New Zealand, this prequel was co-written on location by its lead performer and director."
+  },
+  {
+    "answer": "Apocalypse Now",
+    "year": 1979,
+    "prompt": "The production endured a destructive typhoon, a leading man's heart attack, and shifting weather over many months of shooting in the Philippines, expanding far past its planned schedule and budget."
+  },
+  {
+    "answer": "The Shawshank Redemption",
+    "year": 1994,
+    "prompt": "Adapted from a novella by a writer better known for horror, this prison drama flopped in its initial theatrical run before becoming a cultural staple through years of cable broadcasts and home video."
+  },
+  {
+    "answer": "One Flew Over the Cuckoo's Nest",
+    "year": 1975,
+    "prompt": "The production filmed inside a working state hospital in Oregon, with real patients and staff appearing on screen alongside the cast."
+  },
+  {
+    "answer": "Schindler's List",
+    "year": 1993,
+    "prompt": "Most of the film was shot in stark black and white in Poland, near actual historical locations, with limited use of color reserved for specific symbolic moments."
+  },
+  {
+    "answer": "Saving Private Ryan",
+    "year": 1998,
+    "prompt": "The film's opening Normandy sequence was reconstructed with handheld photography and desaturated color, an approach widely credited with changing how Hollywood depicted World War II combat."
+  },
+  {
+    "answer": "Pulp Fiction",
+    "year": 1994,
+    "prompt": "The screenplay's interlocking, time-shuffled structure was unusual enough that the studio reportedly asked for a chronological breakdown to help early readers track who was alive in which scene."
+  },
+  {
+    "answer": "Fargo",
+    "year": 1996,
+    "prompt": "The opening claim that the film is based on a true story was a deliberate fiction by the filmmakers, intended as a stylistic device rather than a literal documentary disclaimer."
+  },
+  {
+    "answer": "Chinatown",
+    "year": 1974,
+    "prompt": "The screenwriter and director famously clashed over the ending, with the director insisting on a darker conclusion than the version originally written."
+  },
+  {
+    "answer": "Bonnie and Clyde",
+    "year": 1967,
+    "prompt": "The film's startlingly graphic climax helped push American cinema past older content restrictions and into the harsher storytelling of the New Hollywood era."
+  },
+  {
+    "answer": "Network",
+    "year": 1976,
+    "prompt": "The film's lead actor died shortly after its release and went on to become one of the few performers ever to win an Academy Award for acting posthumously."
+  },
+  {
+    "answer": "Taxi Driver",
+    "year": 1976,
+    "prompt": "The production took advantage of a New York City sanitation strike to shoot streets piled high with real garbage, contributing to the film's overheated, decaying atmosphere."
+  },
+  {
+    "answer": "All the President's Men",
+    "year": 1976,
+    "prompt": "The filmmakers built an exacting recreation of the Washington Post newsroom on a studio soundstage, going so far as to import real wastepaper and clutter from the actual offices."
+  },
+  {
+    "answer": "Apollo 13",
+    "year": 1995,
+    "prompt": "The weightless interior shots were filmed in brief bursts aboard a NASA training plane that flies parabolic arcs, giving the actors real zero gravity for short stretches at a time."
+  },
+  {
+    "answer": "The Truman Show",
+    "year": 1998,
+    "prompt": "The production used a master-planned Florida community of pastel buildings and strict design rules as a ready-made stand-in for the fabricated television world at the center of the film."
+  },
+  {
+    "answer": "Memento",
+    "year": 2000,
+    "prompt": "The film's reverse-chronological structure required the actors to play their character across mirrored emotional arcs, learning their scenes out of any natural order."
+  },
+  {
+    "answer": "Children of Men",
+    "year": 2006,
+    "prompt": "Several of the film's tensest set pieces appear as long unbroken takes, achieved through hidden cuts, rigged camera mounts, and carefully timed performances."
+  },
+  {
+    "answer": "There Will Be Blood",
+    "year": 2007,
+    "prompt": "The lead actor based much of his performance on archival recordings of a famous mid-twentieth-century filmmaker, helping shape the character's distinctive theatrical cadence."
+  },
+  {
+    "answer": "The Departed",
+    "year": 2006,
+    "prompt": "The American crime thriller was adapted from a Hong Kong original, with its director finally winning his first competitive Academy Award for Best Director on this film."
+  },
+  {
+    "answer": "The Social Network",
+    "year": 2010,
+    "prompt": "The twin brothers at the heart of the lawsuit were played by a single performer paired with a body double whose face was digitally replaced shot by shot."
+  },
+  {
+    "answer": "Birdman",
+    "year": 2014,
+    "prompt": "The film is designed to look like one continuous shot, stitched together from long takes with hidden cuts and meticulously timed camera moves through the backstage of a theater."
+  },
+  {
+    "answer": "Boyhood",
+    "year": 2014,
+    "prompt": "The production filmed the same cast intermittently across roughly twelve years, allowing the lead and his on-screen family to physically age over the course of a single feature."
+  },
+  {
+    "answer": "The Revenant",
+    "year": 2015,
+    "prompt": "The director insisted on shooting only with available natural light, which compressed each day's filming window and contributed to a long, brutal production across cold, remote locations."
+  },
+  {
+    "answer": "Moonlight",
+    "year": 2016,
+    "prompt": "The film's three chapters were photographed with distinct color palettes, each lit and graded to match a different phase of the central character's life."
+  },
+  {
+    "answer": "1917",
+    "year": 2019,
+    "prompt": "The film was shot and edited to look like a pair of long unbroken takes, requiring extensive choreography between actors, cameras, lighting, and trench locations."
+  },
+  {
+    "answer": "Nomadland",
+    "year": 2020,
+    "prompt": "Many of the supporting roles were filled by real members of contemporary nomadic communities, who appear under their own names alongside the film's professional leads."
+  },
+  {
+    "answer": "Whiplash",
+    "year": 2014,
+    "prompt": "The director first proved out the project as a short film, using its central confrontation to attract financing for the feature that followed soon after."
+  },
+  {
+    "answer": "Oppenheimer",
+    "year": 2023,
+    "prompt": "The filmmakers leaned heavily on practical, non-digital techniques to evoke the Trinity test, using chemistry and miniature work in place of computer-generated imagery."
+  },
+  {
+    "answer": "Once Upon a Time in Hollywood",
+    "year": 2019,
+    "prompt": "The production rebuilt long stretches of 1969 Los Angeles, including period-accurate signage and storefronts, so that extended driving sequences could roll past recreated streets."
+  },
+  {
+    "answer": "Knives Out",
+    "year": 2019,
+    "prompt": "The mansion at the heart of the mystery was a real estate in Massachusetts, with the director designing several rooms around the camera's ability to circle and reframe character positions."
+  },
+  {
+    "answer": "Marriage Story",
+    "year": 2019,
+    "prompt": "The director drew on his own divorce while developing the screenplay and reportedly tailored several monologues to specific quirks of his lead performers."
+  },
+  {
+    "answer": "Spider-Man: Into the Spider-Verse",
+    "year": 2018,
+    "prompt": "The animators developed a hand-rendered style mimicking the inks, dots, and panel rhythms of printed comics, requiring custom tools and a longer-than-usual production cycle.",
+    "aliases": [
+      "into the spider-verse",
+      "spider-verse"
+    ]
+  },
+  {
+    "answer": "Inside Out",
+    "year": 2015,
+    "prompt": "The director and writers consulted research psychologists while shaping the emotion characters, refining how each one might plausibly drive behavior inside the central character's mind."
+  },
+  {
+    "answer": "Coco",
+    "year": 2017,
+    "prompt": "The animators traveled to Mexico to study Day of the Dead traditions in person, gathering visual reference for the film's afterlife sequences."
+  },
+  {
+    "answer": "Encanto",
+    "year": 2021,
+    "prompt": "The musical numbers were written by a composer-lyricist already known for his work on Broadway, and several songs were translated and re-recorded for international releases of the film."
+  },
+  {
+    "answer": "Soul",
+    "year": 2020,
+    "prompt": "The film blends two distinct visual styles, with its more abstract afterlife sequences forcing the studio to develop new approaches to character design and lighting."
+  },
+  {
+    "answer": "WALL-E",
+    "year": 2008,
+    "prompt": "The film's near-silent first act relies on physical comedy, sound design, and small mechanical gestures rather than dialogue, an approach the director attributed to early silent cinema."
+  },
+  {
+    "answer": "Ratatouille",
+    "year": 2007,
+    "prompt": "Animating the lead character at rat eye level required the studio to build a full library of food, cookware, and kitchen surfaces at exaggerated scale for him to move through."
+  },
+  {
+    "answer": "How to Train Your Dragon",
+    "year": 2010,
+    "prompt": "The aerial sequences were developed with input from a celebrated cinematographer who pushed the animators to treat the dragon flights like live-action aerial photography."
+  },
+  {
+    "answer": "Zootopia",
+    "year": 2016,
+    "prompt": "The animal-populated city was structured around different climate districts, each requiring its own art direction, fur design, and scale planning so larger and smaller species could share screen space convincingly."
+  },
+  {
+    "answer": "The Lego Movie",
+    "year": 2014,
+    "prompt": "The film's computer animation was designed to mimic the look and movement of stop-motion built from physical bricks, even simulating subtle imperfections in the surface of real plastic."
+  },
+  {
+    "answer": "Top Gun",
+    "year": 1986,
+    "prompt": "The production negotiated extensive cooperation with the United States Navy, allowing the crew to use real aircraft, carriers, and pilots to capture the bulk of the aerial sequences."
+  },
+  {
+    "answer": "The Lord of the Rings: The Two Towers",
+    "year": 2002,
+    "prompt": "The motion-capture performance of one major character was developed alongside heavily painted-over animation rather than as a finished digital model, marking a milestone in computer-generated screen acting.",
+    "aliases": [
+      "the two towers",
+      "two towers"
+    ]
+  },
+  {
+    "answer": "The Lord of the Rings: The Return of the King",
+    "year": 2003,
+    "prompt": "The third film in the trilogy swept its category at the Academy Awards, becoming the first fantasy feature to win Best Picture and tying the record for total wins in a single ceremony.",
+    "aliases": [
+      "the return of the king",
+      "return of the king"
+    ]
+  },
+  {
+    "answer": "Skyfall",
+    "year": 2012,
+    "prompt": "The franchise marked its fiftieth anniversary by leaning into its own history, including a finale staged at the central character's ancestral home in the Scottish Highlands."
+  },
+  {
+    "answer": "Tár",
+    "year": 2022,
+    "prompt": "The lead performer learned to conduct, speak German, and play piano well enough to handle her own performance scenes throughout this film about a fictional classical conductor.",
+    "aliases": [
+      "tar"
+    ]
   }
 ]

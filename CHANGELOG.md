@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `/giftguffin @user <card>` - gift one of your macguffins to another member.
 - `/adminguffins` - admin tool to view, add, move, remove, or randomly assign member macguffins.
 
+### Changed
+
+- `/return` no longer requires a rating; members can return a rental with just the recommendation checkbox and optional thoughts.
+
 ## [2.2.0] - 2026-05-19
 
 ### Added

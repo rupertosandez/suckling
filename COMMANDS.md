@@ -95,14 +95,14 @@ films you've rented before are never offered again (all-time exclusion, any stat
 
 ---
 
-### `/return <rating> <recommend> [thoughts]`
+### `/return <recommend> [rating] [thoughts]`
 return your current rental and post a review to the forum.
 
-- `rating` (required): your score out of 10 (1-10)
 - `recommend` (required): checkbox — would you recommend this to the group?
+- `rating` (optional): your score out of 10 (1-10)
 - `thoughts` (optional): your review, as brief or long as you like
 
-on return, the forum thread is edited in-place: updated with your rating and review, renamed from "checked out" to "reviewed", and the **recommendation** forum tag is added if you checked yes.
+on return, the forum thread is edited in-place: updated with your rating if you gave one and your review, renamed from "checked out" to "reviewed", and the **recommendation** forum tag is added if you checked yes.
 
 if you return it late, a late fee is calculated: **$1 for every day (or part of a day) overdue**. fees are cosmetic — tracked in the ledger but not collected.
 

@@ -343,8 +343,14 @@ async def lb_group_cmd(interaction: discord.Interaction):
                 "lb_username": lb_user,
                 "entries": entries,
             })
-        except lb_module.LetterboxdError:
-            continue
+        except lb_module.LetterboxdError as e:
+            print(f"[lb-group] Failed to fetch {lb_user}: {e}")
+            activity.append({
+                "discord_tag": discord_tag,
+                "lb_username": lb_user,
+                "entries": [],
+                "error": str(e),
+            })
 
     embed = embeds.lb_group_embed(activity)
     await interaction.followup.send(embed=embed)
