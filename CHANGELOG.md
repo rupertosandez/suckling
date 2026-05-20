@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.1] - 2026-05-20
+
+### Changed
+
+- Housekeeping update: reorganized bot commands into feature modules so future updates are easier to maintain without changing the command list.
+- Runtime paths now resolve from the project folder, which helps prevent accidental fresh data/log folders when the bot is launched from a different working directory.
+
 ## [2.3.0] - 2026-05-19
 
 ### Added
