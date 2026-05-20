@@ -69,17 +69,22 @@ TMDB_API_KEY=your_tmdb_v3_api_key
 GUILD_ID=your_discord_server_id
 PLEX_TOKEN=your_plex_token
 PLEX_LIBRARY=Movies
+SUCKLINGBOT_DATA_DIR=C:\path\to\sucklingbot\data
 ```
 
-| variable        | required | notes                                         |
-| --------------- | -------- | --------------------------------------------- |
-| `DISCORD_TOKEN` | yes      | from the discord developer portal             |
-| `TMDB_API_KEY`  | yes      | v3 key from tmdb account settings             |
-| `GUILD_ID`      | yes      | server id; right-click your server then copy id |
-| `PLEX_TOKEN`    | no       | enables `/rb9`, `/rb9*` stats, and `/rent`    |
-| `PLEX_LIBRARY`  | no       | plex library name (default: `Movies`)         |
+| variable                 | required | notes                                         |
+| ------------------------ | -------- | --------------------------------------------- |
+| `DISCORD_TOKEN`          | yes      | from the discord developer portal             |
+| `TMDB_API_KEY`           | yes      | v3 key from tmdb account settings             |
+| `GUILD_ID`               | yes      | server id; right-click your server then copy id |
+| `PLEX_TOKEN`             | no       | enables `/rb9`, `/rb9*` stats, and `/rent`    |
+| `PLEX_LIBRARY`           | no       | plex library name (default: `Movies`)         |
+| `SUCKLINGBOT_DATA_DIR`   | no       | custom data folder; useful for worktree testing |
+| `SUCKLINGBOT_ASSETS_DIR` | no       | custom assets folder; defaults to project assets |
 
 the `.env` file is gitignored — never commit it.
+
+custom data and assets paths can be absolute, or relative to the project root.
 
 ### first run
 

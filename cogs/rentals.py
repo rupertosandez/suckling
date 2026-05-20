@@ -1,0 +1,378 @@
+import asyncio
+from datetime import datetime, timezone
+
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+import db
+import embeds
+import logger
+import macguffin as macguffin_module
+import plex
+import rental as rental_module
+import views
+
+
+class RentalsCog(commands.Cog):
+    """Video store rental commands and rental admin tools."""
+
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
+    @app_commands.command(name="rent", description="rent a random movie from the rb9 library — 48 hours to watch it")
+    async def rent(self, interaction: discord.Interaction):
+        user_id = str(interaction.user.id)
+
+        existing = db.get_active_rental(user_id)
+        if existing:
+            title = existing.get("title", "a film")
+            due_at_iso = existing.get("due_at", "")
+            try:
+                due = datetime.fromisoformat(due_at_iso)
+                due_ts = int(due.timestamp())
+                due_str = f" (due <t:{due_ts}:R>)"
+            except (ValueError, TypeError):
+                due_str = ""
+            await interaction.response.send_message(
+                f"you already have **{title}** checked out{due_str}. "
+                "use `/return` to return it before renting something new.",
+                ephemeral=True,
+            )
+            return
+
+        warning_view = views.RentWarningView(
+            bot=self.bot,
+            user_id=user_id,
+            user_name=str(interaction.user),
+        )
+        await interaction.response.send_message(
+            "📼 **heads up before you rent**\n\n"
+            "once you confirm a rental, the 48-hour clock starts immediately. "
+            "you can re-roll up to **2 times** if you get something you've seen, "
+            "but after that the film is locked in.\n\n"
+            "ready to grab something from the shelf?",
+            view=warning_view,
+            ephemeral=True,
+        )
+
+    @app_commands.command(name="return", description="return your current rental and post a review to the forum")
+    @app_commands.describe(
+        recommend="would you recommend this to the group?",
+        rating="your rating out of 10 (optional)",
+        thoughts="your review (optional but encouraged)",
+    )
+    async def return_film(
+        self,
+        interaction: discord.Interaction,
+        recommend: bool,
+        rating: int | None = None,
+        thoughts: str | None = None,
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        user_id = str(interaction.user.id)
+
+        if rating is not None and not 1 <= rating <= 10:
+            await interaction.followup.send(
+                "⚠️ rating has to be between 1 and 10.", ephemeral=True
+            )
+            return
+
+        rental = db.get_active_rental(user_id)
+        if not rental:
+            await interaction.followup.send(
+                "you don't have an active rental. use `/rent` to grab something.",
+                ephemeral=True,
+            )
+            return
+
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        late_fee = rental_module.compute_late_fee(rental["due_at"], now_iso)
+
+        db.mark_rental_returned(
+            rental_id=rental["id"],
+            returned_at=now_iso,
+            rating=rating,
+            thoughts=thoughts,
+            recommended=recommend,
+            late_fee_dollars=late_fee,
+        )
+
+        updated_rental = db.get_rental_by_id(rental["id"])
+        await rental_module.edit_thread_returned(self.bot, updated_rental)
+
+        title = rental.get("title", "your film")
+        late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
+        rec_note = "recommended" if recommend else "not recommended"
+        rating_note = f"rating: {rating}/10, " if rating is not None else ""
+
+        await interaction.followup.send(
+            f"✅ **{title}** returned. {rating_note}{rec_note}.{late_note}\n"
+            f"-# review posted to the forum.",
+            ephemeral=True,
+        )
+        try:
+            card = await asyncio.to_thread(
+                macguffin_module.drop_macguffin,
+                user_id,
+                str(interaction.user),
+                "return",
+            )
+            claimed = await asyncio.to_thread(db.get_claimed_macguffin_ids)
+            total = len(macguffin_module.CARDS)
+            drop_embed = embeds.macguffin_drop_embed(
+                card,
+                interaction.user.mention,
+                len(claimed),
+                total,
+            )
+            await interaction.channel.send(embed=drop_embed)
+        except macguffin_module.MacGuffinPoolEmpty:
+            pass
+        except Exception as e:
+            logger.log_exception("macguffin_return_drop", e)
+
+    @app_commands.command(name="myrental", description="check your current rental and time remaining")
+    async def myrental(self, interaction: discord.Interaction):
+        user_id = str(interaction.user.id)
+        rental = db.get_active_rental(user_id)
+
+        if not rental:
+            await interaction.response.send_message(
+                "you don't have anything checked out right now. use `/rent` to grab something.",
+                ephemeral=True,
+            )
+            return
+
+        embed = embeds.rental_status_embed(rental)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="extend", description="extend your active rental by 24 hours")
+    async def extend(self, interaction: discord.Interaction):
+        user_id = str(interaction.user.id)
+        rental = db.get_active_rental(user_id)
+        if not rental:
+            await interaction.response.send_message(
+                "you don't have an active rental to extend.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        _, message = await rental_module.extend_rental(
+            bot=self.bot,
+            user_id=user_id,
+            rental_id=rental["id"],
+        )
+        await interaction.followup.send(message, ephemeral=True)
+
+    @app_commands.command(name="latefees", description="see who owes the store money")
+    async def latefees(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        rows = db.get_late_fees_leaderboard(limit=10)
+        embed = embeds.late_fees_embed(rows)
+        await interaction.followup.send(embed=embed)
+
+    @app_commands.command(name="rentalstats", description="your rental history and stats")
+    @app_commands.describe(user="optional: check another user's stats")
+    async def rentalstats(
+        self,
+        interaction: discord.Interaction,
+        user: discord.Member | None = None,
+    ):
+        await interaction.response.defer()
+        target = user or interaction.user
+        history = db.get_user_rental_history(str(target.id))
+        embed = embeds.rental_stats_embed(history, str(target))
+        await interaction.followup.send(embed=embed)
+
+    @app_commands.command(
+        name="setreviews",
+        description="set the forum channel for rental reviews (admin only)",
+    )
+    @app_commands.describe(channel="the forum channel where rental reviews will post")
+    @app_commands.default_permissions(manage_guild=True)
+    async def set_reviews(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.ForumChannel,
+    ):
+        perms = channel.permissions_for(interaction.guild.me)
+        if not perms.create_public_threads or not perms.send_messages_in_threads:
+            await interaction.response.send_message(
+                f"⚠️ i need **create public threads** and **send messages in threads** "
+                f"permissions in {channel.mention}. grant those first then try again.",
+                ephemeral=True,
+            )
+            return
+
+        db.set_reviews_channel_id(channel.id)
+
+        rental_tag = next(
+            (t for t in channel.available_tags if t.name.lower() == "rental"), None
+        )
+        rec_tag = next(
+            (t for t in channel.available_tags
+             if t.name.lower() in ("recommendation", "recommended", "recommend")),
+            None,
+        )
+
+        if rental_tag:
+            db.set_rental_tag_id(rental_tag.id)
+        if rec_tag:
+            db.set_recommendation_tag_id(rec_tag.id)
+
+        tag_note = ""
+        if not rental_tag:
+            tag_note += "\n⚠️ no **rental** tag found on this forum. create it in the forum settings and run `/setreviews` again."
+        if not rec_tag:
+            tag_note += "\n⚠️ no **recommendation** tag found. create it in the forum settings and run `/setreviews` again."
+
+        found = []
+        if rental_tag:
+            found.append("rental")
+        if rec_tag:
+            found.append("recommendation")
+        found_str = f" tags found: {', '.join(found)}." if found else ""
+
+        await interaction.response.send_message(
+            f"✅ rental reviews will post in {channel.mention}.{found_str}{tag_note}",
+            ephemeral=True,
+        )
+
+    @app_commands.command(
+        name="cancelrental",
+        description="cancel a user's active rental with no late fee (admin only)",
+    )
+    @app_commands.describe(
+        user="the user whose rental to cancel",
+        reason="optional reason (shown in the forum thread)",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def cancel_rental(
+        self,
+        interaction: discord.Interaction,
+        user: discord.Member,
+        reason: str | None = None,
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        rental = db.get_active_rental(str(user.id))
+        if not rental:
+            await interaction.followup.send(
+                f"**{user}** doesn't have an active rental.", ephemeral=True
+            )
+            return
+
+        db.cancel_rental_by_id(rental["id"])
+        await rental_module.edit_thread_cancelled(self.bot, rental, reason)
+
+        reason_str = f" reason: {reason}" if reason else ""
+        await rental_module._send_dm(
+            self.bot,
+            str(user.id),
+            f"📼 your rental of **{rental['title']}** was cancelled by an admin.{reason_str}",
+        )
+
+        await interaction.followup.send(
+            f"✅ cancelled **{rental['title']}** for **{user}**.{reason_str}",
+            ephemeral=True,
+        )
+
+    @app_commands.command(
+        name="assignrental",
+        description="assign an rb9 rental to a user (admin only)",
+    )
+    @app_commands.describe(
+        user="the user to assign the rental to",
+        title="the exact rb9 library title",
+        year="optional release year to disambiguate",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def assign_rental(
+        self,
+        interaction: discord.Interaction,
+        user: discord.Member,
+        title: str,
+        year: int | None = None,
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        existing = db.get_active_rental(str(user.id))
+        if existing:
+            await interaction.followup.send(
+                f"**{user}** already has **{existing['title']}** checked out.",
+                ephemeral=True,
+            )
+            return
+
+        if not db.get_reviews_channel_id():
+            await interaction.followup.send(
+                "the reviews forum hasn't been configured yet. run `/setreviews` first.",
+                ephemeral=True,
+            )
+            return
+
+        try:
+            movie = await plex.find_movie_by_title(title, year=year)
+        except plex.PlexError as e:
+            await interaction.followup.send(f"rb9 error: {e}", ephemeral=True)
+            return
+
+        if not movie:
+            year_note = f" ({year})" if year else ""
+            await interaction.followup.send(
+                f"couldn't find **{title}{year_note}** in the rb9 library.",
+                ephemeral=True,
+            )
+            return
+
+        now = datetime.now(timezone.utc)
+        due_at = rental_module.compute_due_at(now)
+        rental_id = db.create_rental(
+            user_id=str(user.id),
+            user_name=str(user),
+            plex_key=movie["rating_key"],
+            title=movie["title"],
+            year=movie.get("year"),
+            poster_url=movie.get("thumb_url"),
+            rented_at=now.isoformat(),
+            due_at=due_at.isoformat(),
+            rerolls_used=0,
+            initiated_by="admin",
+        )
+
+        thread_ok = await rental_module.create_forum_thread(
+            bot=self.bot,
+            rental_id=rental_id,
+            movie=movie,
+            user_tag=str(user),
+            due_at=due_at,
+        )
+
+        due_ts = int(due_at.timestamp())
+        thread_note = ""
+        if thread_ok:
+            rental = db.get_rental_by_id(rental_id)
+            if rental and rental.get("thread_id"):
+                thread_note = f" thread: <#{rental['thread_id']}>."
+
+        await rental_module._send_dm(
+            self.bot,
+            str(user.id),
+            f"you've been assigned **{movie['title']} ({movie.get('year', '?')})** "
+            f"from the rb9 library. it's due <t:{due_ts}:F> (<t:{due_ts}:R>). "
+            "use `/return` when you're done.",
+        )
+
+        await interaction.followup.send(
+            f"assigned **{movie['title']} ({movie.get('year', '?')})** to **{user}**. "
+            f"due <t:{due_ts}:R>.{thread_note}",
+            ephemeral=True,
+        )
+
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(RentalsCog(bot))

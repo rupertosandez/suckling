@@ -15,11 +15,12 @@ import json
 import random
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
+
+import config
 
 
 ROUND_DURATION_SECONDS = 30
-ASSETS_DIR = Path("assets")
+ASSETS_DIR = config.ASSETS_DIR
 
 # Category metadata: display label, emoji, embed color (hex int)
 CATEGORIES = {
