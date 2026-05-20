@@ -86,7 +86,18 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 
 | File | Purpose |
 |------|---------|
-| `bot.py` | Main entry point, command definitions, scheduler, signal handling (57KB) |
+| `bot.py` | Runtime entry point: bot setup, scheduler, signal handling, startup, and message routing |
+| `cogs/` | Slash command cogs grouped by feature area |
+| `cogs/admin.py` | Admin dashboard, toggles, manual checks, cache tools |
+| `cogs/discovery.py` | `/suck`, `/roll`, daily recommendation posting |
+| `cogs/games.py` | `/guess`, `/play`, `/six`, `/giveup`, game leaderboards |
+| `cogs/letterboxd.py` | `/lb` account, profile, watchlist, group, and tastecheck commands |
+| `cogs/macguffins.py` | MacGuffin claim, gift, collection, and admin commands |
+| `cogs/meta.py` | Bot info/metadata commands |
+| `cogs/rb9.py` | Plex-backed RB9 library pick and stats commands |
+| `cogs/rentals.py` | Rental commands and rental admin tools |
+| `cogs/tracking.py` | Streaming watchlist and auto-posting setup commands |
+| `cogs/watchlist.py` | Personal watchlist commands |
 | `config.py` | Environment variable loading (.env → config constants) |
 | `tmdb.py` | TMDB API wrapper with request deduping, retry/backoff, semaphore, TTL caching |
 | `plex.py` | Plex library connection, random pick, stats (async wrapper around plexapi) |
@@ -110,7 +121,9 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 
 ### Design Patterns
 
-**No circular imports:** `rental.py` and `tracker.py` take `bot: discord.Client` as a parameter instead of importing `bot.py`.
+**Feature cogs:** Slash commands live under `cogs/` and are loaded by `bot.py` during startup. Runtime services such as scheduled checks still live in `bot.py` or feature modules.
+
+**No circular imports:** `rental.py`, `tracker.py`, and cogs take `bot: discord.Client` as a parameter or callback instead of importing `bot.py`.
 
 **Async throughout:** Everything uses `asyncio`. Plex calls wrapped with `asyncio.to_thread` to avoid blocking the event loop.
 
@@ -191,7 +204,18 @@ Auto-posting jobs can be toggled with `/toggle` without losing configuration.
 
 ```
 sucklingbot/
-├── bot.py                    # Main entry, commands, scheduler
+├── bot.py                    # Runtime entry, scheduler, message routing
+├── cogs/                     # Slash command groups
+│   ├── admin.py              # Admin dashboard, toggles, manual checks
+│   ├── discovery.py          # /suck, /roll, daily recommendations
+│   ├── games.py              # /guess, /play, /six, leaderboards
+│   ├── letterboxd.py         # /lb commands
+│   ├── macguffins.py         # MacGuffin commands
+│   ├── meta.py               # Bot info commands
+│   ├── rb9.py                # RB9 library commands
+│   ├── rentals.py            # Rental commands and admin tools
+│   ├── tracking.py           # Streaming watchlist setup and tracking
+│   └── watchlist.py          # Personal watchlist commands
 ├── config.py                 # .env → config constants
 ├── version.py                # VERSION = "2.3.0"
 ├── tmdb.py                   # TMDB API wrapper (cached, deduped, backoff)
@@ -271,7 +295,7 @@ plyer>=2.1.0                  # Desktop notifications
 ## Quick Reference: Adding a Command
 
 1. Add helper functions in the appropriate module (tmdb.py, plex.py, db.py, etc.)
-2. Define command in bot.py with `@bot.tree.command(...)` decorator
+2. Define the command in the appropriate `cogs/*.py` file with an `app_commands` decorator
 3. Add embed builder in embeds.py if needed
 4. Bump version in version.py
 5. Add changelog entry in CHANGELOG.md

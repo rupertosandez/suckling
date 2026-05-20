@@ -11,7 +11,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import config
 import tmdb
-import embeds
 import db
 import tracker
 import game
@@ -32,6 +31,7 @@ COG_EXTENSIONS = (
     "cogs.games",
     "cogs.letterboxd",
     "cogs.macguffins",
+    "cogs.meta",
     "cogs.rb9",
     "cogs.rentals",
     "cogs.tracking",
@@ -573,19 +573,6 @@ def _lb_activity_summary(result: dict) -> str:
         f"seeded **{result['seeded']}**, "
         f"skipped **{result['skipped']}**."
     )
-
-
-@bot.tree.command(name="info", description="show info about the bot")
-async def info(interaction: discord.Interaction):
-    await interaction.response.defer()
-
-    uptime_seconds = (datetime.now(timezone.utc) - bot.started_at).total_seconds()
-    guild_count = len(bot.guilds)
-
-    logo = discord.File("assets/logo.png", filename="logo.png")
-    embed = embeds.info_embed(version.VERSION, uptime_seconds, guild_count)
-
-    await interaction.followup.send(embed=embed, file=logo)
 
 
 bot.suckling_restart_process = _restart_process
