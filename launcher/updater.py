@@ -59,6 +59,12 @@ class Updater:
         if not head or not remote or head == remote:
             return None
 
+        if self._run(["git", "merge-base", "--is-ancestor", remote, head], timeout=30).returncode == 0:
+            return None
+        if self._run(["git", "merge-base", "--is-ancestor", head, remote], timeout=30).returncode != 0:
+            self.log("[launcher] update check found diverged local and remote branches")
+            return None
+
         remote_version_py = self._git_stdout(["git", "show", "origin/main:version.py"])
         new_version = parse_version(remote_version_py)
         if not new_version:
