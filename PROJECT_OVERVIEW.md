@@ -273,6 +273,8 @@ TMDB_API_KEY=your_tmdb_v3_api_key
 GUILD_ID=your_discord_server_id
 PLEX_TOKEN=your_plex_token              # Optional; enables /rb9, /rent
 PLEX_LIBRARY=Movies                      # Optional; default "Movies"
+SUCKLINGBOT_DATA_DIR=C:\path\to\sucklingbot\data  # Optional; custom data folder
+SUCKLINGBOT_ASSETS_DIR=C:\path\to\sucklingbot\assets  # Optional; custom assets folder
 ```
 
 ---

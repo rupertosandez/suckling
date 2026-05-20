@@ -4,6 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+import config
 import embeds
 import version
 
@@ -21,7 +22,7 @@ class MetaCog(commands.Cog):
         uptime_seconds = (datetime.now(timezone.utc) - self.bot.started_at).total_seconds()
         guild_count = len(self.bot.guilds)
 
-        logo = discord.File("assets/logo.png", filename="logo.png")
+        logo = discord.File(config.LOGO_PATH, filename="logo.png")
         embed = embeds.info_embed(version.VERSION, uptime_seconds, guild_count)
 
         await interaction.followup.send(embed=embed, file=logo)

@@ -8,17 +8,16 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-
-LOG_PATH = "data/bot.log"
+import config
 
 
 def setup_logging() -> None:
     """Configure file logging for errors. Call once at startup."""
-    Path(LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
+    Path(config.LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
 
     # Rotating file: 1 MB max per file, keep 3 backups
     file_handler = RotatingFileHandler(
-        LOG_PATH,
+        config.LOG_PATH,
         maxBytes=1_000_000,
         backupCount=3,
         encoding="utf-8",
