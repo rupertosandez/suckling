@@ -218,5 +218,404 @@
     "aliases": [
       "sewage baby"
     ]
+  },
+  {
+    "answer": "Halloween",
+    "year": 1978,
+    "prompt": "The night HE came home!"
+  },
+  {
+    "answer": "Dawn of the Dead",
+    "year": 1978,
+    "prompt": "When there's no more room in hell, the dead will walk the earth."
+  },
+  {
+    "answer": "The Texas Chain Saw Massacre",
+    "year": 1974,
+    "prompt": "Who will survive and what will be left of them?",
+    "aliases": [
+      "texas chainsaw massacre"
+    ]
+  },
+  {
+    "answer": "Hellraiser",
+    "year": 1987,
+    "prompt": "He'll tear your soul apart."
+  },
+  {
+    "answer": "The Last House on the Left",
+    "year": 1972,
+    "prompt": "To avoid fainting, keep repeating, 'It's only a movie...'"
+  },
+  {
+    "answer": "Carrie",
+    "year": 1976,
+    "prompt": "If you've got a taste for terror, take Carrie to the prom."
+  },
+  {
+    "answer": "The Amityville Horror",
+    "year": 1979,
+    "prompt": "For God's sake, get out!"
+  },
+  {
+    "answer": "Saw",
+    "year": 2004,
+    "prompt": "Live or die. Make your choice."
+  },
+  {
+    "answer": "The Ring",
+    "year": 2002,
+    "prompt": "Before you die, you see the ring."
+  },
+  {
+    "answer": "Final Destination",
+    "year": 2000,
+    "prompt": "No accidents. No coincidences. No escapes. You can't cheat death."
+  },
+  {
+    "answer": "Hereditary",
+    "year": 2018,
+    "prompt": "Every family tree hides a secret."
+  },
+  {
+    "answer": "Insidious",
+    "year": 2010,
+    "prompt": "It's not the house that's haunted."
+  },
+  {
+    "answer": "Sinister",
+    "year": 2012,
+    "prompt": "Once you see him, nothing can save you."
+  },
+  {
+    "answer": "Friday the 13th",
+    "year": 1980,
+    "prompt": "They were warned... They are doomed... And on Friday the 13th, nothing will save them."
+  },
+  {
+    "answer": "An American Werewolf in London",
+    "year": 1981,
+    "prompt": "From the director of Animal House, a different kind of animal."
+  },
+  {
+    "answer": "Pet Sematary",
+    "year": 1989,
+    "prompt": "Sometimes dead is better."
+  },
+  {
+    "answer": "The Evil Dead",
+    "year": 1981,
+    "prompt": "The ultimate experience in grueling terror."
+  },
+  {
+    "answer": "The Conjuring",
+    "year": 2013,
+    "prompt": "Based on the true case files of the Warrens."
+  },
+  {
+    "answer": "Drag Me to Hell",
+    "year": 2009,
+    "prompt": "Christine Brown has a good job, a great boyfriend, and a bright future. But in three days, she's going to hell."
+  },
+  {
+    "answer": "A Nightmare on Elm Street",
+    "year": 1984,
+    "prompt": "If Nancy doesn't wake up screaming, she won't wake up at all."
+  },
+  {
+    "answer": "The Witch",
+    "year": 2015,
+    "prompt": "Evil takes many forms.",
+    "aliases": [
+      "the vvitch"
+    ]
+  },
+  {
+    "answer": "Midsommar",
+    "year": 2019,
+    "prompt": "Let the festivities begin."
+  },
+  {
+    "answer": "Dracula",
+    "year": 1931,
+    "prompt": "The story of the strangest passion the world has ever known!"
+  },
+  {
+    "answer": "Frankenstein",
+    "year": 1931,
+    "prompt": "The man who made a monster."
+  },
+  {
+    "answer": "King Kong",
+    "year": 1933,
+    "prompt": "The Eighth Wonder of the World!"
+  },
+  {
+    "answer": "Cloverfield",
+    "year": 2008,
+    "prompt": "Something has found us."
+  },
+  {
+    "answer": "Se7en",
+    "year": 1995,
+    "prompt": "Seven deadly sins. Seven ways to die.",
+    "aliases": [
+      "seven"
+    ]
+  },
+  {
+    "answer": "Zodiac",
+    "year": 2007,
+    "prompt": "There's more than one way to lose your life to a killer."
+  },
+  {
+    "answer": "The Silence of the Lambs",
+    "year": 1991,
+    "prompt": "To enter the mind of a killer she must challenge the mind of a madman."
+  },
+  {
+    "answer": "Jaws",
+    "year": 1975,
+    "prompt": "See it before you go swimming."
+  },
+  {
+    "answer": "Ghostbusters",
+    "year": 1984,
+    "prompt": "Who ya gonna call?"
+  },
+  {
+    "answer": "Superman",
+    "year": 1978,
+    "prompt": "You'll believe a man can fly."
+  },
+  {
+    "answer": "Aliens",
+    "year": 1986,
+    "prompt": "This time it's war."
+  },
+  {
+    "answer": "2001: A Space Odyssey",
+    "year": 1968,
+    "prompt": "The ultimate trip.",
+    "aliases": [
+      "2001"
+    ]
+  },
+  {
+    "answer": "The Terminator",
+    "year": 1984,
+    "prompt": "The thing that won't die, in the nightmare that won't end."
+  },
+  {
+    "answer": "The Dark Knight",
+    "year": 2008,
+    "prompt": "Why so serious?"
+  },
+  {
+    "answer": "Forrest Gump",
+    "year": 1994,
+    "prompt": "Life is like a box of chocolates... you never know what you're gonna get."
+  },
+  {
+    "answer": "Toy Story",
+    "year": 1995,
+    "prompt": "The toys are back in town."
+  },
+  {
+    "answer": "The Lion King",
+    "year": 1994,
+    "prompt": "The greatest adventure of all is finding our place in the circle of life."
+  },
+  {
+    "answer": "Trainspotting",
+    "year": 1996,
+    "prompt": "Choose life."
+  },
+  {
+    "answer": "American Beauty",
+    "year": 1999,
+    "prompt": "Look closer."
+  },
+  {
+    "answer": "No Country for Old Men",
+    "year": 2007,
+    "prompt": "There are no clean getaways."
+  },
+  {
+    "answer": "Brokeback Mountain",
+    "year": 2005,
+    "prompt": "Love is a force of nature."
+  },
+  {
+    "answer": "Rocky",
+    "year": 1976,
+    "prompt": "His whole life has been a million-to-one shot."
+  },
+  {
+    "answer": "The Lord of the Rings: The Fellowship of the Ring",
+    "year": 2001,
+    "prompt": "One ring to rule them all, one ring to find them, one ring to bring them all and in the darkness bind them.",
+    "aliases": [
+      "the fellowship of the ring",
+      "fellowship of the ring"
+    ]
+  },
+  {
+    "answer": "Spider-Man",
+    "year": 2002,
+    "prompt": "Go for the ultimate spin."
+  },
+  {
+    "answer": "The Avengers",
+    "year": 2012,
+    "prompt": "Some assembly required.",
+    "aliases": [
+      "avengers assemble",
+      "marvel's the avengers"
+    ]
+  },
+  {
+    "answer": "Goodfellas",
+    "year": 1990,
+    "prompt": "Three decades of life in the mafia."
+  },
+  {
+    "answer": "Reservoir Dogs",
+    "year": 1992,
+    "prompt": "Let's go to work."
+  },
+  {
+    "answer": "Eternal Sunshine of the Spotless Mind",
+    "year": 2004,
+    "prompt": "You can erase someone from your mind. Getting them out of your heart is another story."
+  },
+  {
+    "answer": "Joker",
+    "year": 2019,
+    "prompt": "Put on a happy face."
+  },
+  {
+    "answer": "La La Land",
+    "year": 2016,
+    "prompt": "Here's to the fools who dream."
+  },
+  {
+    "answer": "Knives Out",
+    "year": 2019,
+    "prompt": "Everyone has a motive. No one has a clue."
+  },
+  {
+    "answer": "Oppenheimer",
+    "year": 2023,
+    "prompt": "The world forever changes."
+  },
+  {
+    "answer": "Avatar",
+    "year": 2009,
+    "prompt": "Enter the world."
+  },
+  {
+    "answer": "Shrek",
+    "year": 2001,
+    "prompt": "The greatest fairy tale never told."
+  },
+  {
+    "answer": "The Departed",
+    "year": 2006,
+    "prompt": "Lies. Betrayal. Sacrifice. How far will you take it?"
+  },
+  {
+    "answer": "Finding Nemo",
+    "year": 2003,
+    "prompt": "There are 3.7 trillion fish in the ocean, they're looking for one."
+  },
+  {
+    "answer": "Platoon",
+    "year": 1986,
+    "prompt": "The first casualty of war is innocence."
+  },
+  {
+    "answer": "Full Metal Jacket",
+    "year": 1987,
+    "prompt": "In Vietnam, the wind doesn't blow. It sucks."
+  },
+  {
+    "answer": "WALL-E",
+    "year": 2008,
+    "prompt": "An adventure beyond the ordinar-E.",
+    "aliases": [
+      "wall e",
+      "walle"
+    ]
+  },
+  {
+    "answer": "Taxi Driver",
+    "year": 1976,
+    "prompt": "On every street in every city, there's a nobody who dreams of being a somebody."
+  },
+  {
+    "answer": "A Clockwork Orange",
+    "year": 1971,
+    "prompt": "Being the adventures of a young man whose principal interests are rape, ultra-violence and Beethoven."
+  },
+  {
+    "answer": "Iron Man",
+    "year": 2008,
+    "prompt": "Heroes aren't born. They're built."
+  },
+  {
+    "answer": "The Prestige",
+    "year": 2006,
+    "prompt": "Are you watching closely?"
+  },
+  {
+    "answer": "Cast Away",
+    "year": 2000,
+    "prompt": "At the edge of the world, his journey begins."
+  },
+  {
+    "answer": "There Will Be Blood",
+    "year": 2007,
+    "prompt": "There will be greed. There will be vengeance."
+  },
+  {
+    "answer": "The Big Lebowski",
+    "year": 1998,
+    "prompt": "Her life was in their hands. Now her toe is in the mail."
+  },
+  {
+    "answer": "Children of Men",
+    "year": 2006,
+    "prompt": "No children. No future. No hope."
+  },
+  {
+    "answer": "Interstellar",
+    "year": 2014,
+    "prompt": "Mankind was born on Earth. It was never meant to die here."
+  },
+  {
+    "answer": "Gravity",
+    "year": 2013,
+    "prompt": "Don't let go."
+  },
+  {
+    "answer": "Little Miss Sunshine",
+    "year": 2006,
+    "prompt": "A family on the verge of a breakdown."
+  },
+  {
+    "answer": "Office Space",
+    "year": 1999,
+    "prompt": "Work sucks."
+  },
+  {
+    "answer": "Donnie Darko",
+    "year": 2001,
+    "prompt": "Dark. Darker. Darko."
+  },
+  {
+    "answer": "Watchmen",
+    "year": 2009,
+    "prompt": "Justice is coming to all of us. No matter what we do."
   }
 ]

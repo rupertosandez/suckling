@@ -688,7 +688,7 @@ def rental_confirmed_embed(movie: dict, user_tag: str, due_at: datetime) -> disc
 def rental_review_embed(
     movie: dict,
     user_tag: str,
-    rating: int,
+    rating: int | None,
     thoughts: str | None,
     recommend: bool,
     returned_at_iso: str,
@@ -721,8 +721,11 @@ def rental_review_embed(
         desc_parts.append(f"\n{thoughts}")
     embed.description = "\n".join(desc_parts)
 
-    stars = "⭐" * rating + "☆" * (10 - rating)
-    embed.add_field(name="rating", value=f"{rating}/10  {stars}", inline=False)
+    if rating is None:
+        embed.add_field(name="rating", value="no rating", inline=False)
+    else:
+        stars = "⭐" * rating + "☆" * (10 - rating)
+        embed.add_field(name="rating", value=f"{rating}/10  {stars}", inline=False)
     embed.add_field(name="recommend?", value="yes" if recommend else "no", inline=True)
     embed.add_field(name="returned", value=returned_str, inline=True)
 
@@ -1062,37 +1065,62 @@ def lb_group_embed(activity: list[dict]) -> discord.Embed:
         )
         return embed
 
-    all_entries = []
-    for member in activity:
+    def latest_date(member: dict) -> str:
+        entries = member.get("entries") or []
+        if not entries:
+            return ""
+        return max(entry.get("watch_date", "") for entry in entries)
+
+    members = sorted(activity, key=latest_date, reverse=True)
+
+    max_description_chars = 3900
+    lines = []
+    shown = 0
+    for member in members:
         tag = member["discord_tag"]
         lb_user = member["lb_username"]
-        for entry in member.get("entries", []):
-            all_entries.append({**entry, "_discord_tag": tag, "_lb_username": lb_user})
+        entries = sorted(
+            member.get("entries") or [],
+            key=lambda entry: entry.get("watch_date", ""),
+            reverse=True,
+        )
 
-    all_entries.sort(key=lambda e: e.get("watch_date", ""), reverse=True)
-
-    lines = []
-    for entry in all_entries[:15]:
-        title = entry.get("film_title", "Unknown")
-        year = entry.get("year")
-        stars = entry.get("stars", "")
-        link = entry.get("link", "")
-        tag = entry.get("_discord_tag", "")
-        date = entry.get("watch_date", "")
-
-        year_str = f" ({year})" if year else ""
-        stars_str = f" {stars}" if stars else ""
-        date_str = f" - {date}" if date else ""
-
-        if link:
-            film_str = f"[{title}{year_str}]({link})"
+        header = f"**{tag}** ([{lb_user}](https://letterboxd.com/{lb_user}/))"
+        if member.get("error"):
+            line = f"{header}: couldn't fetch recent watches"
+        elif not entries:
+            line = f"{header}: no recent public watches"
         else:
-            film_str = f"**{title}{year_str}**"
+            films = []
+            for entry in entries[:2]:
+                title = entry.get("film_title", "Unknown")
+                year = entry.get("year")
+                stars = entry.get("stars", "")
+                link = entry.get("link", "")
+                date = entry.get("watch_date", "")
 
-        lines.append(f"{film_str}{stars_str} - {tag}{date_str}")
+                year_str = f" ({year})" if year else ""
+                stars_str = f" {stars}" if stars else ""
+                date_str = f" - {date}" if date else ""
+                if link:
+                    film_str = f"[{title}{year_str}]({link})"
+                else:
+                    film_str = f"**{title}{year_str}**"
+                films.append(f"{film_str}{stars_str}{date_str}")
+            line = f"{header}: " + " | ".join(films)
+
+        next_description = "\n".join([*lines, line])
+        if len(next_description) > max_description_chars:
+            break
+        lines.append(line)
+
+        shown += 1
 
     embed.description = "\n".join(lines)
-    embed.set_footer(text="letterboxd - recent activity across linked members")
+    footer = f"letterboxd - showing {shown}/{len(activity)} linked member(s)"
+    if len(activity) > shown:
+        footer += " - newest activity first"
+    embed.set_footer(text=footer)
     return embed
 
 

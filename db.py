@@ -591,7 +591,7 @@ def set_rental_thread(rental_id: int, thread_id: int, message_id: int) -> None:
 def mark_rental_returned(
     rental_id: int,
     returned_at: str,
-    rating: int,
+    rating: int | None,
     thoughts: str | None,
     recommended: bool,
     late_fee_dollars: float,

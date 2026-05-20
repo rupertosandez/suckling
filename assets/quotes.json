@@ -381,5 +381,416 @@
     "aliases": [
       "sewage baby"
     ]
+  },
+  {
+    "answer": "Frankenstein",
+    "year": 1931,
+    "prompt": "It's alive! It's alive!"
+  },
+  {
+    "answer": "Dracula",
+    "year": 1931,
+    "prompt": "I never drink... wine."
+  },
+  {
+    "answer": "Night of the Living Dead",
+    "year": 1968,
+    "prompt": "They're coming to get you, Barbra."
+  },
+  {
+    "answer": "Poltergeist",
+    "year": 1982,
+    "prompt": "They're here."
+  },
+  {
+    "answer": "The Thing",
+    "year": 1982,
+    "prompt": "You gotta be fuckin' kidding."
+  },
+  {
+    "answer": "The Lost Boys",
+    "year": 1987,
+    "prompt": "Death by stereo!"
+  },
+  {
+    "answer": "Hellraiser",
+    "year": 1987,
+    "prompt": "We have such sights to show you."
+  },
+  {
+    "answer": "Child's Play",
+    "year": 1988,
+    "prompt": "Hi, I'm Chucky. Wanna play?"
+  },
+  {
+    "answer": "They Live",
+    "year": 1988,
+    "prompt": "I have come here to chew bubblegum and kick ass... and I'm all out of bubblegum."
+  },
+  {
+    "answer": "Beetlejuice",
+    "year": 1988,
+    "prompt": "It's showtime!"
+  },
+  {
+    "answer": "Misery",
+    "year": 1990,
+    "prompt": "I'm your number one fan."
+  },
+  {
+    "answer": "The Silence of the Lambs",
+    "year": 1991,
+    "prompt": "It rubs the lotion on its skin or else it gets the hose again."
+  },
+  {
+    "answer": "Hocus Pocus",
+    "year": 1993,
+    "prompt": "It's just a bunch of hocus pocus!"
+  },
+  {
+    "answer": "American Psycho",
+    "year": 2000,
+    "prompt": "I have to return some videotapes."
+  },
+  {
+    "answer": "Saw",
+    "year": 2004,
+    "prompt": "I want to play a game."
+  },
+  {
+    "answer": "Shaun of the Dead",
+    "year": 2004,
+    "prompt": "You've got red on you."
+  },
+  {
+    "answer": "Zombieland",
+    "year": 2009,
+    "prompt": "Nut up or shut up."
+  },
+  {
+    "answer": "It",
+    "year": 2017,
+    "prompt": "You'll float too.",
+    "aliases": [
+      "it chapter one"
+    ]
+  },
+  {
+    "answer": "Carrie",
+    "year": 1976,
+    "prompt": "They're all gonna laugh at you!"
+  },
+  {
+    "answer": "Aliens",
+    "year": 1986,
+    "prompt": "Get away from her, you bitch!"
+  },
+  {
+    "answer": "The Shining",
+    "year": 1980,
+    "prompt": "Here's Johnny!"
+  },
+  {
+    "answer": "A Nightmare on Elm Street",
+    "year": 1984,
+    "prompt": "One, two, Freddy's coming for you."
+  },
+  {
+    "answer": "Gone with the Wind",
+    "year": 1939,
+    "prompt": "Frankly, my dear, I don't give a damn."
+  },
+  {
+    "answer": "A Streetcar Named Desire",
+    "year": 1951,
+    "prompt": "I have always depended on the kindness of strangers."
+  },
+  {
+    "answer": "All About Eve",
+    "year": 1950,
+    "prompt": "Fasten your seatbelts, it's going to be a bumpy night."
+  },
+  {
+    "answer": "The Maltese Falcon",
+    "year": 1941,
+    "prompt": "The stuff that dreams are made of."
+  },
+  {
+    "answer": "White Heat",
+    "year": 1949,
+    "prompt": "Made it, Ma! Top of the world!"
+  },
+  {
+    "answer": "Casablanca",
+    "year": 1942,
+    "prompt": "Here's looking at you, kid."
+  },
+  {
+    "answer": "It's a Wonderful Life",
+    "year": 1946,
+    "prompt": "Every time a bell rings, an angel gets his wings."
+  },
+  {
+    "answer": "The Treasure of the Sierra Madre",
+    "year": 1948,
+    "prompt": "Badges? We ain't got no badges. We don't need no badges. I don't have to show you any stinkin' badges!"
+  },
+  {
+    "answer": "Sunset Boulevard",
+    "year": 1950,
+    "prompt": "I am big. It's the pictures that got small."
+  },
+  {
+    "answer": "Snow White and the Seven Dwarfs",
+    "year": 1937,
+    "prompt": "Magic mirror on the wall, who is the fairest one of all?"
+  },
+  {
+    "answer": "Die Hard",
+    "year": 1988,
+    "prompt": "Yippee-ki-yay, motherfucker."
+  },
+  {
+    "answer": "Terminator 2: Judgment Day",
+    "year": 1991,
+    "prompt": "Hasta la vista, baby.",
+    "aliases": [
+      "t2",
+      "terminator 2"
+    ]
+  },
+  {
+    "answer": "Top Gun",
+    "year": 1986,
+    "prompt": "I feel the need... the need for speed."
+  },
+  {
+    "answer": "Apollo 13",
+    "year": 1995,
+    "prompt": "Houston, we have a problem."
+  },
+  {
+    "answer": "Braveheart",
+    "year": 1995,
+    "prompt": "They may take our lives, but they'll never take our freedom!"
+  },
+  {
+    "answer": "300",
+    "year": 2006,
+    "prompt": "This is Sparta!"
+  },
+  {
+    "answer": "The Lord of the Rings: The Two Towers",
+    "year": 2002,
+    "prompt": "My precious.",
+    "aliases": [
+      "the two towers",
+      "two towers"
+    ]
+  },
+  {
+    "answer": "Return of the Jedi",
+    "year": 1983,
+    "prompt": "It's a trap!",
+    "aliases": [
+      "star wars episode vi return of the jedi",
+      "return of the jedi"
+    ]
+  },
+  {
+    "answer": "The Empire Strikes Back",
+    "year": 1980,
+    "prompt": "No, I am your father.",
+    "aliases": [
+      "star wars episode v the empire strikes back",
+      "empire strikes back"
+    ]
+  },
+  {
+    "answer": "Taken",
+    "year": 2008,
+    "prompt": "I will look for you, I will find you, and I will kill you."
+  },
+  {
+    "answer": "Snakes on a Plane",
+    "year": 2006,
+    "prompt": "I have had it with these motherfucking snakes on this motherfucking plane!"
+  },
+  {
+    "answer": "Lethal Weapon",
+    "year": 1987,
+    "prompt": "I'm too old for this shit."
+  },
+  {
+    "answer": "Wall Street",
+    "year": 1987,
+    "prompt": "Greed, for lack of a better word, is good."
+  },
+  {
+    "answer": "The Godfather Part II",
+    "year": 1974,
+    "prompt": "Keep your friends close, but your enemies closer.",
+    "aliases": [
+      "the godfather part 2",
+      "godfather 2"
+    ]
+  },
+  {
+    "answer": "The Godfather Part III",
+    "year": 1990,
+    "prompt": "Just when I thought I was out, they pull me back in.",
+    "aliases": [
+      "the godfather part 3",
+      "godfather 3"
+    ]
+  },
+  {
+    "answer": "Caddyshack",
+    "year": 1980,
+    "prompt": "Cinderella story. Outta nowhere."
+  },
+  {
+    "answer": "Airplane!",
+    "year": 1980,
+    "prompt": "Surely you can't be serious. I am serious, and don't call me Shirley.",
+    "aliases": [
+      "airplane"
+    ]
+  },
+  {
+    "answer": "Wayne's World",
+    "year": 1992,
+    "prompt": "Party on, Wayne. Party on, Garth."
+  },
+  {
+    "answer": "Napoleon Dynamite",
+    "year": 2004,
+    "prompt": "Tina, you fat lard, come get some dinner!"
+  },
+  {
+    "answer": "Talladega Nights: The Ballad of Ricky Bobby",
+    "year": 2006,
+    "prompt": "Shake and bake!",
+    "aliases": [
+      "talladega nights"
+    ]
+  },
+  {
+    "answer": "Zoolander",
+    "year": 2001,
+    "prompt": "But why male models?"
+  },
+  {
+    "answer": "Dumb and Dumber",
+    "year": 1994,
+    "prompt": "So you're telling me there's a chance."
+  },
+  {
+    "answer": "Dirty Dancing",
+    "year": 1987,
+    "prompt": "Nobody puts Baby in a corner."
+  },
+  {
+    "answer": "Notting Hill",
+    "year": 1999,
+    "prompt": "I'm also just a girl, standing in front of a boy, asking him to love her."
+  },
+  {
+    "answer": "Jerry Maguire",
+    "year": 1996,
+    "prompt": "You had me at hello."
+  },
+  {
+    "answer": "A League of Their Own",
+    "year": 1992,
+    "prompt": "There's no crying in baseball!"
+  },
+  {
+    "answer": "Field of Dreams",
+    "year": 1989,
+    "prompt": "If you build it, he will come."
+  },
+  {
+    "answer": "Dead Poets Society",
+    "year": 1989,
+    "prompt": "Carpe diem. Seize the day, boys."
+  },
+  {
+    "answer": "Rocky",
+    "year": 1976,
+    "prompt": "Yo, Adrian!"
+  },
+  {
+    "answer": "Sudden Impact",
+    "year": 1983,
+    "prompt": "Go ahead, make my day."
+  },
+  {
+    "answer": "Love Story",
+    "year": 1970,
+    "prompt": "Love means never having to say you're sorry."
+  },
+  {
+    "answer": "As Good as It Gets",
+    "year": 1997,
+    "prompt": "You make me want to be a better man."
+  },
+  {
+    "answer": "Toy Story",
+    "year": 1995,
+    "prompt": "To infinity and beyond!"
+  },
+  {
+    "answer": "The Lion King",
+    "year": 1994,
+    "prompt": "Hakuna matata! It means no worries."
+  },
+  {
+    "answer": "Finding Nemo",
+    "year": 2003,
+    "prompt": "Just keep swimming."
+  },
+  {
+    "answer": "Shrek",
+    "year": 2001,
+    "prompt": "Ogres are like onions."
+  },
+  {
+    "answer": "Aladdin",
+    "year": 1992,
+    "prompt": "Phenomenal cosmic powers! Itty bitty living space!"
+  },
+  {
+    "answer": "Frozen",
+    "year": 2013,
+    "prompt": "Some people are worth melting for."
+  },
+  {
+    "answer": "The Incredibles",
+    "year": 2004,
+    "prompt": "No capes!"
+  },
+  {
+    "answer": "Monsters, Inc.",
+    "year": 2001,
+    "prompt": "We scare because we care.",
+    "aliases": [
+      "monsters inc"
+    ]
+  },
+  {
+    "answer": "Ratatouille",
+    "year": 2007,
+    "prompt": "Anyone can cook."
+  },
+  {
+    "answer": "Up",
+    "year": 2009,
+    "prompt": "Adventure is out there!"
+  },
+  {
+    "answer": "The Princess Bride",
+    "year": 1987,
+    "prompt": "You keep using that word. I do not think it means what you think it means."
   }
 ]

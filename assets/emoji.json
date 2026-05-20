@@ -399,5 +399,406 @@
     "aliases": [
       "sewage baby"
     ]
+  },
+  {
+    "answer": "Rosemary's Baby",
+    "year": 1968,
+    "prompt": "🤰👹🌃"
+  },
+  {
+    "answer": "The Omen",
+    "year": 1976,
+    "prompt": "👶🐕6️⃣"
+  },
+  {
+    "answer": "Carrie",
+    "year": 1976,
+    "prompt": "🩸👑🕯️"
+  },
+  {
+    "answer": "The Texas Chain Saw Massacre",
+    "year": 1974,
+    "prompt": "🪚🥩🌽",
+    "aliases": [
+      "texas chainsaw massacre"
+    ]
+  },
+  {
+    "answer": "A Nightmare on Elm Street",
+    "year": 1984,
+    "prompt": "🛌🔪🧤"
+  },
+  {
+    "answer": "Friday the 13th",
+    "year": 1980,
+    "prompt": "🏕️🔪🏒"
+  },
+  {
+    "answer": "Poltergeist",
+    "year": 1982,
+    "prompt": "📺👻🌳"
+  },
+  {
+    "answer": "The Thing",
+    "year": 1982,
+    "prompt": "❄️🐕👽"
+  },
+  {
+    "answer": "An American Werewolf in London",
+    "year": 1981,
+    "prompt": "🐺🌕🇬🇧"
+  },
+  {
+    "answer": "The Babadook",
+    "year": 2014,
+    "prompt": "📕👻🎩"
+  },
+  {
+    "answer": "The Witch",
+    "year": 2015,
+    "prompt": "🐐🌲🌑",
+    "aliases": [
+      "the vvitch"
+    ]
+  },
+  {
+    "answer": "It Follows",
+    "year": 2014,
+    "prompt": "👣😨🚶"
+  },
+  {
+    "answer": "Saw",
+    "year": 2004,
+    "prompt": "🧩🚿🪚"
+  },
+  {
+    "answer": "The Ring",
+    "year": 2002,
+    "prompt": "📺💍📞"
+  },
+  {
+    "answer": "28 Days Later",
+    "year": 2002,
+    "prompt": "🧟🏥🇬🇧"
+  },
+  {
+    "answer": "Candyman",
+    "year": 1992,
+    "prompt": "🐝🪞🪝"
+  },
+  {
+    "answer": "The Cabin in the Woods",
+    "year": 2011,
+    "prompt": "🏠🌲🎲"
+  },
+  {
+    "answer": "The Conjuring",
+    "year": 2013,
+    "prompt": "🏚️👻📖"
+  },
+  {
+    "answer": "Insidious",
+    "year": 2010,
+    "prompt": "🛌👶🚪"
+  },
+  {
+    "answer": "Paranormal Activity",
+    "year": 2007,
+    "prompt": "📹🛏️👣"
+  },
+  {
+    "answer": "Final Destination",
+    "year": 2000,
+    "prompt": "💀✈️🎢"
+  },
+  {
+    "answer": "The Others",
+    "year": 2001,
+    "prompt": "👻🕯️🌫️"
+  },
+  {
+    "answer": "Suspiria",
+    "year": 1977,
+    "prompt": "🩰🩸🌧️"
+  },
+  {
+    "answer": "The Descent",
+    "year": 2005,
+    "prompt": "🕳️🦇⛏️"
+  },
+  {
+    "answer": "Pearl",
+    "year": 2022,
+    "prompt": "🌽🐊👒"
+  },
+  {
+    "answer": "Talk to Me",
+    "year": 2023,
+    "prompt": "✋👻🕯️"
+  },
+  {
+    "answer": "Barbarian",
+    "year": 2022,
+    "prompt": "🏚️🚪🍼"
+  },
+  {
+    "answer": "M3GAN",
+    "year": 2022,
+    "prompt": "🤖👧💃",
+    "aliases": [
+      "megan"
+    ]
+  },
+  {
+    "answer": "Us",
+    "year": 2019,
+    "prompt": "✂️🐰🪞"
+  },
+  {
+    "answer": "It",
+    "year": 2017,
+    "prompt": "🤡🎈🚽",
+    "aliases": [
+      "it chapter one"
+    ]
+  },
+  {
+    "answer": "Casablanca",
+    "year": 1942,
+    "prompt": "🎩✈️🍷"
+  },
+  {
+    "answer": "Citizen Kane",
+    "year": 1941,
+    "prompt": "🛷📰⚪"
+  },
+  {
+    "answer": "Singin' in the Rain",
+    "year": 1952,
+    "prompt": "☔💃🎬"
+  },
+  {
+    "answer": "Sunset Boulevard",
+    "year": 1950,
+    "prompt": "🏊‍♀️🎬📸"
+  },
+  {
+    "answer": "It's a Wonderful Life",
+    "year": 1946,
+    "prompt": "🔔👼🌉"
+  },
+  {
+    "answer": "The Graduate",
+    "year": 1967,
+    "prompt": "🎓👠🚌"
+  },
+  {
+    "answer": "Apocalypse Now",
+    "year": 1979,
+    "prompt": "🚁🌴🔥"
+  },
+  {
+    "answer": "One Flew Over the Cuckoo's Nest",
+    "year": 1975,
+    "prompt": "🏥🪑🐦"
+  },
+  {
+    "answer": "A Clockwork Orange",
+    "year": 1971,
+    "prompt": "🍊👁️🎩"
+  },
+  {
+    "answer": "Taxi Driver",
+    "year": 1976,
+    "prompt": "🚕🪞🌃"
+  },
+  {
+    "answer": "Chinatown",
+    "year": 1974,
+    "prompt": "🕵️🤥👃"
+  },
+  {
+    "answer": "The Empire Strikes Back",
+    "year": 1980,
+    "prompt": "❄️⚔️👨‍👦",
+    "aliases": [
+      "empire strikes back",
+      "star wars episode v"
+    ]
+  },
+  {
+    "answer": "Schindler's List",
+    "year": 1993,
+    "prompt": "📜🇩🇪👧"
+  },
+  {
+    "answer": "Saving Private Ryan",
+    "year": 1998,
+    "prompt": "🪖🇺🇸🏖️"
+  },
+  {
+    "answer": "Stand by Me",
+    "year": 1986,
+    "prompt": "🚂👬🛤️"
+  },
+  {
+    "answer": "The Shawshank Redemption",
+    "year": 1994,
+    "prompt": "🔨🪣🗿",
+    "aliases": [
+      "shawshank"
+    ]
+  },
+  {
+    "answer": "Raging Bull",
+    "year": 1980,
+    "prompt": "🥊⚪⚫"
+  },
+  {
+    "answer": "Network",
+    "year": 1976,
+    "prompt": "📺🗣️📰"
+  },
+  {
+    "answer": "Dog Day Afternoon",
+    "year": 1975,
+    "prompt": "🏦🥪☎️"
+  },
+  {
+    "answer": "The Deer Hunter",
+    "year": 1978,
+    "prompt": "🦌🔫🎲"
+  },
+  {
+    "answer": "Top Gun",
+    "year": 1986,
+    "prompt": "✈️🕶️🏐"
+  },
+  {
+    "answer": "Pretty Woman",
+    "year": 1990,
+    "prompt": "👠🛀🌹"
+  },
+  {
+    "answer": "Notting Hill",
+    "year": 1999,
+    "prompt": "🍃📚🇬🇧"
+  },
+  {
+    "answer": "Love Actually",
+    "year": 2003,
+    "prompt": "❤️🎄✈️"
+  },
+  {
+    "answer": "When Harry Met Sally",
+    "year": 1989,
+    "prompt": "🥪😶❤️"
+  },
+  {
+    "answer": "Sleepless in Seattle",
+    "year": 1993,
+    "prompt": "🛏️🌧️📻"
+  },
+  {
+    "answer": "Legally Blonde",
+    "year": 2001,
+    "prompt": "👱‍♀️💼🐕"
+  },
+  {
+    "answer": "10 Things I Hate About You",
+    "year": 1999,
+    "prompt": "📋💔🎶",
+    "aliases": [
+      "ten things i hate about you"
+    ]
+  },
+  {
+    "answer": "The Notebook",
+    "year": 2004,
+    "prompt": "📓☔🚣"
+  },
+  {
+    "answer": "Twilight",
+    "year": 2008,
+    "prompt": "🍎🩸🐺"
+  },
+  {
+    "answer": "Spider-Man: Into the Spider-Verse",
+    "year": 2018,
+    "prompt": "🕷️🎨🌈",
+    "aliases": [
+      "into the spider-verse",
+      "spider-verse"
+    ]
+  },
+  {
+    "answer": "Inside Out",
+    "year": 2015,
+    "prompt": "🧠😊😢"
+  },
+  {
+    "answer": "Coco",
+    "year": 2017,
+    "prompt": "💀🎸🌼"
+  },
+  {
+    "answer": "Encanto",
+    "year": 2021,
+    "prompt": "🦋🏠🕯️"
+  },
+  {
+    "answer": "Moana",
+    "year": 2016,
+    "prompt": "🌊🪝🐔"
+  },
+  {
+    "answer": "Zootopia",
+    "year": 2016,
+    "prompt": "🐰🦊🌆"
+  },
+  {
+    "answer": "Soul",
+    "year": 2020,
+    "prompt": "🎷👻🪜"
+  },
+  {
+    "answer": "How to Train Your Dragon",
+    "year": 2010,
+    "prompt": "🐉🛡️👦"
+  },
+  {
+    "answer": "Wreck-It Ralph",
+    "year": 2012,
+    "prompt": "👊🎮🍬"
+  },
+  {
+    "answer": "Big Hero 6",
+    "year": 2014,
+    "prompt": "🤖🥋💖"
+  },
+  {
+    "answer": "The Hunger Games",
+    "year": 2012,
+    "prompt": "🏹🐦🔥"
+  },
+  {
+    "answer": "Black Panther",
+    "year": 2018,
+    "prompt": "🐆💜🌍"
+  },
+  {
+    "answer": "Wonder Woman",
+    "year": 2017,
+    "prompt": "🪢🛡️💛"
+  },
+  {
+    "answer": "Mad Max: Fury Road",
+    "year": 2015,
+    "prompt": "🚙🏜️🔥"
+  },
+  {
+    "answer": "Whiplash",
+    "year": 2014,
+    "prompt": "🥁🎵😡"
   }
 ]

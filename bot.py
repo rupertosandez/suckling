@@ -1589,21 +1589,21 @@ async def rent(interaction: discord.Interaction):
 
 @bot.tree.command(name="return", description="return your current rental and post a review to the forum")
 @app_commands.describe(
-    rating="your rating out of 10 (1-10)",
     recommend="would you recommend this to the group?",
+    rating="your rating out of 10 (optional)",
     thoughts="your review (optional but encouraged)",
 )
 async def return_film(
     interaction: discord.Interaction,
-    rating: int,
     recommend: bool,
+    rating: int | None = None,
     thoughts: str | None = None,
 ):
     await interaction.response.defer(ephemeral=True)
 
     user_id = str(interaction.user.id)
 
-    if not 1 <= rating <= 10:
+    if rating is not None and not 1 <= rating <= 10:
         await interaction.followup.send(
             "⚠️ rating has to be between 1 and 10.", ephemeral=True
         )
@@ -1639,9 +1639,10 @@ async def return_film(
     title = rental.get("title", "your film")
     late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
     rec_note = "recommended" if recommend else "not recommended"
+    rating_note = f"rating: {rating}/10, " if rating is not None else ""
 
     await interaction.followup.send(
-        f"✅ **{title}** returned. rating: {rating}/10, {rec_note}.{late_note}\n"
+        f"✅ **{title}** returned. {rating_note}{rec_note}.{late_note}\n"
         f"-# review posted to the forum.",
         ephemeral=True,
     )
@@ -2897,8 +2898,14 @@ async def lb_group_cmd(interaction: discord.Interaction):
                 "lb_username": lb_user,
                 "entries": entries,
             })
-        except lb_module.LetterboxdError:
-            continue
+        except lb_module.LetterboxdError as e:
+            print(f"[lb-group] Failed to fetch {lb_user}: {e}")
+            activity.append({
+                "discord_tag": discord_tag,
+                "lb_username": lb_user,
+                "entries": [],
+                "error": str(e),
+            })
 
     embed = embeds.lb_group_embed(activity)
     await interaction.followup.send(embed=embed)
