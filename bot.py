@@ -37,6 +37,7 @@ COG_EXTENSIONS = (
     "cogs.admin",
     "cogs.macguffins",
     "cogs.rb9",
+    "cogs.tracking",
     "cogs.watchlist",
 )
 
@@ -686,80 +687,6 @@ async def suck(interaction: discord.Interaction, title: str, year: int | None = 
 
 # ---------- tracking ----------
 
-@bot.tree.command(
-    name="setannouncements",
-    description="Set the channel where horror release alerts will post (admin only)",
-)
-@app_commands.describe(channel="The channel to post announcements in")
-@app_commands.default_permissions(manage_guild=True)
-async def set_announcements(interaction: discord.Interaction, channel: discord.TextChannel):
-    perms = channel.permissions_for(interaction.guild.me)
-    if not perms.send_messages or not perms.embed_links:
-        await interaction.response.send_message(
-            f"⚠️ I don't have permission to send messages or embeds in {channel.mention}. "
-            "Please grant me those permissions first.",
-            ephemeral=True,
-        )
-        return
-
-    db.set_announcement_channel_id(channel.id)
-    await interaction.response.send_message(
-        f"✅ Horror release alerts will now post in {channel.mention}.",
-        ephemeral=True,
-    )
-
-
-@bot.tree.command(
-    name="setdaily",
-    description="Set the channel where daily horror recommendations post (admin only)",
-)
-@app_commands.describe(channel="The channel to post daily recommendations in")
-@app_commands.default_permissions(manage_guild=True)
-async def set_daily(interaction: discord.Interaction, channel: discord.TextChannel):
-    perms = channel.permissions_for(interaction.guild.me)
-    if not perms.send_messages or not perms.embed_links:
-        await interaction.response.send_message(
-            f"⚠️ I don't have permission to send messages or embeds in {channel.mention}. "
-            "Please grant me those permissions first.",
-            ephemeral=True,
-        )
-        return
-
-    db.set_daily_rec_channel_id(channel.id)
-    await interaction.response.send_message(
-        f"✅ Daily horror recommendations will now post in {channel.mention} at noon.",
-        ephemeral=True,
-    )
-
-
-@bot.tree.command(
-    name="setlbactivity",
-    description="Set the channel where linked Letterboxd activity posts (admin only)",
-)
-@app_commands.describe(channel="The channel to post Letterboxd activity in")
-@app_commands.default_permissions(manage_guild=True)
-async def set_lb_activity(interaction: discord.Interaction, channel: discord.TextChannel):
-    perms = channel.permissions_for(interaction.guild.me)
-    if not perms.send_messages or not perms.embed_links:
-        await interaction.response.send_message(
-            f"I don't have permission to send messages or embeds in {channel.mention}. "
-            "Please grant me those permissions first.",
-            ephemeral=True,
-        )
-        return
-
-    await interaction.response.defer(ephemeral=True)
-    db.set_lb_activity_channel_id(channel.id)
-    seed_result = await run_lb_activity_check(post=False, seed_only=True)
-    db.set_lb_activity_enabled(True)
-    await interaction.followup.send(
-        f"Letterboxd activity will now post in {channel.mention}.\n"
-        "I seeded the current feeds first so old watches won't spam the channel: "
-        f"{_lb_activity_summary(seed_result)}",
-        ephemeral=True,
-    )
-
-
 def _lb_activity_summary(result: dict) -> str:
     if result.get("missing_channel"):
         return "no letterboxd activity channel is set yet."
@@ -771,107 +698,6 @@ def _lb_activity_summary(result: dict) -> str:
         f"seeded **{result['seeded']}**, "
         f"skipped **{result['skipped']}**."
     )
-
-
-@bot.tree.command(
-    name="track",
-    description="Add a movie to the watchlist — get notified when it streams",
-)
-@app_commands.describe(
-    title="The movie title to track",
-    year="Optional: filter by release year if there are multiple matches",
-)
-async def track(interaction: discord.Interaction, title: str, year: int | None = None):
-    await interaction.response.defer()
-
-    try:
-        results = await tmdb.search_movie(title, year=year)
-    except tmdb.TMDBError as e:
-        await interaction.followup.send(f"Sorry, TMDB lookup failed: {e}")
-        return
-
-    if not results:
-        msg = f"No results found for **{title}**"
-        if year:
-            msg += f" ({year})"
-        msg += "."
-        await interaction.followup.send(msg)
-        return
-
-    user_tag = str(interaction.user)
-
-    if year is not None or not _needs_disambiguation(results):
-        top = results[0]
-        movie_title = top.get("title", "Unknown")
-        release_date = top.get("release_date", "")
-        movie_year = release_date[:4] if release_date else "—"
-
-        added = db.add_tracked_movie(top["id"], movie_title, user_tag)
-        if not added:
-            await interaction.followup.send(
-                f"**{movie_title} ({movie_year})** is already on the tracked list."
-            )
-            return
-
-        msg = await views._build_track_response(top["id"], movie_title, movie_year)
-        await interaction.followup.send(msg)
-    else:
-        view = views.TrackSelectView(results, added_by=user_tag)
-        await interaction.followup.send(
-            f"Found multiple matches for **{title}**. Pick which one to track:",
-            view=view,
-        )
-
-
-@bot.tree.command(name="untrack", description="Remove a movie from the watchlist")
-@app_commands.describe(title="The movie title to untrack")
-async def untrack(interaction: discord.Interaction, title: str):
-    await interaction.response.defer()
-
-    tracked = db.list_tracked_movies()
-    title_lower = title.lower()
-    matches = [m for m in tracked if title_lower in m["title"].lower()]
-
-    if not matches:
-        await interaction.followup.send(
-            f"No tracked movie matches **{title}**. Use `/tracked` to see the list."
-        )
-        return
-
-    if len(matches) > 1:
-        names = ", ".join(f"**{m['title']}**" for m in matches[:5])
-        await interaction.followup.send(
-            f"Multiple tracked movies match **{title}**: {names}. Be more specific."
-        )
-        return
-
-    match = matches[0]
-    db.remove_tracked_movie(match["tmdb_id"])
-    await interaction.followup.send(f"✅ Stopped tracking **{match['title']}**.")
-
-
-@bot.tree.command(name="tracked", description="Show all movies on the watchlist")
-async def tracked(interaction: discord.Interaction):
-    movies = db.list_tracked_movies()
-
-    if not movies:
-        await interaction.response.send_message(
-            "No movies are being tracked yet. Add some with `/track`.",
-            ephemeral=True,
-        )
-        return
-
-    lines = [f"• **{m['title']}** — added by {m['added_by']}" for m in movies[:25]]
-    extra = len(movies) - 25
-    if extra > 0:
-        lines.append(f"…and {extra} more.")
-
-    embed = discord.Embed(
-        title=f"Tracked Movies ({len(movies)})",
-        description="\n".join(lines),
-        color=0x8B0000,
-    )
-    await interaction.response.send_message(embed=embed)
 
 
 # ---------- recommendations ----------
