@@ -1030,5 +1030,269 @@
     "rarity": "common",
     "source": "Saw (2004)",
     "flavor": "i want to play a game. the tricycle is not included."
+  },
+  {
+    "id": "kitten-mittens",
+    "name": "kitten mittens",
+    "emoji": "🐾",
+    "rarity": "iconic",
+    "source": "It's Always Sunny in Philadelphia (TV)",
+    "flavor": "is your cat making too much noise all the time? finally, a solution nobody asked for."
+  },
+  {
+    "id": "rum-ham",
+    "name": "rum ham",
+    "emoji": "🍖",
+    "rarity": "rare",
+    "source": "It's Always Sunny in Philadelphia (TV)",
+    "flavor": "ham soaked in rum. lost at sea, found in the heart. frank would like it back immediately."
+  },
+  {
+    "id": "green-man-suit",
+    "name": "the green man suit",
+    "emoji": "🟢",
+    "rarity": "rare",
+    "source": "It's Always Sunny in Philadelphia (TV)",
+    "flavor": "full-body confidence in a color that refuses to be ignored. do not wear to court."
+  },
+  {
+    "id": "the-duster",
+    "name": "mac's duster",
+    "emoji": "🧥",
+    "rarity": "common",
+    "source": "It's Always Sunny in Philadelphia (TV)",
+    "flavor": "not a costume. not for sale. dramatically less intimidating than intended."
+  },
+  {
+    "id": "fight-milk",
+    "name": "a can of fight milk",
+    "emoji": "🥫",
+    "rarity": "rare",
+    "source": "It's Always Sunny in Philadelphia (TV)",
+    "flavor": "for bodyguards, by bodyguards. packed with crowtein and questionable life choices."
+  },
+  {
+    "id": "dennis-system-binder",
+    "name": "the D.E.N.N.I.S. system binder",
+    "emoji": "📒",
+    "rarity": "rare",
+    "source": "It's Always Sunny in Philadelphia (TV)",
+    "flavor": "a laminated roadmap to being the worst person in the room. please do not follow it."
+  },
+  {
+    "id": "archer-gorgonite",
+    "name": "archer the gorgonite action figure",
+    "emoji": "🧸",
+    "rarity": "rare",
+    "source": "Small Soldiers (1998)",
+    "flavor": "leader of the gorgonites. small enough for a shelf, noble enough for a war room."
+  },
+  {
+    "id": "baxter-the-dog",
+    "name": "baxter the dog",
+    "emoji": "🐶",
+    "rarity": "common",
+    "source": "Anchorman: The Legend of Ron Burgundy (2004)",
+    "flavor": "a tiny gentleman with excellent judgment. knows more languages than expected."
+  },
+  {
+    "id": "skull-of-argall",
+    "name": "the skull of argall",
+    "emoji": "💀",
+    "rarity": "rare",
+    "source": "Invincible (TV)",
+    "flavor": "ancient, ominous, and probably not something you should keep on your desk."
+  },
+  {
+    "id": "bag-of-blue-meth",
+    "name": "a bag of blue meth",
+    "emoji": "🧊",
+    "rarity": "common",
+    "source": "Breaking Bad (TV)",
+    "flavor": "suspiciously blue. chemistry this recognizable usually comes with consequences."
+  },
+  {
+    "id": "bone-tomahawk",
+    "name": "the bone tomahawk",
+    "emoji": "🪓",
+    "rarity": "common",
+    "source": "Bone Tomahawk (2015)",
+    "flavor": "primitive, brutal, and best admired from a very respectful distance."
+  },
+  {
+    "id": "noisy-cricket",
+    "name": "the noisy cricket",
+    "emoji": "🔫",
+    "rarity": "rare",
+    "source": "Men in Black (1997)",
+    "flavor": "tiny alien hardware with deeply unfair recoil. aim carefully and brace everything."
+  },
+  {
+    "id": "warp-ring",
+    "name": "a warp ring",
+    "emoji": "🟡",
+    "rarity": "common",
+    "source": "Sonic the Hedgehog (2020)",
+    "flavor": "throw it, jump through it, hope you thought about the destination first."
+  },
+  {
+    "id": "sonics-quill",
+    "name": "one of sonic's quills",
+    "emoji": "🪶",
+    "rarity": "rare",
+    "source": "Sonic the Hedgehog (2020)",
+    "flavor": "still buzzing with speed. handle gently unless you enjoy blown fuses."
+  },
+  {
+    "id": "whale-penis-bone",
+    "name": "a whale penis bone",
+    "emoji": "🦴",
+    "rarity": "common",
+    "source": "Tusk (2014)",
+    "flavor": "technically a display piece. emotionally, a warning sign."
+  },
+  {
+    "id": "tecca-chair",
+    "name": "a brand new tecca chair",
+    "emoji": "🪑",
+    "rarity": "rare",
+    "source": "The Chair Company (TV)",
+    "flavor": "fresh out of the box and already carrying suspicious corporate energy."
+  },
+  {
+    "id": "truffonis-sloppy-steaks",
+    "name": "sloppy steaks from truffoni's",
+    "emoji": "🥩",
+    "rarity": "rare",
+    "source": "I Think You Should Leave with Tim Robinson (TV)",
+    "flavor": "a big rare cut of meat with water dumped all over it. they can't stop you from ordering steak."
+  },
+  {
+    "id": "ratbat",
+    "name": "ratbat",
+    "emoji": "🏏",
+    "rarity": "common",
+    "source": "It's Always Sunny in Philadelphia (TV)",
+    "flavor": "for basement problems, sewer problems, and every other problem the gang should not solve themselves."
+  },
+  {
+    "id": "wolf-cola",
+    "name": "a can of wolf cola",
+    "emoji": "🥤",
+    "rarity": "common",
+    "source": "It's Always Sunny in Philadelphia (TV)",
+    "flavor": "the official soft drink of poor decisions. goes down smooth in all the wrong markets."
+  },
+  {
+    "id": "holy-hand-grenade",
+    "name": "the holy hand grenade",
+    "emoji": "💣",
+    "rarity": "iconic",
+    "source": "Monty Python and the Holy Grail (1975)",
+    "flavor": "first shalt thou count to three. not two, unless thou then proceed to three."
+  },
+  {
+    "id": "swedish-penis-pump",
+    "name": "a swedish-made penis enlargement pump",
+    "emoji": "🧰",
+    "rarity": "rare",
+    "source": "Austin Powers: International Man of Mystery (1997)",
+    "flavor": "that sort of thing is not anyone's bag, baby. came with a warranty and several denials."
+  },
+  {
+    "id": "batarang",
+    "name": "a batarang",
+    "emoji": "🦇",
+    "rarity": "rare",
+    "source": "Batman (1989)",
+    "flavor": "shaped like a bat, thrown like a warning, somehow always comes back dramatically."
+  },
+  {
+    "id": "husk-of-corn",
+    "name": "a husk of corn",
+    "emoji": "🌽",
+    "rarity": "common",
+    "source": "Interstellar (2014)",
+    "flavor": "dry, dusty, and extremely important to the future of humanity. probably."
+  },
+  {
+    "id": "midsommar-pube-pie",
+    "name": "a slice of pie with a pube in it",
+    "emoji": "🥧",
+    "rarity": "rare",
+    "source": "Midsommar (2019)",
+    "flavor": "homemade, ceremonial, and deeply not okay. do not ask about the ingredients."
+  },
+  {
+    "id": "donald",
+    "name": "a Donald",
+    "emoji": "🕴️",
+    "rarity": "common",
+    "source": "Invincible (TV)",
+    "flavor": "loyal, professional, and somehow still reporting for duty after everything."
+  },
+  {
+    "id": "cecils-pocket-teleporter",
+    "name": "cecil's pocket teleporter",
+    "emoji": "📟",
+    "rarity": "rare",
+    "source": "Invincible (TV)",
+    "flavor": "instant escape, eye-watering invoice. one use costs more than the gross economic output of lichtenstein."
+  },
+  {
+    "id": "meeseeks-box",
+    "name": "a meeseeks box",
+    "emoji": "🟦",
+    "rarity": "rare",
+    "source": "Rick and Morty (TV)",
+    "flavor": "press the button, make a request, regret the wording. existence is pain."
+  },
+  {
+    "id": "demonic-embalmed-hand",
+    "name": "a demonic embalmed hand",
+    "emoji": "✋",
+    "rarity": "rare",
+    "source": "Talk to Me (2022)",
+    "flavor": "light the candle, hold the hand, say the words. maybe stop before the party gets weird."
+  },
+  {
+    "id": "paimon-crown",
+    "name": "a handmade paimon crown",
+    "emoji": "👑",
+    "rarity": "rare",
+    "source": "Hereditary (2018)",
+    "flavor": "tiny, handmade, and carrying the worst possible family legacy."
+  },
+  {
+    "id": "blood-test-kit",
+    "name": "a blood test kit",
+    "emoji": "🩸",
+    "rarity": "rare",
+    "source": "The Thing (1982)",
+    "flavor": "heat the wire and watch closely. paranoia is just procedure out here."
+  },
+  {
+    "id": "friendship-bracelet",
+    "name": "a friendship bracelet",
+    "emoji": "📿",
+    "rarity": "common",
+    "source": "Jennifer's Body (2009)",
+    "flavor": "cute, handmade, and carrying more history than either friend wants to admit."
+  },
+  {
+    "id": "cursed-coat-button",
+    "name": "a cursed coat button",
+    "emoji": "🧿",
+    "rarity": "common",
+    "source": "Drag Me to Hell (2009)",
+    "flavor": "small enough to lose, cursed enough to ruin your entire week."
+  },
+  {
+    "id": "dusty-blair-witch-camera",
+    "name": "a dusty camera with low battery and full footage",
+    "emoji": "📹",
+    "rarity": "common",
+    "source": "The Blair Witch Project (1999)",
+    "flavor": "found in the woods. low battery, full tape, absolutely no comforting answers."
   }
 ]
