@@ -45,12 +45,16 @@ class AdminCog(commands.Cog):
         post_daily_recommendation: Callable[[discord.Client], Awaitable[bool]],
         run_lb_activity_check: Callable[..., Awaitable[dict]],
         lb_activity_summary: Callable[[dict], str],
+        run_plex_cleanup: Callable[..., Awaitable[object]],
+        run_unpopularity_audit: Callable[..., Awaitable[object]],
     ):
         self.bot = bot
         self.restart_process = restart_process
         self.post_daily_recommendation = post_daily_recommendation
         self.run_lb_activity_check = run_lb_activity_check
         self.lb_activity_summary = lb_activity_summary
+        self.run_plex_cleanup = run_plex_cleanup
+        self.run_unpopularity_audit = run_unpopularity_audit
 
     @app_commands.command(
         name="botstatus",
@@ -317,6 +321,48 @@ class AdminCog(commands.Cog):
         )
 
     @app_commands.command(
+        name="plexcleanupnow",
+        description="Run the Plex cleanup check for debugging (admin only)",
+    )
+    @app_commands.describe(post="True to post candidates; false only shows a private summary")
+    @app_commands.default_permissions(manage_guild=True)
+    async def plexcleanupnow(self, interaction: discord.Interaction, post: bool = False):
+        if post and not db.get_announcement_channel_id():
+            await interaction.response.send_message(
+                "No announcement channel is set. Use `/setannouncements` first.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            result = await self.run_plex_cleanup(bot=self.bot, dry_run=not post)
+        except Exception as e:
+            await interaction.followup.send(
+                f"Plex cleanup check failed: {e}",
+                ephemeral=True,
+            )
+            return
+        await interaction.followup.send(result.to_discord_summary(), ephemeral=True)
+
+    @app_commands.command(
+        name="plexunpopular",
+        description="Show low-watch, low-rated Plex titles (admin only)",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def plexunpopular(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            result = await self.run_unpopularity_audit(limit=10)
+        except Exception as e:
+            await interaction.followup.send(
+                f"Plex unpopularity audit failed: {e}",
+                ephemeral=True,
+            )
+            return
+        await interaction.followup.send(result.to_discord_summary(), ephemeral=True)
+
+    @app_commands.command(
         name="cachestats",
         description="Show cache size and optionally clear it (admin only)",
     )
@@ -348,5 +394,7 @@ async def setup(bot: commands.Bot):
             post_daily_recommendation=bot.suckling_post_daily_recommendation,
             run_lb_activity_check=bot.suckling_run_lb_activity_check,
             lb_activity_summary=bot.suckling_lb_activity_summary,
+            run_plex_cleanup=bot.suckling_run_plex_cleanup,
+            run_unpopularity_audit=bot.suckling_run_unpopularity_audit,
         )
     )

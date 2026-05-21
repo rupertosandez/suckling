@@ -31,6 +31,11 @@ def _normalize_watchlist_title(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
 
 
+def _normalize_rental_search_title(title: str | None) -> str:
+    """Compact title text so punctuation/spacing variants still match."""
+    return re.sub(r"[^a-z0-9]+", "", (title or "").lower())
+
+
 def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(config.DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -627,7 +632,25 @@ def find_active_rental(user_id: str, query: str) -> list[dict]:
             "ORDER BY rented_at ASC",
             (user_id, pattern),
         ).fetchall()
-        return [dict(row) for row in rows]
+        matches = [dict(row) for row in rows]
+        if matches:
+            return matches
+
+        normalized_query = _normalize_rental_search_title(query)
+        if not normalized_query:
+            return []
+
+        rows = conn.execute(
+            "SELECT * FROM rentals "
+            "WHERE user_id = ? AND status = 'active' "
+            "ORDER BY rented_at ASC",
+            (user_id,),
+        ).fetchall()
+        return [
+            dict(row)
+            for row in rows
+            if normalized_query in _normalize_rental_search_title(row["title"])
+        ]
 
 
 def get_rental_by_id(rental_id: int) -> dict | None:

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] - 2026-05-21
+
+### Added
+
+- Monthly Plex cleanup checks can find large, low-activity titles that are easy to stream elsewhere.
+- `/plexcleanupnow` lets admins run the cleanup check manually in dry-run mode or post the current candidates.
+- `/plexunpopular` lets admins review low-watch Plex titles with lower TMDB scores.
+
+### Changed
+
+- Rental title matching now ignores punctuation and spacing when targeting active rentals by title.
+
 ## [2.3.2] - 2026-05-20
 
 ### Added

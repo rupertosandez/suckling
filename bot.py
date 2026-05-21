@@ -23,6 +23,7 @@ import trivia_roulette
 import rental as rental_module
 import letterboxd as lb_module
 import macguffin as macguffin_module
+import cleanup as cleanup_module
 import views
 
 LB_ACTIVITY_POST_LIMIT = 20
@@ -65,6 +66,10 @@ class SucklingBot(commands.Bot):
             await lb_module.close_session()
         except Exception as e:
             logger.log_exception("bot_close_letterboxd", e)
+        try:
+            await cleanup_module.close_session()
+        except Exception as e:
+            logger.log_exception("bot_close_cleanup", e)
         await super().close()
 
 
@@ -243,6 +248,11 @@ async def _restart_process(delay_seconds: float = 1.0) -> None:
         await lb_module.close_session()
     except Exception as e:
         logger.log_exception("restart_letterboxd_close", e)
+
+    try:
+        await cleanup_module.close_session()
+    except Exception as e:
+        logger.log_exception("restart_cleanup_close", e)
 
     try:
         os.execv(sys.executable, [sys.executable, *sys.argv])
@@ -473,6 +483,10 @@ async def _scheduled_lb_activity_check():
         print(f"[scheduler] Letterboxd activity check failed: {e}")
 
 
+async def _scheduled_plex_cleanup():
+    await cleanup_module.scheduled_cleanup(bot)
+
+
 @bot.event
 async def on_ready():
     global _bot_loop
@@ -504,11 +518,16 @@ async def on_ready():
             _scheduled_lb_activity_check, trigger="interval", hours=1,
             id="lb_activity_check", replace_existing=True,
         )
+        scheduler.add_job(
+            _scheduled_plex_cleanup, trigger="cron", day=1, hour=10, minute=0,
+            id="plex_cleanup_check", replace_existing=True,
+        )
         scheduler.start()
         print("[scheduler] Daily tracker check scheduled for 9:00 local time")
         print("[scheduler] Daily horror recommendation scheduled for 12:00 local time")
         print("[scheduler] Rental overdue/reminder check scheduled hourly")
         print("[scheduler] Letterboxd activity check scheduled hourly")
+        print("[scheduler] Plex cleanup scheduled monthly on day 1 at 10:00 local time")
 
     # Warm Plex in the background so the first /rb9 or /rent call does not pay
     # the full library scan cost. Errors are logged but never block startup.
@@ -611,6 +630,8 @@ def _lb_activity_summary(result: dict) -> str:
 bot.suckling_restart_process = _restart_process
 bot.suckling_run_lb_activity_check = run_lb_activity_check
 bot.suckling_lb_activity_summary = _lb_activity_summary
+bot.suckling_run_plex_cleanup = cleanup_module.run_cleanup
+bot.suckling_run_unpopularity_audit = cleanup_module.run_unpopularity_audit
 
 
 if __name__ == "__main__":

@@ -177,6 +177,50 @@ def streaming_announcement_embed(details: dict, new_providers: list[str]) -> dis
     return embed
 
 
+def _cleanup_date_label(value) -> str:
+    if not value:
+        return "never watched"
+    try:
+        return value.strftime("%b %-d, %Y")
+    except ValueError:
+        return value.strftime("%b %#d, %Y")
+
+
+def plex_cleanup_embed(candidates: list) -> discord.Embed:
+    embed = discord.Embed(
+        title="plex cleanup candidates",
+        description=(
+            "big, quiet titles that are easy to stream elsewhere. "
+            "nothing has been removed; this is just the monthly review pile."
+        ),
+        color=0x8B0000,
+    )
+
+    if not candidates:
+        embed.description = "no cleanup candidates found this time."
+        return embed
+
+    for index, candidate in enumerate(candidates, start=1):
+        providers = ", ".join(candidate.providers[:4])
+        if len(candidate.providers) > 4:
+            providers += f", +{len(candidate.providers) - 4} more"
+
+        last_played = _cleanup_date_label(candidate.last_played)
+        year = candidate.year or "????"
+        value = (
+            f"{candidate.size_gb:.1f} gb • {candidate.play_count} play(s) • {last_played}\n"
+            f"streaming on {providers}"
+        )
+        embed.add_field(
+            name=f"{index}. {candidate.title} ({year})",
+            value=value,
+            inline=False,
+        )
+
+    embed.set_footer(text="Based on Plex size, Tautulli activity, and TMDB watch providers")
+    return embed
+
+
 def roll_embed(
     details: dict,
     providers: dict,

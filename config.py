@@ -21,6 +21,9 @@ TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 GUILD_ID = os.getenv("GUILD_ID")
 PLEX_TOKEN = os.getenv("PLEX_TOKEN")
 PLEX_LIBRARY = os.getenv("PLEX_LIBRARY", "Movies")  # default to "Movies"
+TAUTULLI_URL = (os.getenv("TAUTULLI_URL") or "").rstrip("/")
+TAUTULLI_API_KEY = os.getenv("TAUTULLI_API_KEY")
+PLEX_CLEANUP_ENABLED = os.getenv("PLEX_CLEANUP_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 
 if not DISCORD_TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set in .env")
