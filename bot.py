@@ -23,6 +23,7 @@ import trivia_roulette
 import rental as rental_module
 import letterboxd as lb_module
 import macguffin as macguffin_module
+import views
 
 LB_ACTIVITY_POST_LIMIT = 20
 LB_ACTIVITY_WINDOW_MINUTES = 60
@@ -51,6 +52,7 @@ class SucklingBot(commands.Bot):
         self.started_at = datetime.now(timezone.utc)
 
     async def setup_hook(self) -> None:
+        views.register_persistent_public_film_buttons(self)
         for extension in COG_EXTENSIONS:
             await self.load_extension(extension)
 

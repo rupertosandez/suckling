@@ -1,5 +1,6 @@
 import discord
 from datetime import datetime, timezone
+import re
 
 import tmdb
 import embeds
@@ -10,6 +11,103 @@ import rental as rental_module
 MY_WATCHLIST_PAGE_SIZE = 10
 LB_WATCHLIST_PAGE_SIZE = 5
 MACGUFFIN_PAGE_SIZE = 5
+_PERSISTENT_WATCHLIST_RE = re.compile(r"^s:wl:t:(?P<tmdb_id>\d+)$")
+_PERSISTENT_RENT_RE = re.compile(r"^s:rent:t:(?P<tmdb_id>\d+)$")
+
+
+def _film_year_from_details(details: dict) -> int | None:
+    release_date = details.get("release_date") or ""
+    return int(release_date[:4]) if release_date[:4].isdigit() else None
+
+
+async def _watchlist_add_from_tmdb_id(
+    interaction: discord.Interaction,
+    tmdb_id: int,
+) -> None:
+    if not await _defer_component(interaction, ephemeral=True):
+        return
+
+    try:
+        details = await tmdb.get_movie_details(tmdb_id)
+    except tmdb.TMDBError as e:
+        await interaction.followup.send(
+            f"⚠️ couldn't look up that film on TMDB: {e}",
+            ephemeral=True,
+        )
+        return
+
+    title = details.get("title") or "Unknown"
+    year = _film_year_from_details(details)
+    poster_url = tmdb.poster_url(details.get("poster_path"))
+    added = db.watchlist_add(
+        user_id=str(interaction.user.id),
+        title=title,
+        year=year,
+        tmdb_id=tmdb_id,
+        poster_url=poster_url,
+        source="button",
+    )
+
+    year_str = f" ({year})" if year else ""
+    if added:
+        await interaction.followup.send(
+            f"📋 added **{title}{year_str}** to your watchlist.",
+            ephemeral=True,
+        )
+    else:
+        await interaction.followup.send(
+            f"**{title}{year_str}** is already on your watchlist.",
+            ephemeral=True,
+        )
+
+
+async def _rent_from_tmdb_id(
+    interaction: discord.Interaction,
+    tmdb_id: int,
+) -> None:
+    if not await _defer_component(interaction, ephemeral=True):
+        return
+
+    try:
+        details = await tmdb.get_movie_details(tmdb_id)
+    except tmdb.TMDBError as e:
+        await interaction.followup.send(
+            f"⚠️ couldn't look up that film on TMDB: {e}",
+            ephemeral=True,
+        )
+        return
+
+    title = details.get("title") or "Unknown"
+    year = _film_year_from_details(details)
+    try:
+        movie = await plex.find_movie_by_title(title, year=year)
+    except plex.PlexError as e:
+        await interaction.followup.send(
+            f"⚠️ couldn't reach the library right now: {e}",
+            ephemeral=True,
+        )
+        return
+
+    if movie is None:
+        year_str = f" ({year})" if year else ""
+        await interaction.followup.send(
+            f"⚠️ **{title}{year_str}** doesn't seem to be in the library right now.",
+            ephemeral=True,
+        )
+        return
+
+    view = EmbedRentView(
+        bot=interaction.client,
+        user_id=str(interaction.user.id),
+        user_name=str(interaction.user),
+        movie=movie,
+        initiated_by="selected",
+    )
+    await interaction.followup.send(
+        f"📼 rent **{movie['title']}**?",
+        view=view,
+        ephemeral=True,
+    )
 
 
 def _record_existing_providers(movie_id: int, providers: dict) -> list[str]:
@@ -750,7 +848,7 @@ class EmbedRentView(discord.ui.View):
         year: int | None = None,
         initiated_by: str = "selected",
     ):
-        super().__init__(timeout=120)
+        super().__init__(timeout=None)
         self.bot = bot
         self.user_id = user_id
         self.user_name = user_name
@@ -858,21 +956,25 @@ class FilmCardView(discord.ui.View):
         plex_available: bool = False,
         plex_movie: dict | None = None,
     ):
-        super().__init__(timeout=120)
+        super().__init__(timeout=None)
 
+        watchlist_custom_id = f"s:wl:t:{tmdb_id}" if tmdb_id else None
         self.add_item(AddToWatchlistButton(
             title=title,
             year=year,
             tmdb_id=tmdb_id,
             poster_url=poster_url,
             source="button",
+            custom_id=watchlist_custom_id,
         ))
 
         if plex_available:
+            rent_custom_id = f"s:rent:t:{tmdb_id}" if tmdb_id else None
             rent_btn = discord.ui.Button(
                 label="rent this",
                 style=discord.ButtonStyle.success,
                 emoji="📼",
+                custom_id=rent_custom_id,
             )
             _bot = bot
             _title = title
@@ -912,7 +1014,7 @@ class RentThisView(discord.ui.View):
         year: int | None,
         plex_movie: dict | None = None,
     ):
-        super().__init__(timeout=120)
+        super().__init__(timeout=None)
 
         rent_btn = discord.ui.Button(
             label="rent this",
@@ -964,11 +1066,13 @@ class AddToWatchlistButton(discord.ui.Button):
         tmdb_id: int | None = None,
         poster_url: str | None = None,
         source: str = "button",
+        custom_id: str | None = None,
     ):
         super().__init__(
             label="+ watchlist",
             style=discord.ButtonStyle.secondary,
             emoji="📋",
+            custom_id=custom_id,
         )
         self.film_title = title
         self.film_year = year
@@ -1012,6 +1116,73 @@ class AddToWatchlistButton(discord.ui.Button):
                 f"**{self.film_title}{year_str}** is already on your watchlist.",
                 ephemeral=True,
             )
+
+
+class PersistentWatchlistButton(
+    discord.ui.DynamicItem[discord.ui.Button],
+    template=_PERSISTENT_WATCHLIST_RE,
+):
+    """Persistent handler for public film-card + watchlist buttons."""
+
+    def __init__(self, tmdb_id: int):
+        super().__init__(
+            discord.ui.Button(
+                label="+ watchlist",
+                style=discord.ButtonStyle.secondary,
+                emoji="📋",
+                custom_id=f"s:wl:t:{tmdb_id}",
+            )
+        )
+        self.tmdb_id = tmdb_id
+
+    @classmethod
+    async def from_custom_id(
+        cls,
+        interaction: discord.Interaction,
+        item: discord.ui.Item,
+        match: re.Match[str],
+        /,
+    ) -> "PersistentWatchlistButton":
+        return cls(int(match.group("tmdb_id")))
+
+    async def callback(self, interaction: discord.Interaction):
+        await _watchlist_add_from_tmdb_id(interaction, self.tmdb_id)
+
+
+class PersistentRentButton(
+    discord.ui.DynamicItem[discord.ui.Button],
+    template=_PERSISTENT_RENT_RE,
+):
+    """Persistent handler for public film-card rent buttons."""
+
+    def __init__(self, tmdb_id: int):
+        super().__init__(
+            discord.ui.Button(
+                label="rent this",
+                style=discord.ButtonStyle.success,
+                emoji="📼",
+                custom_id=f"s:rent:t:{tmdb_id}",
+            )
+        )
+        self.tmdb_id = tmdb_id
+
+    @classmethod
+    async def from_custom_id(
+        cls,
+        interaction: discord.Interaction,
+        item: discord.ui.Item,
+        match: re.Match[str],
+        /,
+    ) -> "PersistentRentButton":
+        return cls(int(match.group("tmdb_id")))
+
+    async def callback(self, interaction: discord.Interaction):
+        await _rent_from_tmdb_id(interaction, self.tmdb_id)
+
+
+def register_persistent_public_film_buttons(bot: discord.Client) -> None:
+    """Register restart-safe handlers for public film-card buttons."""
+    bot.add_dynamic_items(PersistentWatchlistButton, PersistentRentButton)
 
 
 # ---------- LB watchlist view ----------

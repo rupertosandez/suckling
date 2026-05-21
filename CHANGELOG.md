@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Randomly rolled rentals now have boosted rare/iconic macguffin drop odds when returned.
 - Admin-assigned rentals are tracked as admin recommendations.
 - Watchlist buttons now respond more safely to expired clicks and keep personal watchlist controls owner-only.
+- Public film card buttons are now persistent across bot restarts for TMDB-backed movie cards.
 
 ## [2.3.1] - 2026-05-20
 
