@@ -1329,9 +1329,9 @@ _MACGUFFIN_COLORS = {
 }
 
 _MACGUFFIN_TITLES = {
-    "common": "\U0001F4E6 macguffin acquired",
-    "rare": "\u2728 rare macguffin",
-    "iconic": "\U0001F31F ICONIC DROP \U0001F31F",
+    "common": "COMMON DROP",
+    "rare": "RARE DROP",
+    "iconic": "ICONIC DROP",
 }
 
 _MACGUFFIN_RARITIES = {
@@ -1351,6 +1351,17 @@ def _macguffin_description(card: dict) -> str:
     name = card.get("name", "unknown macguffin")
     flavor = card.get("flavor", "")
     return f"{emoji}\n\n### {name}\n*{flavor}*"
+
+
+def _macguffin_drop_title(card: dict) -> str:
+    emoji = str(card.get("emoji") or "").strip()
+    name = card.get("name", "unknown macguffin")
+    return f"{emoji}\n{name}" if emoji else str(name)
+
+
+def _macguffin_drop_description(card: dict) -> str:
+    flavor = str(card.get("flavor") or "").strip()
+    return f"*{flavor}*" if flavor else None
 
 
 def _macguffin_owner_text(owner_tag: str) -> str:
@@ -1382,9 +1393,12 @@ def macguffin_drop_embed(
     """Public announcement for a newly claimed MacGuffin."""
     rarity = str(card.get("rarity", "common")).lower()
     embed = discord.Embed(
-        title=_MACGUFFIN_TITLES.get(rarity, _MACGUFFIN_TITLES["common"]),
-        description=_macguffin_description(card),
+        title=_macguffin_drop_title(card),
+        description=_macguffin_drop_description(card),
         color=_macguffin_color(card),
+    )
+    embed.set_author(
+        name=_MACGUFFIN_TITLES.get(rarity, _MACGUFFIN_TITLES["common"]),
     )
     embed.add_field(
         name="RARITY",
