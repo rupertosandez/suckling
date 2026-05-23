@@ -14,6 +14,7 @@ import config
 import tmdb
 import db
 import tracker
+import embeds
 import game
 import logger
 import plex
