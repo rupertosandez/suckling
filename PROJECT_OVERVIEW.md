@@ -1,7 +1,7 @@
 # Sucklingbot Project Overview
 
-**Last updated:** May 19, 2026
-**Current version:** 2.3.1
+**Last updated:** May 23, 2026
+**Current version:** 2.4.2
 **Maintainer:** rupertosandez (GitHub)
 
 ---
@@ -37,7 +37,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - **Stats commands:** `/rb9stats`, `/rb9biggest`, `/rb9shortest`, `/rb9oldest`, `/rb9newest`, `/rb9decade`, `/rb9genre`, `/rb9totalruntime`
 
 ### Video Store Rental System
-- **`/rent`** - Rent a random film (48-hour window, 2 re-rolls, permanent exclusion of past rentals)
+- **`/rent`** - Rent a random film (5-day window, 2 re-rolls, permanent exclusion of past rentals)
 - **`/return <rating> <recommend> [thoughts]`** - Return rental + post review to forum + roll a MacGuffin drop
 - **`/extend`** - Extend active rental by 24 hours (once per rental)
 - **`/myrental`** - Current rental status with live countdown
@@ -117,7 +117,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `logger.py` | File logging (data/bot.log, 1MB rotating) |
 | `launcher.py` | Windows system tray launcher wrapper |
 | `launcher/` | Tray UI, subprocess mgmt, auto-updates, state persistence |
-| `version.py` | Version constant (currently 2.3.1) |
+| `version.py` | Version constant (currently 2.4.2) |
 
 ### Design Patterns
 
@@ -217,7 +217,7 @@ sucklingbot/
 │   ├── tracking.py           # Streaming watchlist setup and tracking
 │   └── watchlist.py          # Personal watchlist commands
 ├── config.py                 # .env → config constants
-├── version.py                # VERSION = "2.3.1"
+├── version.py                # VERSION = "2.4.2"
 ├── tmdb.py                   # TMDB API wrapper (cached, deduped, backoff)
 ├── plex.py                   # Plex library async wrapper
 ├── db.py                      # SQLite CRUD

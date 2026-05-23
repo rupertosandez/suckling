@@ -80,7 +80,7 @@ top 10 genres in the library by count.
 
 ## video store
 
-rent a film from the RB9 library. the clock starts when you confirm — you have 48 hours to watch it and `/return` it with a review.
+rent a film from the RB9 library. the clock starts when you confirm — you have 5 days to watch it and `/return` it with a review.
 
 ### `/rent`
 start a rental from the library. you can have up to **3 active rentals** at once.
@@ -294,7 +294,7 @@ the streaming feature only announces films hitting digital for the first time �
 - both games and tracking are server-wide — anyone can add to the tracked list and play
 - leaderboards are separate for `/guess` and `/six` — winning at one doesn't affect the other
 - you can only have one active rental at a time
-- the 48-hour clock starts the moment you confirm — not when you start browsing
+- the 5-day clock starts the moment you confirm — not when you start browsing
 - rent buttons on embeds time out after 2 minutes. the command is still there if you miss it
 
 ---

@@ -1,6 +1,6 @@
 # sucklingbot
 
-a discord bot built specifically for the **return by 9** movie community. looks up films, tracks streaming availability, posts daily recommendations, runs poster/still guessing games and six degrees of separation rounds, pulls random picks and stats from the return by 9 plex library, and runs a video-store-themed rental system where members can check out films for 48 hours and post reviews.
+a discord bot built specifically for the **return by 9** movie community. looks up films, tracks streaming availability, posts daily recommendations, runs poster/still guessing games and six degrees of separation rounds, pulls random picks and stats from the return by 9 plex library, and runs a video-store-themed rental system where members can check out films for 5 days and post reviews.
 
 built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 
@@ -11,7 +11,7 @@ built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 - `/suck` - film lookup with full availability info (theatrical + streaming, per-region)
 - `/roll` - random film pick with decade and runtime filters
 - `/rb9` + 9 stat commands - pick from the return by 9 library, plus stats (longest, shortest, oldest, decade breakdown, genres, etc.)
-- `/rent` - rent a random library film for 48 hours, with up to 2 rerolls. past rentals excluded forever
+- `/rent` - rent a random library film for 5 days, with up to 2 rerolls. past rentals excluded forever
 - `/return` - return your rental and post a review to a configurable forum channel, with late-fee tracking
 - `/extend` - one-time 24-hour rental extension, also available from reminder DMs
 - `/latefees` - leaderboard of accumulated late fees

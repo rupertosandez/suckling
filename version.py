@@ -7,4 +7,4 @@ Versioning follows SemVer (MAJOR.MINOR.PATCH):
   PATCH — bug fixes, copy tweaks, internal refactors
 """
 
-VERSION = "2.4.1"
+VERSION = "2.4.2"
