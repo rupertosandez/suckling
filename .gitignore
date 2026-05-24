@@ -6,6 +6,7 @@
 # persistent state and logs
 data/
 local-docs/
+OPTIMIZATION_REPORT.md
 *.db
 *.sqlite
 *.sqlite3

@@ -1,7 +1,7 @@
 # Sucklingbot Project Overview
 
-**Last updated:** May 23, 2026
-**Current version:** 2.4.2
+**Last updated:** May 24, 2026
+**Current version:** 2.4.3
 **Maintainer:** rupertosandez (GitHub)
 
 ---
@@ -65,7 +65,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 ### Auto-Posting (admin-configurable)
 - **Daily recommendations** - Noon, random pick from TMDB
 - **Streaming announcements** - 9am, new digital availability (first-time only, re-promotion prevention)
-- **Letterboxd activity** - Hourly check for new diary entries from linked accounts
+- **Letterboxd activity** - Hourly check for new diary entries from linked accounts, compacting big single-member catch-ups
 - **Feature toggles:** `/toggle feature:streaming-announcements enabled:False` etc.
 - **Manual triggers:** `/checknow` (dry-run), `/checknowlive` (post live), `/dailynow`, `/lbactivitynow`
 
@@ -117,7 +117,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `logger.py` | File logging (data/bot.log, 1MB rotating) |
 | `launcher.py` | Windows system tray launcher wrapper |
 | `launcher/` | Tray UI, subprocess mgmt, auto-updates, state persistence |
-| `version.py` | Version constant (currently 2.4.2) |
+| `version.py` | Version constant (currently 2.4.3) |
 
 ### Design Patterns
 
@@ -217,7 +217,7 @@ sucklingbot/
 │   ├── tracking.py           # Streaming watchlist setup and tracking
 │   └── watchlist.py          # Personal watchlist commands
 ├── config.py                 # .env → config constants
-├── version.py                # VERSION = "2.4.2"
+├── version.py                # VERSION = "2.4.3"
 ├── tmdb.py                   # TMDB API wrapper (cached, deduped, backoff)
 ├── plex.py                   # Plex library async wrapper
 ├── db.py                      # SQLite CRUD

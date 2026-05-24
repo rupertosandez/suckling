@@ -1084,6 +1084,67 @@ def lb_activity_embed(
     return embed
 
 
+def lb_activity_compact_embed(
+    lb_username: str,
+    entries: list[dict],
+    discord_tag: str | None = None,
+) -> discord.Embed:
+    """Compact auto-post for several recent Letterboxd diary entries."""
+    who = discord_tag or lb_username
+    count = len(entries)
+    noun = "watch" if count == 1 else "watches"
+    lb_url = f"https://letterboxd.com/{lb_username}/"
+
+    lines = []
+    shown = 0
+    max_description_chars = 3900
+    intro = f"**{who}** logged {count} {noun} on letterboxd."
+    for entry in entries:
+        title = entry.get("film_title", "Unknown")
+        year = entry.get("year")
+        link = entry.get("link", "")
+        watch_date = entry.get("watch_date", "")
+        rewatch = entry.get("rewatch", False)
+
+        year_str = f" ({year})" if year else ""
+        if link:
+            line = f"- [{title}{year_str}]({link})"
+        else:
+            line = f"- **{title}{year_str}**"
+
+        details = []
+        rating_text = _lb_rating_text(entry)
+        if rating_text != "unrated":
+            details.append(rating_text)
+        if watch_date:
+            details.append(watch_date)
+        if rewatch:
+            details.append("rewatch")
+        if details:
+            line += f" - {' - '.join(details)}"
+
+        next_description = intro + "\n\n" + "\n".join([*lines, line])
+        if len(next_description) > max_description_chars:
+            break
+        lines.append(line)
+        shown += 1
+
+    description = intro
+    if lines:
+        description += "\n\n" + "\n".join(lines)
+    if shown < count:
+        description += f"\n\nplus {count - shown} more."
+
+    embed = discord.Embed(
+        title="letterboxd catch-up",
+        url=lb_url,
+        description=description,
+        color=_LB_COLOR,
+    )
+    embed.set_footer(text=f"letterboxd - {lb_username}")
+    return embed
+
+
 def lb_watchlist_embed(
     lb_username: str,
     films: list[dict],

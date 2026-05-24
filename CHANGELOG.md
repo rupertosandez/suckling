@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.3] - 2026-05-24
+
+### Changed
+
+- Letterboxd activity auto-posts now compact a single member's catch-up into one post when they have more than 3 new logs in a run.
+
 ## [2.4.2] - 2026-05-23
 
 ### Changed

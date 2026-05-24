@@ -28,6 +28,7 @@ import cleanup as cleanup_module
 import views
 
 LB_ACTIVITY_POST_LIMIT = 20
+LB_ACTIVITY_COMPACT_THRESHOLD = 3
 LB_ACTIVITY_WINDOW_MINUTES = 60
 COG_EXTENSIONS = (
     "cogs.discovery",
@@ -342,6 +343,7 @@ async def run_lb_activity_check(
         "new": 0,
         "recent": 0,
         "posted": 0,
+        "compacted": 0,
         "seeded": 0,
         "skipped": 0,
         "errors": 0,
@@ -431,26 +433,65 @@ async def run_lb_activity_check(
     post_items = new_items[:limit]
     skipped_items = new_items[limit:] + stale_items
 
+    grouped_items: dict[tuple[str, str], list[dict]] = {}
     for item in post_items:
-        embed = embeds.lb_activity_embed(
-            item["lb_username"],
-            item["entry"],
-            discord_tag=item["discord_tag"],
-        )
+        grouped_items.setdefault(
+            (item["user_id"], item["lb_username"]),
+            [],
+        ).append(item)
+
+    async def _send_lb_activity_items(items: list[dict]) -> bool:
+        first_item = items[0]
+        if len(items) > LB_ACTIVITY_COMPACT_THRESHOLD:
+            embed = embeds.lb_activity_compact_embed(
+                first_item["lb_username"],
+                [item["entry"] for item in items],
+                discord_tag=first_item["discord_tag"],
+            )
+        else:
+            embed = embeds.lb_activity_embed(
+                first_item["lb_username"],
+                first_item["entry"],
+                discord_tag=first_item["discord_tag"],
+            )
+
         try:
             await channel.send(embed=embed)
         except discord.HTTPException as e:
             result["errors"] += 1
             logger.log_exception("lb_activity_post", e)
+            return False
+
+        if len(items) > LB_ACTIVITY_COMPACT_THRESHOLD:
+            result["compacted"] += 1
+        return True
+
+    for items in grouped_items.values():
+        if len(items) <= LB_ACTIVITY_COMPACT_THRESHOLD:
+            for item in items:
+                if not await _send_lb_activity_items([item]):
+                    continue
+                db.record_lb_activity_seen(
+                    item["entry_key"],
+                    item["lb_username"],
+                    item["entry"].get("film_title", "Unknown"),
+                    posted=True,
+                )
+                result["posted"] += 1
             continue
 
-        db.record_lb_activity_seen(
-            item["entry_key"],
-            item["lb_username"],
-            item["entry"].get("film_title", "Unknown"),
-            posted=True,
+        if not await _send_lb_activity_items(items):
+            continue
+        db.record_lb_activity_seen_many(
+            (
+                item["entry_key"],
+                item["lb_username"],
+                item["entry"].get("film_title", "Unknown"),
+                True,
+            )
+            for item in items
         )
-        result["posted"] += 1
+        result["posted"] += len(items)
 
     db.record_lb_activity_seen_many(
         (
@@ -623,6 +664,7 @@ def _lb_activity_summary(result: dict) -> str:
         f"found **{result['new']}** new entry/entries, "
         f"**{result.get('recent', 0)}** within the posting window, "
         f"posted **{result['posted']}**, "
+        f"compacted **{result.get('compacted', 0)}** batch(es), "
         f"seeded **{result['seeded']}**, "
         f"skipped **{result['skipped']}**."
     )
