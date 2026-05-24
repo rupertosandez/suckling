@@ -17,6 +17,7 @@ class LauncherState:
     check_interval_minutes: int = 1440
     last_seen_version: str = version.VERSION
     last_update_check_iso: str | None = None
+    bot_pid: int | None = None
 
     _path: Path | None = None
 
@@ -45,6 +46,7 @@ class LauncherState:
             ),
             "last_seen_version": str(raw.get("last_seen_version", version.VERSION)),
             "last_update_check_iso": raw.get("last_update_check_iso"),
+            "bot_pid": _normalize_pid(raw.get("bot_pid")),
             "_path": path,
         }
         return cls(**fields)
@@ -72,6 +74,10 @@ class LauncherState:
         self.last_seen_version = bot_version
         self.save()
 
+    def set_bot_pid(self, pid: int | None) -> None:
+        self.bot_pid = pid
+        self.save()
+
 
 def _normalize_check_interval(value) -> int:
     try:
@@ -81,3 +87,11 @@ def _normalize_check_interval(value) -> int:
     if minutes == 60:
         return 1440
     return max(1, minutes)
+
+
+def _normalize_pid(value) -> int | None:
+    try:
+        pid = int(value)
+    except (TypeError, ValueError):
+        return None
+    return pid if pid > 0 else None

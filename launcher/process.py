@@ -15,6 +15,8 @@ import threading
 import time
 from typing import Callable
 
+from launcher.state import LauncherState
+
 
 MAX_LOG_LINES = 5000
 CRASH_WINDOW_SECONDS = 60
@@ -35,17 +37,25 @@ class ProcessSnapshot:
     crashed: bool
     started_at: datetime | None
     return_code: int | None
+    external_pid: int | None = None
 
 
 class BotProcessManager:
     """Start, stop, restart, and observe the bot child process."""
 
-    def __init__(self, project_root: Path, auto_restart_on_crash: bool = True) -> None:
+    def __init__(
+        self,
+        project_root: Path,
+        state: LauncherState,
+        auto_restart_on_crash: bool = True,
+    ) -> None:
         self.project_root = Path(project_root)
+        self.state = state
         self.auto_restart_on_crash = auto_restart_on_crash
         self.log_queue: queue.Queue[str] = queue.Queue(maxsize=MAX_LOG_LINES)
 
         self._process: subprocess.Popen[str] | None = None
+        self._external_pid: int | None = None
         self._reader_thread: threading.Thread | None = None
         self._watcher_thread: threading.Thread | None = None
         self._lock = threading.RLock()
@@ -66,11 +76,21 @@ class BotProcessManager:
     def snapshot(self) -> ProcessSnapshot:
         with self._lock:
             running = self._process is not None and self._process.poll() is None
+            external_pid = self._external_pid
+            if not running and external_pid is not None:
+                if _pid_is_running(external_pid):
+                    running = True
+                else:
+                    self.log(f"[launcher] clearing stale bot pid {external_pid}")
+                    self._external_pid = None
+                    external_pid = None
+                    self.state.set_bot_pid(None)
             return ProcessSnapshot(
                 running=running,
                 crashed=self._crashed,
                 started_at=self._started_at,
                 return_code=self._last_return_code,
+                external_pid=external_pid,
             )
 
     def is_running(self) -> bool:
@@ -93,6 +113,20 @@ class BotProcessManager:
                 self.log("[launcher] bot is already running")
                 return False
 
+            recorded_pid = self.state.bot_pid
+            if recorded_pid is not None and _pid_is_running(recorded_pid):
+                self._external_pid = recorded_pid
+                self._crashed = False
+                self.log(
+                    "[launcher] bot already appears to be running "
+                    f"as pid {recorded_pid}; not starting another"
+                )
+                self._notify_state()
+                return False
+            if recorded_pid is not None:
+                self.log(f"[launcher] clearing stale bot pid {recorded_pid}")
+                self.state.set_bot_pid(None)
+
             if reset_crashes:
                 self._crash_times.clear()
                 self._crashed = False
@@ -108,12 +142,16 @@ class BotProcessManager:
             self._intentional_stop = False
             self._crashed = False
             self._last_return_code = None
+            self._external_pid = None
             self._started_at = datetime.now(timezone.utc)
 
             self.log(f"[launcher] starting bot with {python_exe}")
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
             self._process = subprocess.Popen(
-                [str(python_exe), "bot.py"],
+                [str(python_exe), "-u", "bot.py"],
                 cwd=self.project_root,
+                env=env,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -123,6 +161,8 @@ class BotProcessManager:
                 bufsize=1,
                 creationflags=creationflags,
             )
+            self.state.set_bot_pid(self._process.pid)
+            self.log(f"[launcher] bot pid {self._process.pid}")
 
             self._reader_thread = threading.Thread(
                 target=self._read_output,
@@ -146,15 +186,37 @@ class BotProcessManager:
     def stop(self) -> bool:
         with self._lock:
             process = self._process
+            external_pid = self._external_pid
             if process is None or process.poll() is not None:
-                self.log("[launcher] bot is already stopped")
                 self._process = None
                 self._started_at = None
                 process = None
+                if external_pid is None:
+                    self.log("[launcher] bot is already stopped")
+                elif _pid_is_running(external_pid):
+                    self.log(f"[launcher] stopping externally running bot pid {external_pid}")
+                else:
+                    self.log(f"[launcher] clearing stale bot pid {external_pid}")
+                    self._external_pid = None
+                    self.state.set_bot_pid(None)
+                    external_pid = None
             else:
                 self._intentional_stop = True
 
         if process is None:
+            if external_pid is not None:
+                stopped = _terminate_pid(external_pid)
+                with self._lock:
+                    self._external_pid = None
+                    self._started_at = None
+                    self._crashed = False
+                    self.state.set_bot_pid(None)
+                if stopped:
+                    self.log(f"[launcher] external bot pid {external_pid} stopped")
+                else:
+                    self.log(f"[launcher] couldn't stop external bot pid {external_pid}")
+                self._notify_state()
+                return stopped
             self._notify_state()
             return False
 
@@ -181,6 +243,7 @@ class BotProcessManager:
             self._process = None
             self._started_at = None
             self._crashed = False
+            self.state.set_bot_pid(None)
 
         self.log(f"[launcher] bot stopped with exit code {process.returncode}")
         self._notify_state()
@@ -255,6 +318,7 @@ class BotProcessManager:
             self._last_return_code = return_code
             self._process = None
             self._started_at = None
+            self.state.set_bot_pid(None)
 
         if intentional:
             self._notify_state()
@@ -300,3 +364,35 @@ class BotProcessManager:
                 callback()
             except Exception as exc:
                 self.log(f"[launcher] state callback failed: {exc}")
+
+
+def _pid_is_running(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _terminate_pid(pid: int) -> bool:
+    try:
+        if os.name == "nt":
+            os.kill(pid, signal.SIGTERM)
+        else:
+            os.kill(pid, signal.SIGTERM)
+    except OSError:
+        return False
+
+    deadline = time.monotonic() + STOP_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        if not _pid_is_running(pid):
+            return True
+        time.sleep(0.2)
+
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError:
+        return True
+    return not _pid_is_running(pid)

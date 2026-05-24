@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import sys
 import traceback
 
@@ -12,11 +13,49 @@ from launcher.updater import Updater
 from launcher.ui import TrayUI
 
 
+_launcher_lock_handle = None
+
+
+def _acquire_launcher_lock(project_root: Path) -> bool:
+    """Prevent multiple launcher/tray supervisors for the same checkout."""
+    global _launcher_lock_handle
+
+    lock_path = project_root / "data" / "launcher.instance.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = lock_path.open("a+", encoding="utf-8")
+    handle.seek(0)
+
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        return False
+
+    handle.seek(0)
+    handle.truncate()
+    handle.write(str(os.getpid()))
+    handle.flush()
+    _launcher_lock_handle = handle
+    return True
+
+
 def main() -> None:
     project_root = Path(__file__).resolve().parent
+    if not _acquire_launcher_lock(project_root):
+        print("[launcher] another sucklingbot launcher is already running; exiting")
+        return
+
     state = LauncherState.load(project_root)
     process_manager = BotProcessManager(
         project_root,
+        state,
         auto_restart_on_crash=state.auto_restart_on_crash,
     )
     updater = Updater(project_root, log=process_manager.log)

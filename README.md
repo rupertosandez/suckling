@@ -89,22 +89,22 @@ custom data and assets paths can be absolute, or relative to the project root.
 ### first run
 
 ```bash
-python bot.py
+venv\Scripts\python.exe launcher.py
 ```
 
-you should see startup output confirming the version, database init, and slash command sync.
+or double-click `launch.vbs` to start it without a terminal window. the launcher is the default way to run sucklingbot: it owns start/stop/restart, keeps one bot process running, and blocks duplicate launcher instances.
 
 ## desktop launcher
 
-if you'd rather not run the bot from a terminal, there's a tray app that wraps it.
+the launcher lives in the system tray and wraps the bot process.
 
 ```bash
 venv\Scripts\python.exe launcher.py
 ```
 
-or double-click `launch.vbs` to start it without a terminal window. `launch.bat` is also available when you want a visible troubleshooting terminal.
+`launch.bat` is also available when you want a visible troubleshooting terminal.
 
-the launcher lives in the system tray and lets you start, stop, and restart the bot, view its log, and apply updates from github with one click.
+right-click the tray icon to start, stop, and restart the bot, view its log, and apply updates from github with one click. the bot can still be run directly for debugging, but the launcher path is safer for normal use because it tracks the child process and prevents accidental duplicates.
 
 right-click the tray icon for the menu. the launcher checks for updates daily and on startup; when one is available, the menu shows the version diff and an `update and restart` option that pulls from main, installs any new requirements, and restarts the bot.
 
@@ -193,6 +193,7 @@ sucklingbot/
 ## architecture notes
 
 - `bot.py` owns runtime setup, scheduled jobs, startup/shutdown handling, and message routing.
+- `launcher.py` is the normal runtime supervisor: it starts one bot child process, tracks its pid, blocks duplicate launcher instances, and owns tray controls.
 - slash commands live in `cogs/`, grouped by feature area and loaded during startup.
 - `rental.py` never imports `bot.py` — takes `bot: discord.Client` as a parameter, same pattern as `tracker.py`.
 - `tmdb.py` uses the cache transparently — pass `force=True` to bypass when fresh data is needed.
@@ -265,8 +266,7 @@ if you're running the bot manually from this repo, updates flow through git:
 ```bash
 # on the live machine
 git pull
-# stop the bot (ctrl+c) and restart
-python bot.py
+# right-click the tray icon and choose restart bot
 ```
 
 `.env` and `data/` aren't in the repo, so they persist across pulls.

@@ -404,6 +404,8 @@ class TrayUI:
             return "crashed"
         if not snapshot.running:
             return "stopped"
+        if snapshot.external_pid is not None:
+            return f"running as pid {snapshot.external_pid}"
         if snapshot.started_at is None:
             return "running"
         delta = datetime.now(timezone.utc) - snapshot.started_at

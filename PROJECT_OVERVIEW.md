@@ -195,8 +195,8 @@ Auto-posting jobs can be toggled with `/toggle` without losing configuration.
 - Film cards now include `+ watchlist` and, when rb9 has the film, `rent this`
 - Daily recommendations, `/suck`, `/roll`, `/rb9`, and `/rb9randomscene` can start rentals from film cards
 
-**Desktop Launcher** - Windows system tray app added in v1.9.0
-- Start/stop/restart controls, live logs, update checks, and one-click update/restart
+**Desktop Launcher** - Default Windows system tray supervisor
+- Start/stop/restart controls, live logs, update checks, one-click update/restart, launcher instance lock, and bot pid tracking
 
 ---
 

@@ -92,6 +92,7 @@ def _acquire_instance_lock() -> bool:
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
     lock_path = Path(config.DATA_DIR) / "bot.instance.lock"
     handle = lock_path.open("a+", encoding="utf-8")
+    handle.seek(0)
 
     try:
         if os.name == "nt":
@@ -133,7 +134,6 @@ async def _shutdown_from_signal(signal_name: str) -> None:
         await bot.close()
     finally:
         print("[shutdown] closed sucklingbot")
-        sys.exit(0)
 
 
 def _request_shutdown(reason: str) -> None:
@@ -582,6 +582,7 @@ async def on_ready():
 
     asyncio.create_task(_warm_plex_cache())
     asyncio.create_task(_post_update_announcement_once())
+    print("[startup] sucklingbot started successfully")
 
 
 @bot.event
