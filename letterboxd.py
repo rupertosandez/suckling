@@ -10,6 +10,7 @@ All responses are cached with a 15-minute TTL using the shared cache module.
 HTTP requests reuse a shared aiohttp session so feed checks keep connections warm.
 """
 
+import asyncio
 import re
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
@@ -84,6 +85,8 @@ async def _fetch_text(url: str, forbidden_error: str = "private") -> str:
             return await resp.text()
     except LetterboxdError:
         raise
+    except asyncio.TimeoutError as e:
+        raise LetterboxdError("network timeout") from e
     except aiohttp.ClientError as e:
         raise LetterboxdError(f"network error: {e}") from e
 
