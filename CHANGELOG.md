@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.4] - 2026-05-24
+
+### Added
+
+- The desktop launcher now opens a branded Suckling dashboard with bot controls, status, live logs, update controls, and tray support.
+- Added optional `Suckling.exe` build support for packaging the launcher as a Windows app.
+
+### Changed
+
+- The launcher is now the recommended way to run the bot and includes stronger duplicate-process protection.
+
 ## [2.4.3] - 2026-05-24
 
 ### Changed

@@ -110,6 +110,15 @@ right-click the tray icon for the menu. the launcher checks for updates daily an
 
 local uncommitted changes block auto-update - the launcher will tell you to commit or stash first.
 
+to build the optional Windows app wrapper, install the dev requirements and run:
+
+```bash
+venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+build_suckling.bat
+```
+
+that produces `Suckling.exe` in the project root. keep it beside the repo files so it can supervise `bot.py`, use `assets/`, and write to `data/`.
+
 in discord, configure the auto-posting channels (admin only):
 
 ```

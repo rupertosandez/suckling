@@ -12,7 +12,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import webbrowser
 
-from PIL import Image
+from PIL import Image, ImageTk
 import pystray
 from pystray import Menu, MenuItem
 
@@ -127,10 +127,26 @@ class TrayUI:
         self.state = state
 
         self.root = tk.Tk()
-        self.root.withdraw()
-        self.root.title("sucklingbot launcher")
+        self.root.title("Suckling")
+        self.root.geometry("940x620")
+        self.root.minsize(760, 520)
+        self.root.protocol("WM_DELETE_WINDOW", self.hide_dashboard)
 
-        self.log_window = LogWindow(self.root, process_manager)
+        self.auto_scroll = tk.BooleanVar(value=True)
+        self.line_count = 0
+        self.logo_image = self._load_logo_image()
+        self.status_var = tk.StringVar(value="status: starting")
+        self.version_var = tk.StringVar(value=f"v{self.updater.current_version()} - return by 9 bot")
+        self.update_var = tk.StringVar(value="updates: checking")
+
+        self.start_button: tk.Button | None = None
+        self.stop_button: tk.Button | None = None
+        self.restart_button: tk.Button | None = None
+        self.update_button: tk.Button | None = None
+        self.launch_startup_check: ttk.Checkbutton | None = None
+        self.log_text: tk.Text | None = None
+        self._build_dashboard()
+
         self.update_info: UpdateInfo | None = None
         self._checking_update = False
         self._quit_requested = False
@@ -141,6 +157,8 @@ class TrayUI:
             "update": self._load_icon("tray_icon_update.ico"),
             "error": self._load_icon("tray_icon_error.ico"),
         }
+        self.window_icon = ImageTk.PhotoImage(self.icons["running"])
+        self.root.iconphoto(False, self.window_icon)
         self.icon = pystray.Icon(
             "sucklingbot",
             self.icons["stopped"],
@@ -150,6 +168,7 @@ class TrayUI:
 
         process_manager.add_state_callback(self.schedule_menu_refresh)
         process_manager.add_crash_callback(self.show_toast)
+        self.root.after(100, self.poll_logs)
         self.root.after(30_000, self._periodic_refresh)
 
     def run(self) -> None:
@@ -182,6 +201,7 @@ class TrayUI:
         self.icon.icon = self.icons[icon_key]
         self.icon.menu = self._build_menu()
         self.icon.update_menu()
+        self.refresh_dashboard(state)
 
     def _periodic_refresh(self) -> None:
         if self._quit_requested:
@@ -217,6 +237,7 @@ class TrayUI:
                 self.state.mark_update_check()
                 if info is None:
                     self.process_manager.log("[launcher] no update available")
+                    self.update_var.set("updates: current")
                     if show_dialog:
                         messagebox.showinfo("sucklingbot", "no update available")
                 else:
@@ -228,6 +249,7 @@ class TrayUI:
                     )
                     if show_dialog:
                         self.show_update_dialog(info)
+                    self.update_var.set(f"update: {info.old_version} -> {info.new_version}")
                 self.refresh_tray()
 
             self.root.after(0, done)
@@ -378,8 +400,8 @@ class TrayUI:
                 ),
                 Menu.SEPARATOR,
                 MenuItem(
-                    "show log window",
-                    lambda _icon, _item: self.root.after(0, self.log_window.show),
+                    "show dashboard",
+                    lambda _icon, _item: self.root.after(0, self.show_dashboard),
                 ),
                 MenuItem(
                     "open data folder",
@@ -398,6 +420,308 @@ class TrayUI:
             ]
         )
         return Menu(*items)
+
+    def _build_dashboard(self) -> None:
+        self._configure_styles()
+        self.root.configure(bg="#141414")
+
+        shell = ttk.Frame(self.root, style="App.TFrame", padding=14)
+        shell.pack(fill=tk.BOTH, expand=True)
+
+        header = ttk.Frame(shell, style="Header.TFrame", padding=(14, 12))
+        header.pack(fill=tk.X)
+        header.columnconfigure(1, weight=1)
+
+        if self.logo_image is not None:
+            ttk.Label(header, image=self.logo_image, style="Header.TLabel").grid(
+                row=0,
+                column=0,
+                rowspan=2,
+                sticky=tk.W,
+                padx=(0, 14),
+            )
+
+        ttk.Label(
+            header,
+            textvariable=self.version_var,
+            style="HeaderSubtle.TLabel",
+        ).grid(row=0, column=1, rowspan=2, sticky=tk.W)
+        ttk.Label(
+            header,
+            textvariable=self.status_var,
+            style="Status.TLabel",
+            padding=(10, 5),
+        ).grid(row=0, column=2, rowspan=2, sticky=tk.E)
+
+        controls = ttk.Frame(shell, style="App.TFrame", padding=(0, 14, 0, 10))
+        controls.pack(fill=tk.X)
+        self.start_button = self._make_action_button(
+            controls,
+            text="start bot",
+            command=lambda: self.process_manager.start(reset_crashes=True),
+            palette="primary",
+        )
+        self.stop_button = self._make_action_button(
+            controls,
+            text="stop bot",
+            command=self.process_manager.stop,
+            palette="danger",
+        )
+        self.restart_button = self._make_action_button(
+            controls,
+            text="restart bot",
+            command=self.process_manager.restart,
+            palette="secondary",
+        )
+        check_button = self._make_action_button(
+            controls,
+            text="check updates",
+            command=lambda: self.check_for_updates(show_dialog=True),
+            palette="secondary",
+        )
+        self.update_button = self._make_action_button(
+            controls,
+            text="update and restart",
+            command=lambda: self.show_update_dialog(),
+            palette="accent",
+        )
+        for button in (
+            self.start_button,
+            self.stop_button,
+            self.restart_button,
+            check_button,
+            self.update_button,
+        ):
+            button.pack(side=tk.LEFT, padx=(0, 8))
+
+        ttk.Button(
+            controls,
+            text="data folder",
+            command=lambda: self._open_folder(self.project_root / "data"),
+        ).pack(side=tk.RIGHT, padx=(8, 0))
+        ttk.Button(
+            controls,
+            text="project folder",
+            command=lambda: self._open_folder(self.project_root),
+        ).pack(side=tk.RIGHT)
+
+        status_row = ttk.Frame(shell, style="App.TFrame")
+        status_row.pack(fill=tk.X, pady=(0, 10))
+        self.launch_startup_check = ttk.Checkbutton(
+            status_row,
+            text="launch on startup",
+            command=self.toggle_launch_on_startup,
+        )
+        self.launch_startup_check.pack(side=tk.LEFT)
+        ttk.Label(
+            status_row,
+            textvariable=self.update_var,
+            style="Subtle.TLabel",
+        ).pack(side=tk.RIGHT)
+
+        log_panel = ttk.Frame(shell, style="Panel.TFrame", padding=10)
+        log_panel.pack(fill=tk.BOTH, expand=True)
+        log_panel.rowconfigure(1, weight=1)
+        log_panel.columnconfigure(0, weight=1)
+
+        log_header = ttk.Frame(log_panel, style="Panel.TFrame")
+        log_header.grid(row=0, column=0, sticky=tk.EW, pady=(0, 8))
+        ttk.Label(log_header, text="live log", style="Section.TLabel").pack(side=tk.LEFT)
+        ttk.Button(log_header, text="clear", command=self.clear_log).pack(side=tk.RIGHT)
+        ttk.Button(log_header, text="copy all", command=self.copy_log).pack(side=tk.RIGHT, padx=(0, 8))
+        ttk.Checkbutton(
+            log_header,
+            text="auto-scroll",
+            variable=self.auto_scroll,
+        ).pack(side=tk.RIGHT, padx=(0, 12))
+
+        text_frame = ttk.Frame(log_panel, style="Panel.TFrame")
+        text_frame.grid(row=1, column=0, sticky=tk.NSEW)
+        text_frame.rowconfigure(0, weight=1)
+        text_frame.columnconfigure(0, weight=1)
+        self.log_text = tk.Text(
+            text_frame,
+            wrap=tk.WORD,
+            state=tk.DISABLED,
+            bg="#0f1115",
+            fg="#e8e8e8",
+            insertbackground="#e8e8e8",
+            relief=tk.FLAT,
+            padx=8,
+            pady=8,
+            font=("Consolas", 9),
+        )
+        scrollbar = ttk.Scrollbar(text_frame, command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=scrollbar.set)
+        self.log_text.grid(row=0, column=0, sticky=tk.NSEW)
+        scrollbar.grid(row=0, column=1, sticky=tk.NS)
+
+        footer = ttk.Frame(shell, style="App.TFrame", padding=(0, 10, 0, 0))
+        footer.pack(fill=tk.X)
+        ttk.Label(
+            footer,
+            text=f"data: {self.project_root / 'data'}",
+            style="Subtle.TLabel",
+        ).pack(side=tk.LEFT)
+        ttk.Button(footer, text="hide to tray", command=self.hide_dashboard).pack(side=tk.RIGHT)
+        ttk.Button(footer, text="quit suckling", command=self.quit).pack(side=tk.RIGHT, padx=(0, 8))
+
+    def _configure_styles(self) -> None:
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure("App.TFrame", background="#141414")
+        style.configure("Header.TFrame", background="#1d1d1d")
+        style.configure("Panel.TFrame", background="#1d1d1d")
+        style.configure("Header.TLabel", background="#1d1d1d", foreground="#e8e8e8")
+        style.configure("HeaderSubtle.TLabel", background="#1d1d1d", foreground="#aaa6a0")
+        style.configure(
+            "Title.TLabel",
+            background="#1d1d1d",
+            foreground="#f2f2f2",
+            font=("Segoe UI", 18, "bold"),
+        )
+        style.configure(
+            "Section.TLabel",
+            background="#1d1d1d",
+            foreground="#f2f2f2",
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.configure("Subtle.TLabel", background="#141414", foreground="#aaa6a0")
+        style.configure("Status.TLabel", background="#2a1a1a", foreground="#ffcf66")
+        style.configure("TButton", padding=(10, 5))
+        style.configure("TCheckbutton", background="#141414", foreground="#ddd7cf")
+
+    def _make_action_button(
+        self,
+        parent,
+        *,
+        text: str,
+        command,
+        palette: str,
+    ) -> tk.Button:
+        palettes = {
+            "primary": ("#7f1d1d", "#991b1b", "#5f1717"),
+            "danger": ("#4b1f1f", "#6b2424", "#351818"),
+            "secondary": ("#2b3038", "#39414d", "#1f242b"),
+            "accent": ("#6b4b16", "#8a631f", "#4c3510"),
+        }
+        normal, hover, pressed = palettes[palette]
+        button = tk.Button(
+            parent,
+            text=text,
+            command=command,
+            bg=normal,
+            fg="#f7f2ea",
+            activebackground=pressed,
+            activeforeground="#ffffff",
+            disabledforeground="#77706a",
+            relief=tk.FLAT,
+            bd=0,
+            padx=14,
+            pady=7,
+            font=("Segoe UI", 9, "bold"),
+            cursor="hand2",
+            highlightthickness=0,
+        )
+        button._suckling_colors = {  # type: ignore[attr-defined]
+            "normal": normal,
+            "hover": hover,
+            "disabled": "#252525",
+        }
+        button.bind("<Enter>", lambda _event, b=button: self._hover_action_button(b, True))
+        button.bind("<Leave>", lambda _event, b=button: self._hover_action_button(b, False))
+        return button
+
+    def _hover_action_button(self, button: tk.Button, active: bool) -> None:
+        if str(button.cget("state")) == tk.DISABLED:
+            return
+        colors = button._suckling_colors  # type: ignore[attr-defined]
+        button.configure(bg=colors["hover"] if active else colors["normal"])
+
+    def _set_action_button_enabled(self, button: tk.Button | None, enabled: bool) -> None:
+        if button is None:
+            return
+        colors = button._suckling_colors  # type: ignore[attr-defined]
+        button.configure(
+            state=tk.NORMAL if enabled else tk.DISABLED,
+            bg=colors["normal"] if enabled else colors["disabled"],
+            cursor="hand2" if enabled else "arrow",
+        )
+
+    def refresh_dashboard(self, snapshot) -> None:
+        self.status_var.set(f"status: {self._status_text(snapshot)}")
+        if self.update_info is None and not self._checking_update:
+            self.update_var.set("updates: current")
+        elif self._checking_update:
+            self.update_var.set("updates: checking")
+
+        running = snapshot.running
+        self._set_action_button_enabled(self.start_button, not running)
+        self._set_action_button_enabled(self.stop_button, running)
+        self._set_action_button_enabled(self.restart_button, running)
+        self._set_action_button_enabled(self.update_button, self.update_info is not None)
+        if self.launch_startup_check is not None:
+            if self.state.launch_on_startup:
+                self.launch_startup_check.state(["selected"])
+            else:
+                self.launch_startup_check.state(["!selected"])
+
+    def show_dashboard(self) -> None:
+        self.root.deiconify()
+        self.root.lift()
+        self.root.focus_force()
+
+    def hide_dashboard(self) -> None:
+        self.root.withdraw()
+
+    def poll_logs(self) -> None:
+        lines = self.process_manager.drain_logs()
+        if lines and self.log_text is not None:
+            at_bottom = self._is_log_at_bottom()
+            self.log_text.configure(state=tk.NORMAL)
+            for line in lines:
+                self.log_text.insert(tk.END, line + "\n")
+                self.line_count += 1
+            self._trim_log_lines()
+            self.log_text.configure(state=tk.DISABLED)
+            if self.auto_scroll.get() and at_bottom:
+                self.log_text.see(tk.END)
+        self.root.after(100, self.poll_logs)
+
+    def clear_log(self) -> None:
+        if self.log_text is None:
+            return
+        self.log_text.configure(state=tk.NORMAL)
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.configure(state=tk.DISABLED)
+        self.line_count = 0
+
+    def copy_log(self) -> None:
+        if self.log_text is None:
+            return
+        content = self.log_text.get("1.0", tk.END).strip()
+        self.root.clipboard_clear()
+        self.root.clipboard_append(content)
+
+    def _is_log_at_bottom(self) -> bool:
+        if self.log_text is None:
+            return True
+        try:
+            return self.log_text.yview()[1] >= 0.999
+        except tk.TclError:
+            return True
+
+    def _trim_log_lines(self) -> None:
+        if self.log_text is None:
+            return
+        extra = self.line_count - 5000
+        if extra <= 0:
+            return
+        self.log_text.delete("1.0", f"{extra + 1}.0")
+        self.line_count -= extra
 
     def _status_text(self, snapshot) -> str:
         if snapshot.crashed:
@@ -451,6 +775,14 @@ class TrayUI:
         if path.exists():
             return Image.open(path)
         return Image.new("RGB", (64, 64), "gray")
+
+    def _load_logo_image(self) -> ImageTk.PhotoImage | None:
+        path = self.project_root / "assets" / "logo.png"
+        if not path.exists():
+            return None
+        image = Image.open(path)
+        image.thumbnail((280, 72), Image.Resampling.LANCZOS)
+        return ImageTk.PhotoImage(image)
 
 
 def startup_shortcut_path() -> Path:

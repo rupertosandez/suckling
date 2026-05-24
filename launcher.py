@@ -46,8 +46,14 @@ def _acquire_launcher_lock(project_root: Path) -> bool:
     return True
 
 
+def _project_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
 def main() -> None:
-    project_root = Path(__file__).resolve().parent
+    project_root = _project_root()
     if not _acquire_launcher_lock(project_root):
         print("[launcher] another sucklingbot launcher is already running; exiting")
         return
@@ -70,7 +76,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
-        root = Path(__file__).resolve().parent
+        root = _project_root()
         crash_log = root / "data" / "launcher.crash.log"
         crash_log.parent.mkdir(parents=True, exist_ok=True)
         crash_log.write_text(traceback.format_exc(), encoding="utf-8")

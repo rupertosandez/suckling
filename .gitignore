@@ -16,6 +16,11 @@ OPTIMIZATION_REPORT.md
 venv/
 .venv/
 
+# build outputs
+build/
+dist/
+Suckling.exe
+
 # python compiled files
 __pycache__/
 *.pyc

@@ -1,7 +1,7 @@
 # Sucklingbot Project Overview
 
 **Last updated:** May 24, 2026
-**Current version:** 2.4.3
+**Current version:** 2.4.4
 **Maintainer:** rupertosandez (GitHub)
 
 ---
@@ -117,7 +117,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `logger.py` | File logging (data/bot.log, 1MB rotating) |
 | `launcher.py` | Windows system tray launcher wrapper |
 | `launcher/` | Tray UI, subprocess mgmt, auto-updates, state persistence |
-| `version.py` | Version constant (currently 2.4.3) |
+| `version.py` | Version constant (currently 2.4.4) |
 
 ### Design Patterns
 
@@ -217,7 +217,7 @@ sucklingbot/
 │   ├── tracking.py           # Streaming watchlist setup and tracking
 │   └── watchlist.py          # Personal watchlist commands
 ├── config.py                 # .env → config constants
-├── version.py                # VERSION = "2.4.3"
+├── version.py                # VERSION = "2.4.4"
 ├── tmdb.py                   # TMDB API wrapper (cached, deduped, backoff)
 ├── plex.py                   # Plex library async wrapper
 ├── db.py                      # SQLite CRUD
