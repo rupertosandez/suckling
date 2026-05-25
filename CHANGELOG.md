@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Rentals now last 5 days instead of 48 hours.
+- Rentals now last 5 days.
 
 ## [2.4.1] - 2026-05-21
 
@@ -215,7 +215,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-**video store rental system** — users can "rent" a film from the RB9 Plex library, have 48 hours to watch it, and return it with a review. reviews post to a configurable Discord forum channel.
+**video store rental system** — users can "rent" a film from the RB9 Plex library, have 5 days to watch it, and return it with a review. reviews post to a configurable Discord forum channel.
 
 - `/rent` — picks a random film from the library (excluding anything the user has rented before). shows an offer screen with up to 2 re-rolls: first pick shows "re-roll", second shows "re-roll (last one)" with a warning, third pick is auto-confirmed with no choice. flow is fully ephemeral.
 - `/return rating recommend [thoughts]` — returns the active rental and posts a review to the forum. rating is 1-10, recommend is a boolean toggle, thoughts are optional. edits the forum thread in-place: updates the starter message, renames the thread from "checked out" to "reviewed", and adds the recommendation tag if applicable.

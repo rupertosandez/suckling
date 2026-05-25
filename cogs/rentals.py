@@ -118,7 +118,7 @@ class RentalsCog(commands.Cog):
             "📼 **choose your rental path**\n\n"
             f"you currently have **{active_count}/"
             f"{rental_module.MAX_ACTIVE_RENTALS_PER_USER}** rentals active. "
-            "once a rental is confirmed, the 48-hour clock starts immediately.\n\n"
+            "once a rental is confirmed, the 5-day clock starts immediately.\n\n"
             "**roll random** gives you up to 2 rerolls and boosted macguffin odds "
             "when you return it. **pick a movie** lets you choose from rb9. "
             "**ask an admin** posts a recommendation request.",
