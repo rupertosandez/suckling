@@ -101,6 +101,11 @@ async def _fetch_rss(url: str) -> str:
 def _lb_tag(item: ET.Element, local_name: str) -> str | None:
     """Find a Letterboxd-namespaced tag value on an RSS item."""
     el = item.find(f"{{{_LB_NS}}}{local_name}")
+    if el is None:
+        for child in item:
+            if child.tag.rsplit("}", 1)[-1] == local_name:
+                el = child
+                break
     return el.text.strip() if el is not None and el.text else None
 
 
@@ -150,16 +155,43 @@ def _html_attr(tag: str, attr_name: str) -> str | None:
     return unescape(match.group(1)).strip() if match else None
 
 
+# ---------- diary feed ----------
+
+def _normalize_rating_stars(value: str) -> str:
+    return (
+        value
+        .replace("\u00e2\u02dc\u2026", "\u2605")
+        .replace("\u00c2\u00bd", "\u00bd")
+    )
+
+
+def _rating_from_title_suffix(raw_title: str) -> float | None:
+    """Parse the star suffix from a Letterboxd RSS title."""
+    title = _normalize_rating_stars(raw_title)
+    match = re.search(r"\s*-\s*([\u2605\u00bd]+)\s*$", title)
+    if not match:
+        return None
+
+    suffix = match.group(1)
+    rating = suffix.count("\u2605")
+    if "\u00bd" in suffix:
+        rating += 0.5
+    return rating if rating > 0 else None
+
+
+def _title_without_rating_suffix(raw_title: str) -> str:
+    title = _normalize_rating_stars(raw_title)
+    return re.sub(r"\s*-\s*[\u2605\u00bd]+.*$", "", title).strip()
+
+
 def _rating_to_stars(rating: float | None) -> str:
     """Convert a decimal rating (0-5, 0.5 increments) to star characters."""
     if rating is None:
         return ""
     full = int(rating)
     half = (rating % 1) >= 0.5
-    return "★" * full + ("½" if half else "")
+    return "\u2605" * full + ("\u00bd" if half else "")
 
-
-# ---------- diary feed ----------
 
 def _parse_diary_xml(xml_text: str) -> list[dict]:
     """Parse a Letterboxd diary RSS feed into a list of entry dicts."""
@@ -173,9 +205,8 @@ def _parse_diary_xml(xml_text: str) -> list[dict]:
         raw_title = (title_el.text or "").strip()
 
         # LB title format: "Film Name, YYYY - ★★★½" or "Film Name, YYYY"
-        # Strip rating suffix first
-        film_title = re.sub(r"\s*-\s*[★½].*$", "", raw_title).strip()
-        # Strip ", YYYY" suffix
+        # Strip rating suffix first, then strip ", YYYY" suffix
+        film_title = _title_without_rating_suffix(raw_title)
         film_title = re.sub(r",\s*\d{4}$", "", film_title).strip()
 
         year_str = _lb_tag(item, "filmYear")
@@ -186,6 +217,8 @@ def _parse_diary_xml(xml_text: str) -> list[dict]:
             rating = float(rating_str) if rating_str else None
         except ValueError:
             rating = None
+        if rating is None:
+            rating = _rating_from_title_suffix(raw_title)
 
         watch_date = _lb_tag(item, "watchedDate") or ""
         rewatch = _lb_tag(item, "rewatch") == "Yes"
