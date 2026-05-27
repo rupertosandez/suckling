@@ -793,9 +793,10 @@ def get_late_fees_leaderboard(limit: int = 10) -> list[dict]:
         rows = conn.execute(
             "SELECT user_id, user_name, "
             "  SUM(late_fee_dollars) AS total_fees, "
-            "  COUNT(*) AS total_rentals "
+            "  COUNT(*) AS total_rentals, "
+            "  SUM(CASE WHEN late_fee_dollars > 0 THEN 1 ELSE 0 END) AS late_count "
             "FROM rentals "
-            "WHERE status IN ('returned', 'active') "
+            "WHERE status = 'returned' "
             "GROUP BY user_id "
             "HAVING total_fees > 0 "
             "ORDER BY total_fees DESC "
