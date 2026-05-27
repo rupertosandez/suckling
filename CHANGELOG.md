@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- `/lb group` now formats each member's recent watches as its own readable block instead of one dense paragraph.
+- Letterboxd activity posts now show the Discord user linked to the account instead of falling back to the Letterboxd username.
+
 ## [2.4.5] - 2026-05-26
 
 ### Fixed

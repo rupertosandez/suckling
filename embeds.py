@@ -1202,6 +1202,11 @@ def lb_group_embed(activity: list[dict]) -> discord.Embed:
         )
         return embed
 
+    def _trim(text: str, max_chars: int) -> str:
+        if len(text) <= max_chars:
+            return text
+        return text[: max_chars - 3].rstrip() + "..."
+
     def latest_date(member: dict) -> str:
         entries = member.get("entries") or []
         if not entries:
@@ -1210,8 +1215,9 @@ def lb_group_embed(activity: list[dict]) -> discord.Embed:
 
     members = sorted(activity, key=latest_date, reverse=True)
 
-    max_description_chars = 3900
-    lines = []
+    max_embed_chars = 5600
+    max_fields = 20
+    used_chars = len(embed.title or "")
     shown = 0
     for member in members:
         tag = member["discord_tag"]
@@ -1222,11 +1228,11 @@ def lb_group_embed(activity: list[dict]) -> discord.Embed:
             reverse=True,
         )
 
-        header = f"**{tag}** ([{lb_user}](https://letterboxd.com/{lb_user}/))"
+        field_name = _trim(f"{tag} ({lb_user})", 256)
         if member.get("error"):
-            line = f"{header}: couldn't fetch recent watches"
+            value = "couldn't fetch recent watches"
         elif not entries:
-            line = f"{header}: no recent public watches"
+            value = "no recent public watches"
         else:
             films = []
             for entry in entries[:2]:
@@ -1243,17 +1249,18 @@ def lb_group_embed(activity: list[dict]) -> discord.Embed:
                     film_str = f"[{title}{year_str}]({link})"
                 else:
                     film_str = f"**{title}{year_str}**"
-                films.append(f"{film_str}{stars_str}{date_str}")
-            line = f"{header}: " + " | ".join(films)
+                films.append(f"- {film_str}{stars_str}{date_str}")
+            value = "\n".join(films)
+        value = _trim(value, 1024)
 
-        next_description = "\n".join([*lines, line])
-        if len(next_description) > max_description_chars:
+        field_chars = len(field_name) + len(value)
+        if shown >= max_fields or used_chars + field_chars > max_embed_chars:
             break
-        lines.append(line)
 
+        embed.add_field(name=field_name, value=value, inline=False)
+        used_chars += field_chars
         shown += 1
 
-    embed.description = "\n".join(lines)
     footer = f"letterboxd - showing {shown}/{len(activity)} linked member(s)"
     if len(activity) > shown:
         footer += " - newest activity first"

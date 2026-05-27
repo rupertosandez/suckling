@@ -300,6 +300,11 @@ async def _activity_channel() -> discord.abc.Messageable | None:
 
 
 def _member_label(user_id: str, lb_username: str) -> str:
+    try:
+        return f"<@{int(user_id)}>"
+    except (TypeError, ValueError):
+        pass
+
     guild = bot.get_guild(config.GUILD_ID)
     if guild is None:
         return lb_username
