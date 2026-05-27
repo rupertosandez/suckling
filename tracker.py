@@ -26,7 +26,7 @@ class CheckResult:
     discover_count: int = 0
     candidate_count: int = 0
     is_first_run: bool = False
-    announcements: list[tuple[int, str, list[str]]] = field(default_factory=list)
+    announcements: list[tuple[int, str, list[str], str | None]] = field(default_factory=list)
     posted_count: int = 0
     dry_run: bool = True
     warnings: list[str] = field(default_factory=list)
@@ -56,7 +56,7 @@ class CheckResult:
         else:
             n = len(self.announcements)
             lines.append(f"**{n} new announcement(s)**:")
-            for movie_id, title, providers in self.announcements[:15]:
+            for movie_id, title, providers, *_tracker_user_id in self.announcements[:15]:
                 provider_list = ", ".join(providers)
                 lines.append(f"• {title} → {provider_list}")
             if n > 15:
@@ -122,12 +122,18 @@ async def _discover_horror_movies(result: CheckResult) -> list[dict]:
     return movies
 
 
-def _build_candidate_pool(discover_movies: list[dict]) -> dict[int, str]:
-    candidates: dict[int, str] = {}
+def _build_candidate_pool(discover_movies: list[dict]) -> dict[int, dict[str, str | None]]:
+    candidates: dict[int, dict[str, str | None]] = {}
     for movie in discover_movies:
-        candidates[movie["id"]] = movie.get("title", "Unknown")
+        candidates[movie["id"]] = {
+            "title": movie.get("title", "Unknown"),
+            "tracker_user_id": None,
+        }
     for tracked in db.list_tracked_movies():
-        candidates[tracked["tmdb_id"]] = tracked["title"]
+        candidates[tracked["tmdb_id"]] = {
+            "title": tracked["title"],
+            "tracker_user_id": tracked.get("added_by_id"),
+        }
     return candidates
 
 
@@ -160,6 +166,7 @@ async def _post_announcement(
     bot: discord.Client,
     movie_id: int,
     new_providers: list[str],
+    tracker_user_id: str | None,
     result: CheckResult,
 ) -> bool:
     channel_id = db.get_announcement_channel_id()
@@ -185,8 +192,10 @@ async def _post_announcement(
         return False
 
     embed = embeds.streaming_announcement_embed(details, new_providers)
+    content = f"<@{tracker_user_id}> your tracked movie is streaming." if tracker_user_id else None
+    allowed_mentions = discord.AllowedMentions(users=True) if tracker_user_id else None
     try:
-        await channel.send(embed=embed)
+        await channel.send(content=content, embed=embed, allowed_mentions=allowed_mentions)
         return True
     except discord.HTTPException as e:
         _log(result, f"  [warn] Failed to post to channel: {e}", warning=True)
@@ -229,10 +238,13 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
     result.candidate_count = len(candidates)
     print(f"[tracker] Candidate pool: {result.candidate_count} films (Discover + tracked)")
 
-    candidate_items = list(candidates.items())
+    candidate_items = [
+        (movie_id, meta["title"] or "Unknown", meta.get("tracker_user_id"))
+        for movie_id, meta in candidates.items()
+    ]
     for start in range(0, len(candidate_items), PROVIDER_CHECK_CONCURRENCY):
         batch = candidate_items[start:start + PROVIDER_CHECK_CONCURRENCY]
-        batch_movie_ids = [movie_id for movie_id, _title in batch]
+        batch_movie_ids = [movie_id for movie_id, _title, _tracker_user_id in batch]
         seen_providers = db.get_provider_snapshot_map(batch_movie_ids)
         announced_ids = (
             set()
@@ -240,14 +252,17 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
             else db.get_announced_movie_ids(batch_movie_ids)
         )
         checks = await asyncio.gather(
-            *(_fetch_movie_provider_names(movie_id, title, result) for movie_id, title in batch),
+            *(
+                _fetch_movie_provider_names(movie_id, title, result)
+                for movie_id, title, _tracker_user_id in batch
+            ),
             return_exceptions=True,
         )
 
         provider_records: list[tuple[int, str]] = []
         announce_records: list[tuple[int, str]] = []
 
-        for (movie_id, title), check_result in zip(batch, checks):
+        for (movie_id, title, tracker_user_id), check_result in zip(batch, checks):
             if isinstance(check_result, Exception):
                 _log(result, f"  [warn] Provider check failed for {title}: {check_result}", warning=True)
                 continue
@@ -276,7 +291,7 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
                 if movie_id in announced_ids:
                     result.skipped_already_announced += 1
                 else:
-                    result.announcements.append((movie_id, title, newly_seen))
+                    result.announcements.append((movie_id, title, newly_seen, tracker_user_id))
 
         db.record_providers_many(provider_records)
         db.record_announced_movies_many(announce_records)
@@ -301,7 +316,7 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
         return result
 
     print("[tracker] Announcements:")
-    for movie_id, title, providers in result.announcements:
+    for movie_id, title, providers, tracker_user_id in result.announcements:
         provider_list = ", ".join(providers)
         print(f"  • {title} → {provider_list}")
 
@@ -311,8 +326,8 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
         return result
 
     print("[tracker] Posting announcements to Discord...")
-    for movie_id, title, new_providers in result.announcements:
-        ok = await _post_announcement(bot, movie_id, new_providers, result)
+    for movie_id, title, new_providers, tracker_user_id in result.announcements:
+        ok = await _post_announcement(bot, movie_id, new_providers, tracker_user_id, result)
         if ok:
             result.posted_count += 1
             db.record_announced_movie(movie_id, title)

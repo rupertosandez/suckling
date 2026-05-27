@@ -229,8 +229,9 @@ class MovieSelectView(discord.ui.View):
 class TrackSelect(discord.ui.Select):
     """Dropdown for picking which movie to track when there's ambiguity."""
 
-    def __init__(self, candidates: list[dict], added_by: str):
+    def __init__(self, candidates: list[dict], added_by: str, added_by_id: str | None = None):
         self.added_by = added_by
+        self.added_by_id = added_by_id
         # Store the candidates so we can look up year/title later
         self._candidates_by_id = {str(m["id"]): m for m in candidates[:25]}
 
@@ -264,7 +265,12 @@ class TrackSelect(discord.ui.Select):
         release_date = chosen.get("release_date", "")
         movie_year = release_date[:4] if release_date else "—"
 
-        added = db.add_tracked_movie(movie_id, movie_title, self.added_by)
+        added = db.add_tracked_movie(
+            movie_id,
+            movie_title,
+            self.added_by,
+            self.added_by_id,
+        )
         if not added:
             msg = f"**{movie_title} ({movie_year})** is already on the tracked list."
             await interaction.response.edit_message(content=msg, view=None)
@@ -279,9 +285,9 @@ class TrackSelect(discord.ui.Select):
 class TrackSelectView(discord.ui.View):
     """View wrapping TrackSelect for /track."""
 
-    def __init__(self, candidates: list[dict], added_by: str):
+    def __init__(self, candidates: list[dict], added_by: str, added_by_id: str | None = None):
         super().__init__(timeout=60)
-        self.add_item(TrackSelect(candidates, added_by))
+        self.add_item(TrackSelect(candidates, added_by, added_by_id))
 
     async def on_timeout(self):
         for item in self.children:

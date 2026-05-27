@@ -62,6 +62,7 @@ def init_db() -> None:
                 tmdb_id    INTEGER PRIMARY KEY,
                 title      TEXT NOT NULL,
                 added_by   TEXT NOT NULL,
+                added_by_id TEXT,
                 added_at   TEXT NOT NULL
             );
 
@@ -163,6 +164,12 @@ def init_db() -> None:
                 extensions_used  INTEGER NOT NULL DEFAULT 0
             );
         """)
+        _ensure_column(
+            conn,
+            "tracked_movies",
+            "added_by_id",
+            "TEXT",
+        )
         _ensure_column(
             conn,
             "rentals",
@@ -326,13 +333,18 @@ def set_last_update_announced_version(bot_version: str) -> None:
 
 # ---------- tracked_movies ----------
 
-def add_tracked_movie(tmdb_id: int, title: str, added_by: str) -> bool:
+def add_tracked_movie(
+    tmdb_id: int,
+    title: str,
+    added_by: str,
+    added_by_id: str | None = None,
+) -> bool:
     with _connect() as conn:
         try:
             conn.execute(
-                "INSERT INTO tracked_movies (tmdb_id, title, added_by, added_at) "
-                "VALUES (?, ?, ?, ?)",
-                (tmdb_id, title, added_by, _utc_now_iso()),
+                "INSERT INTO tracked_movies (tmdb_id, title, added_by, added_by_id, added_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (tmdb_id, title, added_by, added_by_id, _utc_now_iso()),
             )
             return True
         except sqlite3.IntegrityError:
@@ -348,7 +360,8 @@ def remove_tracked_movie(tmdb_id: int) -> bool:
 def list_tracked_movies() -> list[dict]:
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT tmdb_id, title, added_by, added_at FROM tracked_movies ORDER BY added_at DESC"
+            "SELECT tmdb_id, title, added_by, added_by_id, added_at "
+            "FROM tracked_movies ORDER BY added_at DESC"
         ).fetchall()
         return [dict(row) for row in rows]
 

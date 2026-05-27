@@ -143,6 +143,7 @@ class TrackingCog(commands.Cog):
             return
 
         user_tag = str(interaction.user)
+        user_id = str(interaction.user.id)
 
         if year is not None or not _needs_disambiguation(results):
             top = results[0]
@@ -150,7 +151,7 @@ class TrackingCog(commands.Cog):
             release_date = top.get("release_date", "")
             movie_year = release_date[:4] if release_date else "—"
 
-            added = db.add_tracked_movie(top["id"], movie_title, user_tag)
+            added = db.add_tracked_movie(top["id"], movie_title, user_tag, user_id)
             if not added:
                 await interaction.followup.send(
                     f"**{movie_title} ({movie_year})** is already on the tracked list."
@@ -160,7 +161,7 @@ class TrackingCog(commands.Cog):
             msg = await views._build_track_response(top["id"], movie_title, movie_year)
             await interaction.followup.send(msg)
         else:
-            view = views.TrackSelectView(results, added_by=user_tag)
+            view = views.TrackSelectView(results, added_by=user_tag, added_by_id=user_id)
             await interaction.followup.send(
                 f"Found multiple matches for **{title}**. Pick which one to track:",
                 view=view,
