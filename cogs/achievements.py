@@ -287,24 +287,33 @@ class AchievementsCog(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
         if user:
-            users = [(str(user.id), str(user))]
+            users = [(str(user.id), str(user), user)]
         else:
             users = []
             for user_id in db.get_all_achievement_candidate_user_ids():
                 member = interaction.guild.get_member(int(user_id))
-                users.append((user_id, str(member) if member else user_id))
+                if member is None:
+                    try:
+                        member = await interaction.guild.fetch_member(int(user_id))
+                    except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                        member = None
+                users.append((user_id, str(member) if member else user_id, member))
 
         awarded = 0
-        for user_id, user_tag in users:
-            awarded += len(
-                achievement_module.evaluate_user(
-                    user_id,
-                    user_tag,
-                    source_type="rescan",
-                )
+        announced = 0
+        for user_id, user_tag, member in users:
+            unlocked = achievement_module.evaluate_user(
+                user_id,
+                user_tag,
+                source_type="rescan",
             )
+            awarded += len(unlocked)
+            if unlocked and member:
+                await achievement_module.post_unlocks(self.bot, member, unlocked)
+                announced += len(unlocked)
         await interaction.followup.send(
-            f"rescan complete. awarded **{awarded}** new achievement(s).",
+            f"rescan complete. awarded **{awarded}** new achievement(s); "
+            f"posted **{announced}** to the feed.",
             ephemeral=True,
         )
 
