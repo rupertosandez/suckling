@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.3] - 2026-05-28
+
+### Added
+
+- Added the `mutant mommy` achievement for whoever holds the iconic **the suckling** macguffin.
+
 ## [2.5.2] - 2026-05-28
 
 ### Changed

@@ -99,6 +99,10 @@ def _macguffin_count(user_id: str) -> int:
     return len(db.get_macguffin_inventory(user_id))
 
 
+def _owns_suckling_macguffin(user_id: str) -> int:
+    return 1 if db.user_owns_macguffin(user_id, "the-suckling") else 0
+
+
 def _guess_wins(user_id: str) -> int:
     score = db.get_guess_score(user_id)
     return int(score.get("wins") or 0) if score else 0
@@ -142,6 +146,7 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("prop-department", "prop department", "owned 5 macguffins.", "own 5 macguffins.", "macguffins", 5, _macguffin_count, "🗝️"),
     Achievement("cursed-object-enjoyer", "cursed object enjoyer", "owned 10 macguffins.", "own 10 macguffins.", "macguffins", 10, _macguffin_count, "🔮"),
     Achievement("gift-shop", "the gift shop", "gifted a macguffin.", "gift a macguffin to another member.", "macguffins", 1, _event_count("macguffin_gift_sent"), "🎁"),
+    Achievement("mutant-mommy", "mutant mommy", "held the iconic the suckling macguffin.", "hold the iconic the suckling macguffin.", "macguffins", 1, _owns_suckling_macguffin, "🍼"),
     Achievement("poster-child", "poster child", "won 5 guess/trivia rounds.", "win 5 /guess or /play rounds.", "games", 5, _guess_wins, "🎬"),
     Achievement("quote-machine", "quote machine", "won 10 guess/trivia rounds.", "win 10 /guess or /play rounds.", "games", 10, _guess_wins, "💬"),
     Achievement("six-degrees-menace", "six degrees menace", "won 5 six degrees rounds.", "win 5 /six rounds.", "games", 5, _six_wins, "🕸️"),
