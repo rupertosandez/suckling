@@ -9,6 +9,7 @@ import embeds
 import logger
 import macguffin as macguffin_module
 import views
+import achievements as achievement_module
 
 
 _CLAIM_LOCKS: dict[str, asyncio.Lock] = {}
@@ -91,6 +92,13 @@ class MacGuffinCog(commands.Cog):
                 )
                 await asyncio.to_thread(db.record_free_claim_used, user_id)
                 await _announce_drop(interaction, card, interaction.user)
+                unlocked = achievement_module.evaluate_user(
+                    user_id,
+                    str(interaction.user),
+                    source_type="macguffin_claim",
+                    source_id=card.get("id"),
+                )
+                await achievement_module.post_unlocks(self.bot, interaction.user, unlocked)
                 await interaction.followup.send("check the channel!", ephemeral=True)
             except macguffin_module.MacGuffinPoolEmpty:
                 await interaction.followup.send(
@@ -181,6 +189,19 @@ class MacGuffinCog(commands.Cog):
             f"{interaction.user.mention} gifted {user.mention} "
             f"the [{rarity}] {emoji} **{name}**"
         )
+        db.record_achievement_event(
+            sender_id,
+            str(interaction.user),
+            "macguffin_gift_sent",
+            macguffin_id,
+        )
+        unlocked = achievement_module.evaluate_user(
+            sender_id,
+            str(interaction.user),
+            source_type="macguffin_gift",
+            source_id=macguffin_id,
+        )
+        await achievement_module.post_unlocks(self.bot, interaction.user, unlocked)
         await interaction.followup.send("gift sent.", ephemeral=True)
 
     @app_commands.command(name="myguffins", description="view your macguffin collection")
@@ -294,6 +315,13 @@ class MacGuffinCog(commands.Cog):
                 ephemeral=True,
             )
             await _announce_drop(interaction, selected, user)
+            unlocked = achievement_module.evaluate_user(
+                target_id,
+                str(user),
+                source_type="macguffin_admin",
+                source_id=selected.get("id"),
+            )
+            await achievement_module.post_unlocks(self.bot, user, unlocked)
             return
 
         if not card:
@@ -387,6 +415,13 @@ class MacGuffinCog(commands.Cog):
                     )
                     return
                 await _announce_drop(interaction, selected, user)
+                unlocked = achievement_module.evaluate_user(
+                    target_id,
+                    str(user),
+                    source_type="macguffin_admin",
+                    source_id=selected.get("id"),
+                )
+                await achievement_module.post_unlocks(self.bot, user, unlocked)
                 await interaction.followup.send(
                     f"moved {selected.get('emoji', '')} **{selected.get('name')}** "
                     f"from **{existing.get('owner_tag', 'another member')}** to **{user}**.",
@@ -402,6 +437,13 @@ class MacGuffinCog(commands.Cog):
                 "admin",
             )
             await _announce_drop(interaction, selected, user)
+            unlocked = achievement_module.evaluate_user(
+                target_id,
+                str(user),
+                source_type="macguffin_admin",
+                source_id=selected.get("id"),
+            )
+            await achievement_module.post_unlocks(self.bot, user, unlocked)
             await interaction.followup.send(
                 f"added {selected.get('emoji', '')} **{selected.get('name')}** "
                 f"to **{user}**.",

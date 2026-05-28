@@ -20,6 +20,7 @@ RENTAL_REQUEST_CHANNEL_KEY = "rental_request_channel_id"
 RENTAL_TAG_KEY = "rental_tag_id"
 RECOMMENDATION_TAG_KEY = "recommendation_tag_id"
 LAST_UPDATE_ANNOUNCED_VERSION_KEY = "last_update_announced_version"
+FEED_CHANNEL_KEY = "feed_channel_id"
 
 
 def _utc_now_iso() -> str:
@@ -186,6 +187,40 @@ def init_db() -> None:
                 genres_json      TEXT NOT NULL DEFAULT '[]',
                 cached_at        TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS achievement_earned (
+                user_id          TEXT NOT NULL,
+                achievement_id   TEXT NOT NULL,
+                user_tag         TEXT NOT NULL,
+                earned_at        TEXT NOT NULL,
+                source_type      TEXT,
+                source_id        TEXT,
+                PRIMARY KEY (user_id, achievement_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS achievement_display (
+                user_id          TEXT NOT NULL,
+                achievement_id   TEXT NOT NULL,
+                slot             INTEGER NOT NULL,
+                updated_at       TEXT NOT NULL,
+                PRIMARY KEY (user_id, achievement_id),
+                UNIQUE (user_id, slot)
+            );
+
+            CREATE TABLE IF NOT EXISTS achievement_roles (
+                achievement_id   TEXT PRIMARY KEY,
+                role_id          TEXT NOT NULL,
+                created_at       TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS achievement_events (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id          TEXT NOT NULL,
+                user_tag         TEXT NOT NULL,
+                event_type       TEXT NOT NULL,
+                source_id        TEXT,
+                created_at       TEXT NOT NULL
+            );
         """)
         _ensure_column(
             conn,
@@ -212,6 +247,10 @@ def init_db() -> None:
                 ON plex_library_cache (added_at);
             CREATE INDEX IF NOT EXISTS idx_plex_library_updated
                 ON plex_library_cache (updated_at);
+            CREATE INDEX IF NOT EXISTS idx_achievement_events_user_type
+                ON achievement_events (user_id, event_type);
+            CREATE INDEX IF NOT EXISTS idx_achievement_earned_earned_at
+                ON achievement_earned (earned_at DESC);
         """)
 
 
@@ -504,6 +543,15 @@ def set_last_update_announced_version(bot_version: str) -> None:
     set_setting(LAST_UPDATE_ANNOUNCED_VERSION_KEY, bot_version)
 
 
+def get_feed_channel_id() -> int | None:
+    raw = get_setting(FEED_CHANNEL_KEY)
+    return int(raw) if raw else None
+
+
+def set_feed_channel_id(channel_id: int) -> None:
+    set_setting(FEED_CHANNEL_KEY, str(channel_id))
+
+
 # ---------- tracked_movies ----------
 
 def add_tracked_movie(
@@ -542,6 +590,14 @@ def list_tracked_movies() -> list[dict]:
 def tracked_movie_count() -> int:
     with _connect() as conn:
         return conn.execute("SELECT COUNT(*) AS c FROM tracked_movies").fetchone()["c"]
+
+
+def tracked_movie_count_for_user(user_id: str) -> int:
+    with _connect() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) AS c FROM tracked_movies WHERE added_by_id = ?",
+            (user_id,),
+        ).fetchone()["c"]
 
 
 # ---------- provider_snapshots ----------
@@ -653,6 +709,16 @@ def get_leaderboard(limit: int = 10) -> list[dict]:
         return [dict(row) for row in rows]
 
 
+def get_guess_score(user_id: str) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT user_id, user_tag, points, wins, last_win "
+            "FROM guess_scores WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
 # ---------- announced_movies ----------
 
 def has_been_announced(tmdb_id: int) -> bool:
@@ -735,6 +801,16 @@ def get_six_leaderboard(limit: int = 10) -> list[dict]:
             (limit,),
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+def get_six_score(user_id: str) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT user_id, user_tag, points, wins, last_win "
+            "FROM six_scores WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        return dict(row) if row else None
 
 
 # ---------- rentals ----------
@@ -986,6 +1062,31 @@ def get_user_rental_history(user_id: str) -> list[dict]:
             (user_id,),
         ).fetchall()
         return [dict(row) for row in rows]
+
+
+def get_all_returned_rental_user_ids() -> list[str]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT user_id FROM rentals WHERE status = 'returned'"
+        ).fetchall()
+        return [row["user_id"] for row in rows]
+
+
+def get_all_achievement_candidate_user_ids() -> list[str]:
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT user_id FROM rentals
+            UNION SELECT owner_id AS user_id FROM macguffins
+            UNION SELECT user_id FROM guess_scores
+            UNION SELECT user_id FROM six_scores
+            UNION SELECT user_id FROM watchlist
+            UNION SELECT added_by_id AS user_id FROM tracked_movies WHERE added_by_id IS NOT NULL
+            UNION SELECT user_id FROM lb_accounts
+            UNION SELECT user_id FROM achievement_events
+            """
+        ).fetchall()
+        return [row["user_id"] for row in rows if row["user_id"]]
 
 
 def get_all_active_rentals() -> list[dict]:
@@ -1282,3 +1383,148 @@ def record_free_claim_used(user_id: str) -> None:
             "INSERT OR IGNORE INTO macguffin_free_claims (user_id) VALUES (?)",
             (user_id,),
         )
+
+
+# ---------- achievements ----------
+
+def record_achievement_event(
+    user_id: str,
+    user_tag: str,
+    event_type: str,
+    source_id: str | None = None,
+) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO achievement_events "
+            "(user_id, user_tag, event_type, source_id, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (user_id, user_tag, event_type, source_id, _utc_now_iso()),
+        )
+
+
+def achievement_event_count(user_id: str, event_type: str) -> int:
+    with _connect() as conn:
+        return conn.execute(
+            "SELECT COUNT(*) AS c FROM achievement_events "
+            "WHERE user_id = ? AND event_type = ?",
+            (user_id, event_type),
+        ).fetchone()["c"]
+
+
+def add_earned_achievement(
+    user_id: str,
+    achievement_id: str,
+    user_tag: str,
+    source_type: str | None = None,
+    source_id: str | None = None,
+) -> bool:
+    with _connect() as conn:
+        try:
+            conn.execute(
+                "INSERT INTO achievement_earned "
+                "(user_id, achievement_id, user_tag, earned_at, source_type, source_id) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (user_id, achievement_id, user_tag, _utc_now_iso(), source_type, source_id),
+            )
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+
+def get_earned_achievement_ids(user_id: str) -> set[str]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT achievement_id FROM achievement_earned WHERE user_id = ?",
+            (user_id,),
+        ).fetchall()
+        return {row["achievement_id"] for row in rows}
+
+
+def get_earned_achievements(user_id: str) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT user_id, achievement_id, user_tag, earned_at, source_type, source_id "
+            "FROM achievement_earned WHERE user_id = ? ORDER BY earned_at DESC",
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_recent_achievement_unlocks(limit: int = 10) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT user_id, achievement_id, user_tag, earned_at, source_type, source_id "
+            "FROM achievement_earned ORDER BY earned_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_achievement_counts_by_user(limit: int = 10) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT user_id, user_tag, COUNT(*) AS total, MAX(earned_at) AS last_earned "
+            "FROM achievement_earned GROUP BY user_id "
+            "ORDER BY total DESC, last_earned ASC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_achievement_rarity_counts() -> dict[str, int]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT achievement_id, COUNT(*) AS total "
+            "FROM achievement_earned GROUP BY achievement_id"
+        ).fetchall()
+        return {row["achievement_id"]: row["total"] for row in rows}
+
+
+def get_displayed_achievements(user_id: str) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT achievement_id, slot, updated_at FROM achievement_display "
+            "WHERE user_id = ? ORDER BY slot ASC",
+            (user_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def set_displayed_achievements(user_id: str, achievement_ids: list[str]) -> None:
+    with _connect() as conn:
+        conn.execute("DELETE FROM achievement_display WHERE user_id = ?", (user_id,))
+        rows = [
+            (user_id, achievement_id, index + 1, _utc_now_iso())
+            for index, achievement_id in enumerate(achievement_ids[:3])
+        ]
+        if rows:
+            conn.executemany(
+                "INSERT INTO achievement_display "
+                "(user_id, achievement_id, slot, updated_at) VALUES (?, ?, ?, ?)",
+                rows,
+            )
+
+
+def get_achievement_role_id(achievement_id: str) -> int | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT role_id FROM achievement_roles WHERE achievement_id = ?",
+            (achievement_id,),
+        ).fetchone()
+        return int(row["role_id"]) if row else None
+
+
+def set_achievement_role_id(achievement_id: str, role_id: int) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO achievement_roles (achievement_id, role_id, created_at) "
+            "VALUES (?, ?, ?) "
+            "ON CONFLICT(achievement_id) DO UPDATE SET role_id = excluded.role_id",
+            (achievement_id, str(role_id), _utc_now_iso()),
+        )
+
+
+def get_all_achievement_role_ids() -> set[int]:
+    with _connect() as conn:
+        rows = conn.execute("SELECT role_id FROM achievement_roles").fetchall()
+        return {int(row["role_id"]) for row in rows}

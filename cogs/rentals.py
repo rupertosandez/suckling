@@ -13,6 +13,7 @@ import macguffin as macguffin_module
 import plex
 import rental as rental_module
 import views
+import achievements as achievement_module
 
 
 COMMON_TIMEZONES = (
@@ -293,6 +294,19 @@ class RentalsCog(commands.Cog):
             pass
         except Exception as e:
             logger.log_exception("macguffin_return_drop", e)
+
+        unlocked = achievement_module.evaluate_user(
+            user_id,
+            str(interaction.user),
+            source_type="rental_return",
+            source_id=str(rental_record["id"]),
+        )
+        await achievement_module.post_unlocks(
+            self.bot,
+            interaction.user,
+            unlocked,
+            rental=updated_rental,
+        )
 
     @app_commands.command(name="myrental", description="check your current rental and time remaining")
     async def myrental(self, interaction: discord.Interaction):

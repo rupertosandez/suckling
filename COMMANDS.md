@@ -193,6 +193,35 @@ the card leaves your collection and moves to theirs. partial card names are fine
 
 ---
 
+## achievements
+
+earn movie-club badges by using suckling. rentals are the official record for watched-movie achievements, so anything about watching or returning movies comes from `/return`.
+
+members can earn as many achievements as they want, but only **3** can be pinned as visible Discord badge roles at once.
+
+### `/achievements [user]`
+view an achievement shelf.
+
+- leave `user` blank to see your own private shelf, visible badges, recent unlocks, and progress hints
+- choose another member to see their public shelf
+
+### `/achievementdisplay <achievement> [replace]`
+pin an earned achievement as one of your visible badge roles.
+
+- `achievement` is one of your unlocked badges
+- `replace` is optional, and lets you swap out an existing visible badge when your 3 slots are full
+
+### `/achievementhide <achievement>`
+remove one visible achievement badge role. the achievement stays unlocked.
+
+### `/achievementclear`
+remove all visible achievement badge roles.
+
+### `/achievementboard`
+community achievement board with newest unlocks, top shelves, and rare badges.
+
+---
+
 ## tracking
 
 ### `/track <title> [year]`
@@ -404,6 +433,9 @@ set the channel where the daily recommendation posts (at noon).
 ### `/setlbactivity <channel>`
 set the channel where new diary entries from linked letterboxd accounts post. when you run this, the bot seeds the current feeds first so old watches do not flood the channel.
 
+### `/setfeed <channel>`
+set the channel where suckling feed posts go, including achievement unlocks.
+
 ### `/toggle <feature> <enabled>`
 enable or disable an auto-posting feature without removing the channel setting.
 
@@ -427,6 +459,12 @@ show the size of the in-memory cache. pass `clear:True` to wipe both the tmdb ca
 
 ### `/restart`
 restart the bot process. useful after pulling updates or clearing a stuck runtime state.
+
+### `/achievementrescan [user]`
+backfill achievements from existing bot history. leave `user` blank to rescan everyone.
+
+### `/achievementsyncroles <user>`
+reapply a member's selected visible achievement badge roles. useful if roles were manually changed in Discord.
 
 ### `/version`
 show the bot's current version.

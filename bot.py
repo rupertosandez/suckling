@@ -31,6 +31,7 @@ LB_ACTIVITY_POST_LIMIT = 20
 LB_ACTIVITY_COMPACT_THRESHOLD = 3
 LB_ACTIVITY_WINDOW_MINUTES = 60
 COG_EXTENSIONS = (
+    "cogs.achievements",
     "cogs.discovery",
     "cogs.admin",
     "cogs.games",

@@ -6,6 +6,7 @@ import db
 import embeds
 import tmdb
 import views
+import achievements as achievement_module
 
 
 MY_WATCHLIST_PAGE_SIZE = 10
@@ -107,6 +108,13 @@ class WatchlistCog(commands.Cog):
         year_str = f" ({film_year})" if film_year else ""
         film_name = top.get("title", title)
         if added:
+            unlocked = achievement_module.evaluate_user(
+                str(interaction.user.id),
+                str(interaction.user),
+                source_type="watchlist_add",
+                source_id=str(top["id"]),
+            )
+            await achievement_module.post_unlocks(self.bot, interaction.user, unlocked)
             await interaction.followup.send(
                 f"\U0001f4cb added **{film_name}{year_str}** to your watchlist.",
                 ephemeral=True,

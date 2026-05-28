@@ -15,6 +15,7 @@ import picker
 import sixdegrees
 import tmdb
 import trivia_roulette
+import achievements as achievement_module
 
 
 ROUND_DURATION_SECONDS = 60
@@ -153,6 +154,15 @@ class GamesCog(commands.Cog):
             new_total = db.increment_guess_score(
                 round_obj.winner_id, round_obj.winner_tag, points=points
             )
+            member = interaction.guild.get_member(int(round_obj.winner_id))
+            if member:
+                unlocked = achievement_module.evaluate_user(
+                    round_obj.winner_id,
+                    round_obj.winner_tag,
+                    source_type="guess_win",
+                    source_id=str(movie["id"]),
+                )
+                await achievement_module.post_unlocks(self.bot, member, unlocked)
             reveal_embed.description = (
                 f"🏆 <@{round_obj.winner_id}> got it! "
                 f"(+{points} point{'s' if points > 1 else ''} — total: **{new_total}**)"
@@ -237,6 +247,15 @@ class GamesCog(commands.Cog):
             new_total = db.increment_guess_score(
                 round_obj.winner_id, round_obj.winner_tag, points=1
             )
+            member = interaction.guild.get_member(int(round_obj.winner_id))
+            if member:
+                unlocked = achievement_module.evaluate_user(
+                    round_obj.winner_id,
+                    round_obj.winner_tag,
+                    source_type="trivia_win",
+                    source_id=category,
+                )
+                await achievement_module.post_unlocks(self.bot, member, unlocked)
             reveal_embed = embeds.trivia_reveal_embed(
                 category=category,
                 answer=round_obj.answer,
@@ -377,6 +396,15 @@ class GamesCog(commands.Cog):
                 round_obj.winner_id, round_obj.winner_tag, points=points
             )
             chain_str = " → ".join(round_obj.winning_chain)
+            member = interaction.guild.get_member(int(round_obj.winner_id))
+            if member:
+                unlocked = achievement_module.evaluate_user(
+                    round_obj.winner_id,
+                    round_obj.winner_tag,
+                    source_type="six_win",
+                    source_id=str(round_obj.actor_a_id),
+                )
+                await achievement_module.post_unlocks(self.bot, member, unlocked)
             win_embed = discord.Embed(
                 title=f"🏆 {round_obj.winner_tag} wins!",
                 description=(

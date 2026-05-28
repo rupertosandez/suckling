@@ -7,6 +7,7 @@ import embeds
 import db
 import plex
 import rental as rental_module
+import achievements as achievement_module
 
 MY_WATCHLIST_PAGE_SIZE = 10
 LB_WATCHLIST_PAGE_SIZE = 5
@@ -50,6 +51,13 @@ async def _watchlist_add_from_tmdb_id(
 
     year_str = f" ({year})" if year else ""
     if added:
+        unlocked = achievement_module.evaluate_user(
+            str(interaction.user.id),
+            str(interaction.user),
+            source_type="watchlist_add",
+            source_id=str(tmdb_id),
+        )
+        await achievement_module.post_unlocks(interaction.client, interaction.user, unlocked)
         await interaction.followup.send(
             f"📋 added **{title}{year_str}** to your watchlist.",
             ephemeral=True,
@@ -279,6 +287,14 @@ class TrackSelect(discord.ui.Select):
         # Defer because the auto-check involves a TMDB call
         await interaction.response.defer()
         msg = await _build_track_response(movie_id, movie_title, movie_year)
+        if self.added_by_id:
+            unlocked = achievement_module.evaluate_user(
+                self.added_by_id,
+                self.added_by,
+                source_type="track",
+                source_id=str(movie_id),
+            )
+            await achievement_module.post_unlocks(interaction.client, interaction.user, unlocked)
         await interaction.edit_original_response(content=msg, view=None)
 
 
@@ -1365,6 +1381,14 @@ class LBWatchlistView(discord.ui.View):
         parts = [f"📥 imported **{added}** film(s) from {self.lb_username}'s letterboxd watchlist."]
         if skipped:
             parts.append(f"{skipped} already on your watchlist and skipped.")
+        if added:
+            unlocked = achievement_module.evaluate_user(
+                user_id,
+                str(interaction.user),
+                source_type="watchlist_import",
+                source_id=self.lb_username,
+            )
+            await achievement_module.post_unlocks(interaction.client, interaction.user, unlocked)
         await interaction.followup.send(" ".join(parts), ephemeral=True)
 
     async def on_timeout(self):
