@@ -11,7 +11,6 @@ import logger
 
 
 MAX_DISPLAYED_ACHIEVEMENTS = 3
-ROLE_PREFIX = "badge:"
 ROLE_COLOR = discord.Color.from_rgb(142, 36, 52)
 
 
@@ -24,6 +23,7 @@ class Achievement:
     category: str
     threshold: int
     progress: Callable[[str], int]
+    emoji: str = "🏆"
     hidden: bool = False
 
 
@@ -126,35 +126,39 @@ def _event_count(event_type: str) -> Callable[[str], int]:
 
 
 ACHIEVEMENTS: tuple[Achievement, ...] = (
-    Achievement("be-kind-rewind", "be kind, rewind", "returned your first rb9 rental.", "return your first rb9 rental.", "rentals", 1, _returned_count),
-    Achievement("return-by-9", "return by 9", "returned 9 rentals on time.", "return 9 rentals on time.", "rentals", 9, _on_time_count),
-    Achievement("the-final-cut", "the final cut", "returned 25 rentals.", "return 25 rentals.", "rentals", 25, _returned_count),
-    Achievement("certified-sicko", "certified sicko", "returned 50 rentals.", "return 50 rentals.", "rentals", 50, _returned_count),
-    Achievement("staff-pick-survivor", "staff pick survivor", "returned an admin-assigned rental.", "return a rental picked by an admin.", "rentals", 1, _admin_pick_count),
-    Achievement("no-trailers-no-mercy", "no trailers, no mercy", "returned a random rental without rerolling.", "return a random rental without rerolling.", "rentals", 1, _random_no_reroll_count),
-    Achievement("criterion-creature", "criterion creature", "returned rentals from 5 different decades.", "return rentals from 5 different decades.", "rentals", 5, _decades_returned_count),
-    Achievement("grave-robber", "grave robber", "returned a pre-1970 rental.", "return something from before 1970.", "rentals", 1, _pre_1970_count),
-    Achievement("fresh-blood", "fresh blood", "returned a rental from the current decade.", "return something from the current decade.", "rentals", 1, _current_decade_count),
-    Achievement("two-thumbs-up", "two thumbs up", "recommended 10 returned rentals.", "recommend 10 rentals when returning them.", "reviews", 10, _recommended_count),
-    Achievement("perfect-score", "perfect score", "gave a rental a 10/10.", "give a returned rental a 10/10.", "reviews", 1, _perfect_rating_count),
-    Achievement("notes-app-auteur", "notes app auteur", "left written thoughts on 10 returned rentals.", "leave thoughts on 10 rental returns.", "reviews", 10, _written_review_count),
-    Achievement("it-belongs-in-a-museum", "it belongs in a museum", "claimed your first macguffin.", "get your first macguffin.", "macguffins", 1, _macguffin_count),
-    Achievement("prop-department", "prop department", "owned 5 macguffins.", "own 5 macguffins.", "macguffins", 5, _macguffin_count),
-    Achievement("cursed-object-enjoyer", "cursed object enjoyer", "owned 10 macguffins.", "own 10 macguffins.", "macguffins", 10, _macguffin_count),
-    Achievement("gift-shop", "the gift shop", "gifted a macguffin.", "gift a macguffin to another member.", "macguffins", 1, _event_count("macguffin_gift_sent")),
-    Achievement("poster-child", "poster child", "won 5 guess/trivia rounds.", "win 5 /guess or /play rounds.", "games", 5, _guess_wins),
-    Achievement("quote-machine", "quote machine", "won 10 guess/trivia rounds.", "win 10 /guess or /play rounds.", "games", 10, _guess_wins),
-    Achievement("six-degrees-menace", "six degrees menace", "won 5 six degrees rounds.", "win 5 /six rounds.", "games", 5, _six_wins),
-    Achievement("watchlist-whisperer", "watchlist whisperer", "kept 25 films on your watchlist.", "add 25 films to your watchlist.", "discovery", 25, _watchlist_count),
-    Achievement("coming-soon", "coming soon", "tracked 10 movies.", "add 10 movies to streaming tracking.", "discovery", 10, _tracked_count),
-    Achievement("letterboxed-in", "letterboxed in", "linked your letterboxd account.", "link your letterboxd account.", "letterboxd", 1, _letterboxd_linked),
+    Achievement("be-kind-rewind", "be kind, rewind", "returned your first rb9 rental.", "return your first rb9 rental.", "rentals", 1, _returned_count, "📼"),
+    Achievement("return-by-9", "return by 9", "returned 9 rentals on time.", "return 9 rentals on time.", "rentals", 9, _on_time_count, "⏰"),
+    Achievement("the-final-cut", "the final cut", "returned 25 rentals.", "return 25 rentals.", "rentals", 25, _returned_count, "✂️"),
+    Achievement("certified-sicko", "certified sicko", "returned 50 rentals.", "return 50 rentals.", "rentals", 50, _returned_count, "🩸"),
+    Achievement("staff-pick-survivor", "staff pick survivor", "returned an admin-assigned rental.", "return a rental picked by an admin.", "rentals", 1, _admin_pick_count, "🎟️"),
+    Achievement("no-trailers-no-mercy", "no trailers, no mercy", "returned a random rental without rerolling.", "return a random rental without rerolling.", "rentals", 1, _random_no_reroll_count, "🎲"),
+    Achievement("criterion-creature", "criterion creature", "returned rentals from 5 different decades.", "return rentals from 5 different decades.", "rentals", 5, _decades_returned_count, "🎞️"),
+    Achievement("grave-robber", "grave robber", "returned a pre-1970 rental.", "return something from before 1970.", "rentals", 1, _pre_1970_count, "⚰️"),
+    Achievement("fresh-blood", "fresh blood", "returned a rental from the current decade.", "return something from the current decade.", "rentals", 1, _current_decade_count, "🩸"),
+    Achievement("two-thumbs-up", "two thumbs up", "recommended 10 returned rentals.", "recommend 10 rentals when returning them.", "reviews", 10, _recommended_count, "👍"),
+    Achievement("perfect-score", "perfect score", "gave a rental a 10/10.", "give a returned rental a 10/10.", "reviews", 1, _perfect_rating_count, "💯"),
+    Achievement("notes-app-auteur", "notes app auteur", "left written thoughts on 10 returned rentals.", "leave thoughts on 10 rental returns.", "reviews", 10, _written_review_count, "📝"),
+    Achievement("it-belongs-in-a-museum", "it belongs in a museum", "claimed your first macguffin.", "get your first macguffin.", "macguffins", 1, _macguffin_count, "🏛️"),
+    Achievement("prop-department", "prop department", "owned 5 macguffins.", "own 5 macguffins.", "macguffins", 5, _macguffin_count, "🗝️"),
+    Achievement("cursed-object-enjoyer", "cursed object enjoyer", "owned 10 macguffins.", "own 10 macguffins.", "macguffins", 10, _macguffin_count, "🔮"),
+    Achievement("gift-shop", "the gift shop", "gifted a macguffin.", "gift a macguffin to another member.", "macguffins", 1, _event_count("macguffin_gift_sent"), "🎁"),
+    Achievement("poster-child", "poster child", "won 5 guess/trivia rounds.", "win 5 /guess or /play rounds.", "games", 5, _guess_wins, "🎬"),
+    Achievement("quote-machine", "quote machine", "won 10 guess/trivia rounds.", "win 10 /guess or /play rounds.", "games", 10, _guess_wins, "💬"),
+    Achievement("six-degrees-menace", "six degrees menace", "won 5 six degrees rounds.", "win 5 /six rounds.", "games", 5, _six_wins, "🕸️"),
+    Achievement("watchlist-whisperer", "watchlist whisperer", "kept 25 films on your watchlist.", "add 25 films to your watchlist.", "discovery", 25, _watchlist_count, "📋"),
+    Achievement("coming-soon", "coming soon", "tracked 10 movies.", "add 10 movies to streaming tracking.", "discovery", 10, _tracked_count, "📣"),
+    Achievement("letterboxed-in", "letterboxed in", "linked your letterboxd account.", "link your letterboxd account.", "letterboxd", 1, _letterboxd_linked, "📗"),
 )
 
 ACHIEVEMENT_BY_ID = {achievement.id: achievement for achievement in ACHIEVEMENTS}
 
 
 def visible_name(achievement: Achievement) -> str:
-    return f"{ROLE_PREFIX} {achievement.name}"
+    return f"{achievement.emoji} {achievement.name.title()}"
+
+
+def legacy_visible_name(achievement: Achievement) -> str:
+    return f"badge: {achievement.name}"
 
 
 def progress_for(user_id: str, achievement_id: str) -> tuple[int, int] | None:
@@ -240,6 +244,12 @@ async def ensure_role(guild: discord.Guild, achievement: Achievement) -> discord
     if role_id:
         role = guild.get_role(role_id)
         if role:
+            name = visible_name(achievement)
+            if role.name != name:
+                try:
+                    await role.edit(name=name, reason="Suckling achievement badge rename")
+                except (discord.Forbidden, discord.HTTPException) as e:
+                    logger.log_exception("achievement_role_rename", e)
             return role
 
     name = visible_name(achievement)
@@ -247,6 +257,15 @@ async def ensure_role(guild: discord.Guild, achievement: Achievement) -> discord
     if existing:
         db.set_achievement_role_id(achievement.id, existing.id)
         return existing
+
+    legacy = discord.utils.get(guild.roles, name=legacy_visible_name(achievement))
+    if legacy:
+        try:
+            await legacy.edit(name=name, reason="Suckling achievement badge rename")
+        except (discord.Forbidden, discord.HTTPException) as e:
+            logger.log_exception("achievement_role_rename", e)
+        db.set_achievement_role_id(achievement.id, legacy.id)
+        return legacy
 
     try:
         role = await guild.create_role(

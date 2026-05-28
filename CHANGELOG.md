@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.1] - 2026-05-28
+
+### Changed
+
+- Achievement badge roles now use a matching emoji and title case, like `🎬 Poster Child`.
+- Existing achievement roles are renamed during badge role sync.
+
 ## [2.5.0] - 2026-05-28
 
 ### Added
