@@ -1,6 +1,6 @@
 # sucklingbot
 
-a discord bot built specifically for the **return by 9** movie community. looks up films, tracks streaming availability, posts daily recommendations, runs poster/still guessing games and six degrees of separation rounds, pulls random picks and stats from the return by 9 plex library, and runs a video-store-themed rental system where members can check out films for 5 days and post reviews.
+a discord bot built specifically for the **return by 9** movie community. looks up films, tracks streaming availability, posts daily recommendations, runs poster/still guessing games and six degrees of separation rounds, pulls random picks and stats from the return by 9 plex library, and runs a video-store-themed rental system where members can check out films until 9 pm on the fifth day and post reviews.
 
 built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 
@@ -11,7 +11,8 @@ built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 - `/suck` - film lookup with full availability info (theatrical + streaming, per-region)
 - `/roll` - random film pick with decade and runtime filters
 - `/rb9` + 9 stat commands - pick from the return by 9 library, plus stats (longest, shortest, oldest, decade breakdown, genres, etc.)
-- `/rent` - rent a random library film for 5 days, with up to 2 rerolls. past rentals excluded forever
+- `/rent` - rent a random library film, due by 9 pm on the fifth day, with up to 2 rerolls. past rentals excluded forever
+- `/timezone` - set your timezone so rentals are due at 9 pm where you are
 - `/return` - return your rental and post a review to a configurable forum channel, with late-fee tracking
 - `/extend` - one-time 24-hour rental extension, also available from reminder DMs
 - `/latefees` - leaderboard of accumulated late fees
@@ -69,6 +70,7 @@ TMDB_API_KEY=your_tmdb_v3_api_key
 GUILD_ID=your_discord_server_id
 PLEX_TOKEN=your_plex_token
 PLEX_LIBRARY=Movies
+BOT_TIMEZONE=America/Los_Angeles
 SUCKLINGBOT_DATA_DIR=C:\path\to\sucklingbot\data
 ```
 
@@ -79,6 +81,7 @@ SUCKLINGBOT_DATA_DIR=C:\path\to\sucklingbot\data
 | `GUILD_ID`               | yes      | server id; right-click your server then copy id |
 | `PLEX_TOKEN`             | no       | enables `/rb9`, `/rb9*` stats, and `/rent`    |
 | `PLEX_LIBRARY`           | no       | plex library name (default: `Movies`)         |
+| `BOT_TIMEZONE`           | no       | local timezone for rental due dates (default: `America/Los_Angeles`) |
 | `SUCKLINGBOT_DATA_DIR`   | no       | custom data folder; useful for worktree testing |
 | `SUCKLINGBOT_ASSETS_DIR` | no       | custom assets folder; defaults to project assets |
 
@@ -208,7 +211,7 @@ sucklingbot/
 - `tmdb.py` uses the cache transparently — pass `force=True` to bypass when fresh data is needed.
 - `tracker.py` uses `force=True` everywhere because it needs fresh data to detect changes.
 - `picker.py` maintains a separate 24-hour-cached candidate pool of ~1000 films (used by `/roll` and the daily recommendation).
-- `plex.py` uses `asyncio.to_thread` to wrap `plexapi`'s synchronous calls so they don't block the event loop. the library list is cached for 1 hour.
+- `plex.py` uses `asyncio.to_thread` to wrap `plexapi`'s synchronous calls so they don't block the event loop. the library snapshot is persisted in sqlite, refreshed incrementally hourly, and fully reconciled weekly.
 - `sixdegrees.py` maintains a separate 24-hour-cached pool of popular actors and uses tmdb cast data to validate chain submissions.
 - all persistent state lives in `data/moviebot.db`. loseable: in-memory caches, active rounds, active rental view state (in-progress `/rent` flows restart cleanly).
 - the error log captures exceptions from scheduled jobs and `on_message` handlers.

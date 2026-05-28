@@ -360,7 +360,8 @@ async def _confirm_rental(
     Called from RentPickView and EmbedRentView on acceptance.
     """
     now = datetime.now(timezone.utc)
-    due_at = rental_module.compute_due_at(now)
+    user_timezone = db.get_user_timezone(user_id)
+    due_at = rental_module.compute_due_at(now, user_timezone)
 
     active_count = _active_rental_count_for_user(user_id)
     if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:

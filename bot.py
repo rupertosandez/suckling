@@ -534,6 +534,26 @@ async def _scheduled_plex_cleanup():
     await cleanup_module.scheduled_cleanup(bot)
 
 
+async def _scheduled_plex_incremental_refresh():
+    if not config.PLEX_TOKEN:
+        return
+    try:
+        await plex.refresh_incremental_cache()
+    except Exception as e:
+        logger.log_exception("scheduled_plex_incremental_refresh", e)
+        print(f"[scheduler] Plex incremental refresh failed: {e}")
+
+
+async def _scheduled_plex_full_refresh():
+    if not config.PLEX_TOKEN:
+        return
+    try:
+        await plex.refresh_full_cache()
+    except Exception as e:
+        logger.log_exception("scheduled_plex_full_refresh", e)
+        print(f"[scheduler] Plex full refresh failed: {e}")
+
+
 @bot.event
 async def on_ready():
     global _bot_loop
@@ -569,12 +589,26 @@ async def on_ready():
             _scheduled_plex_cleanup, trigger="cron", day=1, hour=10, minute=0,
             id="plex_cleanup_check", replace_existing=True,
         )
+        scheduler.add_job(
+            _scheduled_plex_incremental_refresh, trigger="interval", hours=1,
+            id="plex_incremental_refresh", replace_existing=True,
+        )
+        scheduler.add_job(
+            _scheduled_plex_full_refresh,
+            trigger="cron",
+            day_of_week="sun",
+            hour=4,
+            minute=0,
+            id="plex_weekly_full_refresh", replace_existing=True,
+        )
         scheduler.start()
         print("[scheduler] Daily tracker check scheduled for 9:00 local time")
         print("[scheduler] Daily horror recommendation scheduled for 12:00 local time")
         print("[scheduler] Rental overdue/reminder check scheduled hourly")
         print("[scheduler] Letterboxd activity check scheduled hourly")
         print("[scheduler] Plex cleanup scheduled monthly on day 1 at 10:00 local time")
+        print("[scheduler] Plex incremental refresh scheduled hourly")
+        print("[scheduler] Plex full refresh scheduled Sundays at 4:00 local time")
 
     # Warm Plex in the background so the first /rb9 or /rent call does not pay
     # the full library scan cost. Errors are logged but never block startup.

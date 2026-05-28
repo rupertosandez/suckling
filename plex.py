@@ -14,12 +14,14 @@ import asyncio
 import random
 import time
 from collections import Counter
+from datetime import datetime
 from typing import Any
 
 from plexapi.exceptions import NotFound, Unauthorized
 from plexapi.myplex import MyPlexAccount
 
 import config
+import db
 
 
 CACHE_TTL_SECONDS = 3600
@@ -28,7 +30,7 @@ CONNECT_TIMEOUT_SECONDS = 15
 _account: MyPlexAccount | None = None
 _server: Any | None = None
 _library: Any | None = None
-_movies_cache: list[Any] | None = None
+_movies_cache: list[dict] | None = None
 _movie_dict_cache: list[dict] | None = None
 _title_index: dict[str, list[dict]] = {}
 _cache_age: float = 0
@@ -77,35 +79,99 @@ async def _connect() -> None:
     await asyncio.to_thread(_connect_sync)
 
 
-def _refresh_cache_sync() -> list[Any]:
+def _datetime_to_iso(value: Any) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def _parse_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _date_sort_key(value: str | None) -> datetime:
+    return _parse_datetime(value) or datetime.min
+
+
+def _refresh_cache_sync() -> list[dict]:
     if _library is None:
         raise PlexError("Not connected to Plex")
-    return list(_library.all())
+    return [_movie_to_dict(movie) for movie in _library.all()]
+
+
+def _refresh_incremental_cache_sync() -> list[dict]:
+    if _library is None:
+        raise PlexError("Not connected to Plex")
+
+    max_added_at, max_updated_at = db.get_plex_library_cache_watermarks()
+    changed: dict[str, dict] = {}
+
+    if max_added_at:
+        added_since = _parse_datetime(max_added_at) or max_added_at
+        for movie in _library.search(
+            filters={"addedAt>>": added_since},
+            sort="addedAt:asc",
+        ):
+            serialized = _movie_to_dict(movie)
+            changed[serialized["rating_key"]] = serialized
+
+    if max_updated_at:
+        updated_since = _parse_datetime(max_updated_at) or max_updated_at
+        for movie in _library.search(
+            filters={"updatedAt>>": updated_since},
+            sort="updatedAt:asc",
+        ):
+            serialized = _movie_to_dict(movie)
+            changed[serialized["rating_key"]] = serialized
+
+    if not max_added_at and not max_updated_at:
+        return _refresh_cache_sync()
+
+    return list(changed.values())
 
 
 def _absolute_url(relative: str | None) -> str | None:
     """Convert a relative Plex image path to a full URL with auth token."""
-    if not relative:
+    if not relative or _server is None:
         return None
-    server_url = _server._baseurl if _server else ""
-    return f"{server_url}{relative}?X-Plex-Token={config.PLEX_TOKEN}"
+    return f"{_server._baseurl}{relative}?X-Plex-Token={config.PLEX_TOKEN}"
 
 
 def _movie_to_dict(movie: Any) -> dict:
     """Serialize a Plex movie object into a plain dict."""
+    thumb_path = movie.thumb
+    art_path = movie.art
     return {
         "rating_key": str(movie.ratingKey),
         "title": movie.title,
         "year": movie.year,
         "summary": movie.summary or "",
-        "thumb_url": _absolute_url(movie.thumb),
-        "art_url": _absolute_url(movie.art),
+        "thumb_path": thumb_path,
+        "art_path": art_path,
+        "thumb_url": _absolute_url(thumb_path),
+        "art_url": _absolute_url(art_path),
         "duration_minutes": int(movie.duration / 60000) if movie.duration else None,
         "rating": movie.contentRating or None,
         "audience_rating": movie.audienceRating,
-        "added_at": movie.addedAt,
+        "added_at": _datetime_to_iso(movie.addedAt),
+        "updated_at": _datetime_to_iso(movie.updatedAt),
         "genres": [g.tag for g in (movie.genres or [])],
     }
+
+
+def _hydrate_cached_movie(movie: dict) -> dict:
+    hydrated = dict(movie)
+    hydrated["rating_key"] = str(hydrated["rating_key"])
+    hydrated["thumb_url"] = _absolute_url(hydrated.get("thumb_path"))
+    hydrated["art_url"] = _absolute_url(hydrated.get("art_path"))
+    return hydrated
 
 
 def _normalize_title(s: str) -> str:
@@ -121,7 +187,7 @@ def _rebuild_indexes() -> None:
     global _movie_dict_cache, _title_index
 
     movies = _movies_cache or []
-    _movie_dict_cache = [_movie_to_dict(m) for m in movies]
+    _movie_dict_cache = movies
 
     title_index: dict[str, list[dict]] = {}
     for movie in _movie_dict_cache:
@@ -131,8 +197,33 @@ def _rebuild_indexes() -> None:
     _title_index = title_index
 
 
-async def _get_movies() -> list[Any]:
-    """Get the movie list, refreshing the cache once per hour."""
+def _load_persistent_cache() -> list[dict]:
+    return [_hydrate_cached_movie(movie) for movie in db.get_plex_library_cache()]
+
+
+async def refresh_full_cache() -> list[dict]:
+    """Fully refresh the Plex cache and replace the persisted snapshot."""
+    global _movies_cache, _cache_age
+
+    async with _refresh_lock:
+        await _connect()
+        movies = await asyncio.to_thread(_refresh_cache_sync)
+        db.replace_plex_library_cache(movies)
+        _movies_cache = [_hydrate_cached_movie(movie) for movie in movies]
+        _cache_age = time.time()
+        _rebuild_indexes()
+        print(f"[plex] Full library cache refreshed: {len(movies)} movies")
+        return _movies_cache
+
+
+async def refresh_incremental_cache() -> list[dict]:
+    """Refresh only Plex items added or updated since the persisted snapshot."""
+    async with _refresh_lock:
+        return await _refresh_incremental_cache_unlocked()
+
+
+async def _get_movies() -> list[dict]:
+    """Get the movie list from memory, then the persisted snapshot, then Plex."""
     global _movies_cache, _cache_age
 
     now = time.time()
@@ -145,13 +236,51 @@ async def _get_movies() -> list[Any]:
         if _movies_cache is not None and (now - _cache_age) <= CACHE_TTL_SECONDS:
             return _movies_cache
 
+        movies = _load_persistent_cache()
+        if movies:
+            _movies_cache = movies
+            _cache_age = time.time()
+            _rebuild_indexes()
+            return movies
+
+    return await refresh_incremental_cache()
+
+
+async def refresh_incremental_cache_if_stale() -> list[dict]:
+    now = time.time()
+    if _movies_cache is not None and (now - _cache_age) <= CACHE_TTL_SECONDS:
+        return _movies_cache
+    return await refresh_incremental_cache()
+
+
+async def _refresh_incremental_cache_unlocked() -> list[dict]:
+    global _movies_cache, _cache_age
+
+    existing = _load_persistent_cache()
+    if not existing:
         await _connect()
         movies = await asyncio.to_thread(_refresh_cache_sync)
-        _movies_cache = movies
+        db.replace_plex_library_cache(movies)
+        _movies_cache = [_hydrate_cached_movie(movie) for movie in movies]
         _cache_age = time.time()
         _rebuild_indexes()
-        print(f"[plex] Library cache refreshed: {len(movies)} movies")
-        return movies
+        print(f"[plex] Full library cache refreshed: {len(movies)} movies")
+        return _movies_cache
+
+    await _connect()
+    changed = await asyncio.to_thread(_refresh_incremental_cache_sync)
+    if changed:
+        db.upsert_plex_library_cache(changed)
+
+    movies = _load_persistent_cache()
+    _movies_cache = movies
+    _cache_age = time.time()
+    _rebuild_indexes()
+    print(
+        "[plex] Incremental library cache refreshed: "
+        f"{len(changed)} changed, {len(movies)} cached"
+    )
+    return movies
 
 
 async def _get_movie_dicts() -> list[dict]:
@@ -163,7 +292,7 @@ async def warm_cache() -> None:
     """Refresh Plex in the background so the first /rb9 command is fast."""
     if not config.PLEX_TOKEN:
         return
-    await _get_movies()
+    await refresh_incremental_cache()
 
 
 # ---------- random pick (existing /rb9) ----------
@@ -224,25 +353,24 @@ async def check_availability(title: str | None, year: int | None = None) -> bool
 
 async def get_library_summary() -> dict:
     """Overall library stats: count, total runtime, oldest, newest, avg rating."""
-    raw_movies = await _get_movies()
     movies = await _get_movie_dicts()
-    if not raw_movies:
+    if not movies:
         return {"count": 0}
 
     total_minutes = sum(m.get("duration_minutes") or 0 for m in movies)
     years = [m["year"] for m in movies if m.get("year")]
     ratings = [m["audience_rating"] for m in movies if m.get("audience_rating") is not None]
 
-    oldest = min(raw_movies, key=lambda m: m.year if m.year else 9999)
-    newest_by_year = max(raw_movies, key=lambda m: m.year if m.year else 0)
-    newest_added = max(raw_movies, key=lambda m: m.addedAt if m.addedAt else 0)
+    oldest = min(movies, key=lambda m: m.get("year") or 9999)
+    newest_by_year = max(movies, key=lambda m: m.get("year") or 0)
+    newest_added = max(movies, key=lambda m: _date_sort_key(m.get("added_at")))
 
     return {
-        "count": len(raw_movies),
+        "count": len(movies),
         "total_minutes": total_minutes,
-        "oldest": _movie_to_dict(oldest),
-        "newest_by_year": _movie_to_dict(newest_by_year),
-        "newest_added": _movie_to_dict(newest_added),
+        "oldest": oldest,
+        "newest_by_year": newest_by_year,
+        "newest_added": newest_added,
         "avg_rating": sum(ratings) / len(ratings) if ratings else None,
         "rated_count": len(ratings),
         "min_year": min(years) if years else None,
@@ -274,7 +402,7 @@ async def get_newest_movie() -> dict | None:
     """Most recently added to the library."""
     movies = await _get_movie_dicts()
     candidates = [m for m in movies if m.get("added_at")]
-    return max(candidates, key=lambda m: m["added_at"]) if candidates else None
+    return max(candidates, key=lambda m: _date_sort_key(m.get("added_at"))) if candidates else None
 
 
 async def get_total_runtime() -> dict:

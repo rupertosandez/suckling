@@ -24,6 +24,7 @@ PLEX_LIBRARY = os.getenv("PLEX_LIBRARY", "Movies")  # default to "Movies"
 TAUTULLI_URL = (os.getenv("TAUTULLI_URL") or "").rstrip("/")
 TAUTULLI_API_KEY = os.getenv("TAUTULLI_API_KEY")
 PLEX_CLEANUP_ENABLED = os.getenv("PLEX_CLEANUP_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
+BOT_TIMEZONE = os.getenv("BOT_TIMEZONE", "America/Los_Angeles")
 
 if not DISCORD_TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set in .env")

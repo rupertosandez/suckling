@@ -1,5 +1,6 @@
 import re
 import sqlite3
+import json
 from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -139,6 +140,12 @@ def init_db() -> None:
                 user_id  TEXT PRIMARY KEY
             );
 
+            CREATE TABLE IF NOT EXISTS user_timezones (
+                user_id      TEXT PRIMARY KEY,
+                timezone     TEXT NOT NULL,
+                updated_at   TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS rentals (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id          TEXT NOT NULL,
@@ -163,6 +170,22 @@ def init_db() -> None:
                 overdue_notified INTEGER NOT NULL DEFAULT 0,
                 extensions_used  INTEGER NOT NULL DEFAULT 0
             );
+
+            CREATE TABLE IF NOT EXISTS plex_library_cache (
+                rating_key       TEXT PRIMARY KEY,
+                title            TEXT NOT NULL,
+                year             INTEGER,
+                summary          TEXT NOT NULL DEFAULT '',
+                thumb_path       TEXT,
+                art_path         TEXT,
+                duration_minutes INTEGER,
+                rating           TEXT,
+                audience_rating  REAL,
+                added_at         TEXT,
+                updated_at       TEXT,
+                genres_json      TEXT NOT NULL DEFAULT '[]',
+                cached_at        TEXT NOT NULL
+            );
         """)
         _ensure_column(
             conn,
@@ -185,6 +208,10 @@ def init_db() -> None:
                 ON watchlist (user_id, added_at DESC);
             CREATE INDEX IF NOT EXISTS idx_lb_activity_username
                 ON lb_activity_seen (lb_username, first_seen_at);
+            CREATE INDEX IF NOT EXISTS idx_plex_library_added
+                ON plex_library_cache (added_at);
+            CREATE INDEX IF NOT EXISTS idx_plex_library_updated
+                ON plex_library_cache (updated_at);
         """)
 
 
@@ -217,6 +244,152 @@ def set_setting(key: str, value: str) -> None:
             "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             (key, value),
         )
+
+
+# ---------- user preferences ----------
+
+def get_user_timezone(user_id: str) -> str | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT timezone FROM user_timezones WHERE user_id = ?",
+            (str(user_id),),
+        ).fetchone()
+        return row["timezone"] if row else None
+
+
+def set_user_timezone(user_id: str, timezone_name: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO user_timezones (user_id, timezone, updated_at) "
+            "VALUES (?, ?, ?) "
+            "ON CONFLICT(user_id) DO UPDATE SET "
+            "timezone = excluded.timezone, updated_at = excluded.updated_at",
+            (str(user_id), timezone_name, _utc_now_iso()),
+        )
+
+
+def clear_user_timezone(user_id: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "DELETE FROM user_timezones WHERE user_id = ?",
+            (str(user_id),),
+        )
+
+
+# ---------- Plex library cache ----------
+
+def get_plex_library_cache() -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT rating_key, title, year, summary, thumb_path, art_path,
+                   duration_minutes, rating, audience_rating, added_at,
+                   updated_at, genres_json
+            FROM plex_library_cache
+            ORDER BY title COLLATE NOCASE
+            """
+        ).fetchall()
+
+    movies = []
+    for row in rows:
+        movie = dict(row)
+        try:
+            movie["genres"] = json.loads(movie.pop("genres_json") or "[]")
+        except json.JSONDecodeError:
+            movie["genres"] = []
+        movies.append(movie)
+    return movies
+
+
+def upsert_plex_library_cache(movies: Iterable[dict]) -> int:
+    return _upsert_plex_library_cache_rows(_plex_library_cache_rows(movies))
+
+
+def replace_plex_library_cache(movies: Iterable[dict]) -> int:
+    rows = _plex_library_cache_rows(movies)
+    with _connect() as conn:
+        conn.execute("DELETE FROM plex_library_cache")
+        _upsert_plex_library_cache_rows(rows, conn=conn)
+    return len(rows)
+
+
+def _plex_library_cache_rows(movies: Iterable[dict]) -> list[tuple]:
+    cached_at = _utc_now_iso()
+    return [
+        (
+            str(movie["rating_key"]),
+            movie.get("title") or "Unknown",
+            movie.get("year"),
+            movie.get("summary") or "",
+            movie.get("thumb_path"),
+            movie.get("art_path"),
+            movie.get("duration_minutes"),
+            movie.get("rating"),
+            movie.get("audience_rating"),
+            movie.get("added_at"),
+            movie.get("updated_at"),
+            json.dumps(movie.get("genres") or []),
+            cached_at,
+        )
+        for movie in movies
+        if movie.get("rating_key")
+    ]
+
+
+def _upsert_plex_library_cache_rows(
+    rows: list[tuple],
+    *,
+    conn: sqlite3.Connection | None = None,
+) -> int:
+    if not rows:
+        return 0
+
+    def _write(target_conn: sqlite3.Connection) -> None:
+        target_conn.executemany(
+            """
+            INSERT INTO plex_library_cache (
+                rating_key, title, year, summary, thumb_path, art_path,
+                duration_minutes, rating, audience_rating, added_at, updated_at,
+                genres_json, cached_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(rating_key) DO UPDATE SET
+                title = excluded.title,
+                year = excluded.year,
+                summary = excluded.summary,
+                thumb_path = excluded.thumb_path,
+                art_path = excluded.art_path,
+                duration_minutes = excluded.duration_minutes,
+                rating = excluded.rating,
+                audience_rating = excluded.audience_rating,
+                added_at = excluded.added_at,
+                updated_at = excluded.updated_at,
+                genres_json = excluded.genres_json,
+                cached_at = excluded.cached_at
+            """,
+            rows,
+        )
+
+    if conn is not None:
+        _write(conn)
+    else:
+        with _connect() as new_conn:
+            _write(new_conn)
+    return len(rows)
+
+
+def get_plex_library_cache_watermarks() -> tuple[str | None, str | None]:
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT MAX(added_at) AS max_added_at,
+                   MAX(updated_at) AS max_updated_at
+            FROM plex_library_cache
+            """
+        ).fetchone()
+    if not row:
+        return None, None
+    return row["max_added_at"], row["max_updated_at"]
 
 
 def get_announcement_channel_id() -> int | None:

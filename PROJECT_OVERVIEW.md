@@ -37,7 +37,8 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - **Stats commands:** `/rb9stats`, `/rb9biggest`, `/rb9shortest`, `/rb9oldest`, `/rb9newest`, `/rb9decade`, `/rb9genre`, `/rb9totalruntime`
 
 ### Video Store Rental System
-- **`/rent`** - Rent a random film (5-day window, 2 re-rolls, permanent exclusion of past rentals)
+- **`/rent`** - Rent a random film (due by 9 pm on the fifth day, 2 re-rolls, permanent exclusion of past rentals)
+- **`/timezone [timezone_name] [clear]`** - Set personal rental timezone for 9 pm due dates
 - **`/return <rating> <recommend> [thoughts]`** - Return rental + post review to forum + roll a MacGuffin drop
 - **`/extend`** - Extend active rental by 24 hours (once per rental)
 - **`/myrental`** - Current rental status with live countdown
@@ -129,7 +130,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 
 **Caching layers:**
 - TMDB: in-memory TTL cache, global semaphore (8 concurrent requests), request deduping
-- Plex: 1-hour library cache with refresh lock (prevents duplicate scans)
+- Plex: persisted SQLite library snapshot, hourly incremental refresh, weekly full reconcile, refresh lock
 - Picker: 24-hour candidate pool of ~1000 films
 - Six Degrees: 24-hour actor pool
 
@@ -149,7 +150,9 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `lb_accounts` | Discord user to Letterboxd username links |
 | `lb_activity_seen` | Letterboxd diary entries already seeded or posted |
 | `watchlist` | Per-user personal film queues |
+| `user_timezones` | Per-user rental timezone preferences |
 | `rentals` | Full rental lifecycle (status, plex key, thread IDs, rating, late fee, notifications) |
+| `plex_library_cache` | Persisted Plex library snapshot for fast RB9 reads |
 | `macguffins` | Globally unique MacGuffin ownership records |
 | `macguffin_free_claims` | One-time free claim tracking per user |
 
@@ -273,6 +276,7 @@ TMDB_API_KEY=your_tmdb_v3_api_key
 GUILD_ID=your_discord_server_id
 PLEX_TOKEN=your_plex_token              # Optional; enables /rb9, /rent
 PLEX_LIBRARY=Movies                      # Optional; default "Movies"
+BOT_TIMEZONE=America/Los_Angeles         # Optional; local timezone for rental due dates
 SUCKLINGBOT_DATA_DIR=C:\path\to\sucklingbot\data  # Optional; custom data folder
 SUCKLINGBOT_ASSETS_DIR=C:\path\to\sucklingbot\assets  # Optional; custom assets folder
 ```
@@ -352,7 +356,7 @@ Site is for community members (casual tone, user-facing copy) not maintainers (n
 
 **TMDB caching:** Global semaphore of 8 concurrent requests prevents rate-limiting. Request deduping means simultaneous calls for the same movie share one network round-trip.
 
-**Plex library:** Cached 1h, refresh lock prevents duplicate scans. Precomputed title index (O(1) lookup instead of O(n) scan). Cold cache warms at startup via `plex.warm_cache()`.
+**Plex library:** Persisted SQLite snapshot backs fast startup and command reads. Hourly refreshes only fetch titles added or updated since the last snapshot; a weekly full reconcile catches deletes. Refresh lock prevents duplicate scans. Precomputed title index keeps title lookup O(1).
 
 **Tracker:** Fetches provider lookups in batches of 8 concurrently, DB ops still serialized per movie. No sleeps between movies — global TMDB semaphore provides backpressure.
 

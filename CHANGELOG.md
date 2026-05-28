@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.4.6] - 2026-05-28
+
+### Added
+
+- `/timezone` lets members set their personal rental timezone so rentals are due at 9 PM where they are.
+
 ### Changed
+
+- Rentals are now due at 9 PM on the fifth calendar day instead of exactly 120 hours after checkout.
+- Plex library data now persists in SQLite, refreshes incrementally each hour, and does a full weekly reconcile to catch removals.
+- `/rb9`, rentals, and Plex availability checks can use the persisted library snapshot immediately after restart.
 
 - `/lb group` now formats each member's recent watches as its own readable block instead of one dense paragraph.
 - Letterboxd activity posts now show the Discord user linked to the account instead of falling back to the Letterboxd username.

@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
+from zoneinfo import available_timezones
 
 import discord
 from discord import app_commands
@@ -12,6 +13,41 @@ import macguffin as macguffin_module
 import plex
 import rental as rental_module
 import views
+
+
+COMMON_TIMEZONES = (
+    "America/Los_Angeles",
+    "America/Denver",
+    "America/Chicago",
+    "America/New_York",
+    "America/Phoenix",
+    "America/Anchorage",
+    "Pacific/Honolulu",
+    "America/Toronto",
+    "Europe/London",
+    "Europe/Paris",
+    "Europe/Berlin",
+    "UTC",
+)
+ALL_TIMEZONES = tuple(sorted(available_timezones()))
+
+
+async def _timezone_autocomplete(
+    interaction: discord.Interaction,
+    current: str,
+) -> list[app_commands.Choice[str]]:
+    current = (current or "").strip().lower()
+    if current:
+        matches = [
+            tz for tz in ALL_TIMEZONES
+            if current in tz.lower()
+        ]
+    else:
+        matches = list(COMMON_TIMEZONES)
+    return [
+        app_commands.Choice(name=tz, value=tz)
+        for tz in matches[:25]
+    ]
 
 
 def _format_active_rental_options(rentals: list[dict]) -> str:
@@ -118,11 +154,66 @@ class RentalsCog(commands.Cog):
             "📼 **choose your rental path**\n\n"
             f"you currently have **{active_count}/"
             f"{rental_module.MAX_ACTIVE_RENTALS_PER_USER}** rentals active. "
-            "once a rental is confirmed, the 5-day clock starts immediately.\n\n"
+            "once a rental is confirmed, it's due by 9 pm on the fifth day.\n\n"
             "**roll random** gives you up to 2 rerolls and boosted macguffin odds "
             "when you return it. **pick a movie** lets you choose from rb9. "
             "**ask an admin** posts a recommendation request.",
             view=warning_view,
+            ephemeral=True,
+        )
+
+    @app_commands.command(
+        name="timezone",
+        description="set your timezone for rental due dates",
+    )
+    @app_commands.describe(
+        timezone_name="IANA timezone, like America/Los_Angeles or Europe/London",
+        clear="clear your saved timezone and use the server default",
+    )
+    @app_commands.autocomplete(timezone_name=_timezone_autocomplete)
+    async def timezone(
+        self,
+        interaction: discord.Interaction,
+        timezone_name: str | None = None,
+        clear: bool = False,
+    ):
+        user_id = str(interaction.user.id)
+        if clear:
+            db.clear_user_timezone(user_id)
+            await interaction.response.send_message(
+                "cleared your rental timezone. i'll use the server default for future rentals.",
+                ephemeral=True,
+            )
+            return
+
+        if timezone_name is None:
+            saved = db.get_user_timezone(user_id)
+            if saved:
+                await interaction.response.send_message(
+                    f"your rental timezone is **{saved}**.",
+                    ephemeral=True,
+                )
+            else:
+                await interaction.response.send_message(
+                    "you don't have a rental timezone set yet. "
+                    f"future rentals use the server default: **{rental_module.default_timezone_name()}**.",
+                    ephemeral=True,
+                )
+            return
+
+        normalized = rental_module.validate_timezone(timezone_name)
+        if normalized is None:
+            await interaction.response.send_message(
+                "i don't recognize that timezone. try one like "
+                "`America/Los_Angeles`, `America/New_York`, or `Europe/London`.",
+                ephemeral=True,
+            )
+            return
+
+        db.set_user_timezone(user_id, normalized)
+        await interaction.response.send_message(
+            f"set your rental timezone to **{normalized}**. "
+            "future rentals will be due at 9 pm in that timezone on the fifth day.",
             ephemeral=True,
         )
 
@@ -453,7 +544,8 @@ class RentalsCog(commands.Cog):
             return
 
         now = datetime.now(timezone.utc)
-        due_at = rental_module.compute_due_at(now)
+        user_timezone = db.get_user_timezone(str(user.id))
+        due_at = rental_module.compute_due_at(now, user_timezone)
         rental_id = db.create_rental(
             user_id=str(user.id),
             user_name=str(user),

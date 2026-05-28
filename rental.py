@@ -5,16 +5,19 @@ Handles forum thread creation/editing, late fee calculation, overdue
 notifications, and 12-hour reminder DMs. All Discord API calls take
 the bot client as a parameter — this module never imports bot.py.
 """
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, time, timezone, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import discord
 
+import config
 import db
 import embeds
 import logger
 
 
-RENTAL_DURATION_HOURS = 5 * 24
+RENTAL_DURATION_DAYS = 5
+RENTAL_DUE_HOUR_LOCAL = 21
 RENTAL_EXTENSION_HOURS = 24
 MAX_ACTIVE_RENTALS_PER_USER = 3
 MAX_RENTAL_EXTENSIONS = 1
@@ -23,8 +26,50 @@ LATE_FEE_PER_DAY = 1.0  # dollars
 
 # ---------- core helpers ----------
 
-def compute_due_at(rented_at: datetime) -> datetime:
-    return rented_at + timedelta(hours=RENTAL_DURATION_HOURS)
+def validate_timezone(timezone_name: str) -> str | None:
+    timezone_name = (timezone_name or "").strip()
+    if not timezone_name:
+        return None
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        return None
+    return timezone_name
+
+
+def _rental_timezone(timezone_name: str | None = None) -> ZoneInfo:
+    if timezone_name:
+        try:
+            return ZoneInfo(timezone_name)
+        except ZoneInfoNotFoundError:
+            pass
+    try:
+        return ZoneInfo(config.BOT_TIMEZONE)
+    except ZoneInfoNotFoundError:
+        return ZoneInfo("America/Los_Angeles")
+
+
+def default_timezone_name() -> str:
+    return _rental_timezone().key
+
+
+def compute_due_at(rented_at: datetime, timezone_name: str | None = None) -> datetime:
+    if rented_at.tzinfo is None:
+        rented_at = rented_at.replace(tzinfo=timezone.utc)
+
+    local_tz = _rental_timezone(timezone_name)
+    rented_local = rented_at.astimezone(local_tz)
+    due_local_date = rented_local.date() + timedelta(days=RENTAL_DURATION_DAYS)
+    due_local = datetime.combine(
+        due_local_date,
+        time(hour=RENTAL_DUE_HOUR_LOCAL),
+        tzinfo=local_tz,
+    )
+    return due_local.astimezone(timezone.utc)
+
+
+def rental_window_label() -> str:
+    return f"{RENTAL_DURATION_DAYS} days, due by 9 pm"
 
 
 def compute_late_fee(due_at_iso: str, returned_at_iso: str) -> float:
