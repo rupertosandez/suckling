@@ -386,7 +386,7 @@ class AdminCog(commands.Cog):
     @app_commands.default_permissions(manage_guild=True)
     async def restart_command(self, interaction: discord.Interaction):
         await interaction.response.send_message(
-            "Restarting sucklingbot...",
+            "restart initiated.",
             ephemeral=True,
         )
         asyncio.create_task(self.restart_process())

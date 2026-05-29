@@ -331,8 +331,12 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
 ACHIEVEMENT_BY_ID = {achievement.id: achievement for achievement in ACHIEVEMENTS}
 
 
+def _title_case_name(name: str) -> str:
+    return " ".join(word if word.isupper() else word.capitalize() for word in name.split(" "))
+
+
 def visible_name(achievement: Achievement) -> str:
-    return f"{achievement.emoji} {achievement.name.title()}"
+    return f"{achievement.emoji} {_title_case_name(achievement.name)}"
 
 
 def display_name(achievement: Achievement) -> str:
