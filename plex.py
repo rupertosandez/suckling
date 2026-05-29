@@ -87,6 +87,15 @@ def _datetime_to_iso(value: Any) -> str | None:
     return str(value)
 
 
+def _plex_timestamp_to_iso(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromtimestamp(int(value)).isoformat()
+    except (TypeError, ValueError, OSError):
+        return value
+
+
 def _parse_datetime(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -103,7 +112,26 @@ def _date_sort_key(value: str | None) -> datetime:
 def _refresh_cache_sync() -> list[dict]:
     if _library is None:
         raise PlexError("Not connected to Plex")
-    return [_movie_to_dict(movie) for movie in _library.all()]
+
+    movies: list[dict] = []
+    offset = 0
+    page_size = 500
+    total_size = None
+    while total_size is None or offset < total_size:
+        root = _server.query(
+            f"/library/sections/{_library.key}/all"
+            f"?type=1&includeCollections=1"
+            f"&X-Plex-Container-Start={offset}"
+            f"&X-Plex-Container-Size={page_size}"
+        )
+        if total_size is None:
+            total_size = int(root.attrib.get("totalSize") or 0)
+        videos = root.findall("Video")
+        if not videos:
+            break
+        movies.extend(_movie_element_to_dict(video) for video in videos)
+        offset += len(videos)
+    return movies
 
 
 def _refresh_incremental_cache_sync() -> list[dict]:
@@ -144,10 +172,48 @@ def _absolute_url(relative: str | None) -> str | None:
     return f"{_server._baseurl}{relative}?X-Plex-Token={config.PLEX_TOKEN}"
 
 
+def _tag_values(video: Any, tag: str) -> list[str]:
+    return [
+        child.attrib["tag"]
+        for child in video.findall(tag)
+        if child.attrib.get("tag")
+    ]
+
+
+def _movie_element_to_dict(video: Any) -> dict:
+    duration = video.attrib.get("duration")
+    audience_rating = video.attrib.get("audienceRating")
+    year = video.attrib.get("year")
+    thumb_path = video.attrib.get("thumb")
+    art_path = video.attrib.get("art")
+    return {
+        "rating_key": str(video.attrib.get("ratingKey")),
+        "title": video.attrib.get("title") or "Unknown",
+        "year": int(year) if year and year.isdigit() else None,
+        "summary": video.attrib.get("summary") or "",
+        "thumb_path": thumb_path,
+        "art_path": art_path,
+        "thumb_url": _absolute_url(thumb_path),
+        "art_url": _absolute_url(art_path),
+        "duration_minutes": int(int(duration) / 60000) if duration else None,
+        "rating": video.attrib.get("contentRating") or None,
+        "audience_rating": float(audience_rating) if audience_rating else None,
+        "added_at": _plex_timestamp_to_iso(video.attrib.get("addedAt")),
+        "updated_at": _plex_timestamp_to_iso(video.attrib.get("updatedAt")),
+        "genres": _tag_values(video, "Genre"),
+        "directors": _tag_values(video, "Director"),
+        "writers": _tag_values(video, "Writer"),
+        "actors": _tag_values(video, "Role"),
+        "countries": _tag_values(video, "Country"),
+        "collections": _tag_values(video, "Collection"),
+    }
+
+
 def _movie_to_dict(movie: Any) -> dict:
     """Serialize a Plex movie object into a plain dict."""
     thumb_path = movie.thumb
     art_path = movie.art
+    tag_values = lambda values: [item.tag for item in (values or []) if getattr(item, "tag", None)]
     return {
         "rating_key": str(movie.ratingKey),
         "title": movie.title,
@@ -163,6 +229,11 @@ def _movie_to_dict(movie: Any) -> dict:
         "added_at": _datetime_to_iso(movie.addedAt),
         "updated_at": _datetime_to_iso(movie.updatedAt),
         "genres": [g.tag for g in (movie.genres or [])],
+        "directors": tag_values(getattr(movie, "directors", [])),
+        "writers": tag_values(getattr(movie, "writers", [])),
+        "actors": tag_values(getattr(movie, "roles", [])) or tag_values(getattr(movie, "actors", [])),
+        "countries": tag_values(getattr(movie, "countries", [])),
+        "collections": tag_values(getattr(movie, "collections", [])),
     }
 
 
@@ -199,6 +270,16 @@ def _rebuild_indexes() -> None:
 
 def _load_persistent_cache() -> list[dict]:
     return [_hydrate_cached_movie(movie) for movie in db.get_plex_library_cache()]
+
+
+def _needs_metadata_backfill(movies: list[dict]) -> bool:
+    return bool(movies) and not any(
+        movie.get("directors")
+        or movie.get("actors")
+        or movie.get("countries")
+        or movie.get("collections")
+        for movie in movies
+    )
 
 
 async def refresh_full_cache() -> list[dict]:
@@ -257,7 +338,7 @@ async def _refresh_incremental_cache_unlocked() -> list[dict]:
     global _movies_cache, _cache_age
 
     existing = _load_persistent_cache()
-    if not existing:
+    if not existing or _needs_metadata_backfill(existing):
         await _connect()
         movies = await asyncio.to_thread(_refresh_cache_sync)
         db.replace_plex_library_cache(movies)

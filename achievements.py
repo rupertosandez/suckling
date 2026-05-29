@@ -42,6 +42,73 @@ def _returned_count(user_id: str) -> int:
     return len(_returned_rentals(user_id))
 
 
+def _returned_plex_movies(user_id: str) -> list[dict]:
+    movies_by_key = {
+        str(movie["rating_key"]): movie
+        for movie in db.get_plex_library_cache()
+    }
+    movies = []
+    for rental in _returned_rentals(user_id):
+        movie = movies_by_key.get(str(rental.get("plex_key")))
+        if movie:
+            movies.append(movie)
+    return movies
+
+
+def _normalize_text(value: str) -> str:
+    return " ".join((value or "").casefold().split())
+
+
+def _has_tag(movie: dict, field: str, target: str) -> bool:
+    target = _normalize_text(target)
+    return any(_normalize_text(value) == target for value in movie.get(field, []))
+
+
+def _metadata_count(field: str, target: str) -> Callable[[str], int]:
+    return lambda user_id: sum(
+        1 for movie in _returned_plex_movies(user_id)
+        if _has_tag(movie, field, target)
+    )
+
+
+def _title_word_count(word: str) -> Callable[[str], int]:
+    needle = _normalize_text(word)
+
+    def count(user_id: str) -> int:
+        total = 0
+        for movie in _returned_plex_movies(user_id):
+            words = [
+                "".join(ch for ch in part if ch.isalnum()).casefold()
+                for part in (movie.get("title") or "").split()
+            ]
+            if needle in words:
+                total += 1
+        return total
+
+    return count
+
+
+def _title_contains_any_count(needles: tuple[str, ...]) -> Callable[[str], int]:
+    normalized = tuple(_normalize_text(needle) for needle in needles)
+
+    def count(user_id: str) -> int:
+        total = 0
+        for movie in _returned_plex_movies(user_id):
+            title = _normalize_text(movie.get("title") or "")
+            if any(needle in title for needle in normalized):
+                total += 1
+        return total
+
+    return count
+
+
+def _long_runtime_count(user_id: str) -> int:
+    return sum(
+        1 for movie in _returned_plex_movies(user_id)
+        if (movie.get("duration_minutes") or 0) >= 180
+    )
+
+
 def _parse_dt(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -293,6 +360,24 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("silent-era-adjacent", "silent era adjacent", "returned a rental from 1929 or earlier.", "return a rental from 1929 or earlier.", "rentals", 1, _silent_era_adjacent_count, "🪦"),
     Achievement("fresh-blood", "fresh blood", "returned a rental from the current decade.", "return something from the current decade.", "rentals", 1, _current_decade_count, "🩸"),
     Achievement("modern-problems", "modern problems", "returned 5 rentals from 2020 or later.", "return 5 rentals from 2020 or later.", "rentals", 5, _modern_return_count, "🧪"),
+    Achievement("deadite", "deadite", "returned 3 Sam Raimi rentals.", "return 3 Sam Raimi movies from rb9.", "rb9 library", 3, _metadata_count("directors", "Sam Raimi"), "📕"),
+    Achievement("videodrome", "videodrome", "returned 3 David Cronenberg rentals.", "return 3 David Cronenberg movies from rb9.", "rb9 library", 3, _metadata_count("directors", "David Cronenberg"), "📺"),
+    Achievement("obey", "obey", "returned 3 John Carpenter rentals.", "return 3 John Carpenter movies from rb9.", "rb9 library", 3, _metadata_count("directors", "John Carpenter"), "🕶️"),
+    Achievement("eraserhead", "eraserhead", "returned 3 David Lynch rentals.", "return 3 David Lynch movies from rb9.", "rb9 library", 3, _metadata_count("directors", "David Lynch"), "🧠"),
+    Achievement("vengeance", "vengeance", "returned 3 Park Chan-wook rentals.", "return 3 Park Chan-wook movies from rb9.", "rb9 library", 3, _metadata_count("directors", "Park Chan-wook"), "🔨"),
+    Achievement("sicario", "sicario", "returned 4 Denis Villeneuve rentals.", "return 4 Denis Villeneuve movies from rb9.", "rb9 library", 4, _metadata_count("directors", "Denis Villeneuve"), "🎯"),
+    Achievement("cage", "cage", "returned 5 Nicolas Cage rentals.", "return 5 Nicolas Cage movies from rb9.", "rb9 library", 5, _metadata_count("actors", "Nicolas Cage"), "🐝"),
+    Achievement("whoa", "whoa", "returned 5 Keanu Reeves rentals.", "return 5 Keanu Reeves movies from rb9.", "rb9 library", 5, _metadata_count("actors", "Keanu Reeves"), "💊"),
+    Achievement("kaiju", "kaiju", "returned 3 Godzilla or Kong rentals.", "return 3 Godzilla or Kong movies from rb9.", "rb9 library", 3, _title_contains_any_count(("godzilla", "kong")), "🦖"),
+    Achievement("precious", "precious", "returned 3 Lord of the Rings rentals.", "return the Lord of the Rings trilogy from rb9.", "rb9 library", 3, _title_contains_any_count(("the lord of the rings",)), "💍"),
+    Achievement("matrix", "matrix", "returned 3 Matrix rentals.", "return 3 Matrix movies from rb9.", "rb9 library", 3, _title_contains_any_count(("matrix",)), "🕶️"),
+    Achievement("baba", "baba", "returned 3 John Wick rentals.", "return 3 John Wick movies from rb9.", "rb9 library", 3, _title_contains_any_count(("john wick",)), "✏️"),
+    Achievement("xenomorph", "xenomorph", "returned 3 Alien or Predator rentals.", "return 3 Alien or Predator movies from rb9.", "rb9 library", 3, _title_contains_any_count(("alien", "predator", "prey")), "👽"),
+    Achievement("replicant", "replicant", "returned 5 science fiction rentals.", "return 5 science fiction movies from rb9.", "rb9 library", 5, _metadata_count("genres", "Science Fiction"), "🦉"),
+    Achievement("finalgirl", "finalgirl", "returned 10 horror rentals.", "return 10 horror movies from rb9.", "rb9 library", 10, _metadata_count("genres", "Horror"), "🔪"),
+    Achievement("night", "night", "returned 5 rentals with night in the title.", "return 5 rb9 movies with night in the title.", "rb9 library", 5, _title_word_count("night"), "🌙"),
+    Achievement("evil", "evil", "returned 3 rentals with evil in the title.", "return 3 rb9 movies with evil in the title.", "rb9 library", 3, _title_word_count("evil"), "😈"),
+    Achievement("intermission", "intermission", "returned 3 rentals over 3 hours.", "return 3 rb9 movies that run at least 3 hours.", "rb9 library", 3, _long_runtime_count, "⏸️"),
     Achievement("two-thumbs-up", "two thumbs up", "recommended 10 returned rentals.", "recommend 10 rentals when returning them.", "reviews", 10, _recommended_count, "👍"),
     Achievement("easy-recommend", "easy recommend", "recommended 25 returned rentals.", "recommend 25 rentals when returning them.", "reviews", 25, _recommended_count, "❤️"),
     Achievement("not-for-me", "not for me", "marked 5 rentals as not recommended.", "mark 5 rentals as not recommended.", "reviews", 5, _not_recommended_count, "🚫"),

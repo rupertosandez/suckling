@@ -185,6 +185,11 @@ def init_db() -> None:
                 added_at         TEXT,
                 updated_at       TEXT,
                 genres_json      TEXT NOT NULL DEFAULT '[]',
+                directors_json   TEXT NOT NULL DEFAULT '[]',
+                writers_json     TEXT NOT NULL DEFAULT '[]',
+                actors_json      TEXT NOT NULL DEFAULT '[]',
+                countries_json   TEXT NOT NULL DEFAULT '[]',
+                collections_json TEXT NOT NULL DEFAULT '[]',
                 cached_at        TEXT NOT NULL
             );
 
@@ -234,6 +239,19 @@ def init_db() -> None:
             "extensions_used",
             "INTEGER NOT NULL DEFAULT 0",
         )
+        for column in (
+            "directors_json",
+            "writers_json",
+            "actors_json",
+            "countries_json",
+            "collections_json",
+        ):
+            _ensure_column(
+                conn,
+                "plex_library_cache",
+                column,
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
         conn.executescript("""
             CREATE INDEX IF NOT EXISTS idx_rentals_user_status
                 ON rentals (user_id, status);
@@ -323,7 +341,8 @@ def get_plex_library_cache() -> list[dict]:
             """
             SELECT rating_key, title, year, summary, thumb_path, art_path,
                    duration_minutes, rating, audience_rating, added_at,
-                   updated_at, genres_json
+                   updated_at, genres_json, directors_json, writers_json,
+                   actors_json, countries_json, collections_json
             FROM plex_library_cache
             ORDER BY title COLLATE NOCASE
             """
@@ -332,10 +351,11 @@ def get_plex_library_cache() -> list[dict]:
     movies = []
     for row in rows:
         movie = dict(row)
-        try:
-            movie["genres"] = json.loads(movie.pop("genres_json") or "[]")
-        except json.JSONDecodeError:
-            movie["genres"] = []
+        for key in ("genres", "directors", "writers", "actors", "countries", "collections"):
+            try:
+                movie[key] = json.loads(movie.pop(f"{key}_json") or "[]")
+            except json.JSONDecodeError:
+                movie[key] = []
         movies.append(movie)
     return movies
 
@@ -368,6 +388,11 @@ def _plex_library_cache_rows(movies: Iterable[dict]) -> list[tuple]:
             movie.get("added_at"),
             movie.get("updated_at"),
             json.dumps(movie.get("genres") or []),
+            json.dumps(movie.get("directors") or []),
+            json.dumps(movie.get("writers") or []),
+            json.dumps(movie.get("actors") or []),
+            json.dumps(movie.get("countries") or []),
+            json.dumps(movie.get("collections") or []),
             cached_at,
         )
         for movie in movies
@@ -389,9 +414,10 @@ def _upsert_plex_library_cache_rows(
             INSERT INTO plex_library_cache (
                 rating_key, title, year, summary, thumb_path, art_path,
                 duration_minutes, rating, audience_rating, added_at, updated_at,
-                genres_json, cached_at
+                genres_json, directors_json, writers_json, actors_json,
+                countries_json, collections_json, cached_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(rating_key) DO UPDATE SET
                 title = excluded.title,
                 year = excluded.year,
@@ -404,6 +430,11 @@ def _upsert_plex_library_cache_rows(
                 added_at = excluded.added_at,
                 updated_at = excluded.updated_at,
                 genres_json = excluded.genres_json,
+                directors_json = excluded.directors_json,
+                writers_json = excluded.writers_json,
+                actors_json = excluded.actors_json,
+                countries_json = excluded.countries_json,
+                collections_json = excluded.collections_json,
                 cached_at = excluded.cached_at
             """,
             rows,

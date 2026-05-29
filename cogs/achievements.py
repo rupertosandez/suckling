@@ -197,7 +197,7 @@ def _achievement_catalog_embeds() -> list[discord.Embed]:
             )
         return embed
 
-    category_order = ("rentals", "reviews", "macguffins", "games", "discovery", "letterboxd")
+    category_order = ("rentals", "rb9 library", "reviews", "macguffins", "games", "discovery", "letterboxd")
     embeds = []
     for category in category_order:
         achievements = by_category.get(category)
