@@ -10,6 +10,7 @@ import discord
 import tmdb
 import db
 import embeds
+import achievements as achievement_module
 
 
 HORROR_GENRE_ID = 27
@@ -202,6 +203,43 @@ async def _post_announcement(
         return False
 
 
+async def _award_stream_prophet(
+    bot: discord.Client,
+    tracker_user_id: str | None,
+    movie_id: int,
+) -> None:
+    if not tracker_user_id:
+        return
+
+    user = None
+    try:
+        user = await bot.fetch_user(int(tracker_user_id))
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException, ValueError):
+        pass
+
+    user_tag = str(user) if user else tracker_user_id
+    achievement_module.record_event(
+        tracker_user_id,
+        user_tag,
+        "stream_prophet",
+        str(movie_id),
+    )
+    if user:
+        await achievement_module.award_for_user(
+            bot,
+            user,
+            source_type="stream_prophet",
+            source_id=str(movie_id),
+        )
+    else:
+        achievement_module.evaluate_user(
+            tracker_user_id,
+            user_tag,
+            source_type="stream_prophet",
+            source_id=str(movie_id),
+        )
+
+
 async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> CheckResult:
     """
     Main polling routine.
@@ -331,6 +369,7 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
         if ok:
             result.posted_count += 1
             db.record_announced_movie(movie_id, title)
+            await _award_stream_prophet(bot, tracker_user_id, movie_id)
         await asyncio.sleep(1)
     print(f"[tracker] Posted {result.posted_count}/{len(result.announcements)} announcements.")
 

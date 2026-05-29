@@ -51,13 +51,12 @@ async def _watchlist_add_from_tmdb_id(
 
     year_str = f" ({year})" if year else ""
     if added:
-        unlocked = achievement_module.evaluate_user(
-            str(interaction.user.id),
-            str(interaction.user),
+        await achievement_module.award_for_user(
+            interaction.client,
+            interaction.user,
             source_type="watchlist_add",
             source_id=str(tmdb_id),
         )
-        await achievement_module.post_unlocks(interaction.client, interaction.user, unlocked)
         await interaction.followup.send(
             f"📋 added **{title}{year_str}** to your watchlist.",
             ephemeral=True,
@@ -267,6 +266,13 @@ class TrackSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction):
+        if self.added_by_id and str(interaction.user.id) != self.added_by_id:
+            await interaction.response.send_message(
+                "only the member who ran `/track` can pick this movie.",
+                ephemeral=True,
+            )
+            return
+
         movie_id = int(self.values[0])
         chosen = self._candidates_by_id.get(self.values[0], {})
         movie_title = chosen.get("title", "Unknown")
@@ -288,13 +294,12 @@ class TrackSelect(discord.ui.Select):
         await interaction.response.defer()
         msg = await _build_track_response(movie_id, movie_title, movie_year)
         if self.added_by_id:
-            unlocked = achievement_module.evaluate_user(
-                self.added_by_id,
-                self.added_by,
+            await achievement_module.award_for_user(
+                interaction.client,
+                interaction.user,
                 source_type="track",
                 source_id=str(movie_id),
             )
-            await achievement_module.post_unlocks(interaction.client, interaction.user, unlocked)
         await interaction.edit_original_response(content=msg, view=None)
 
 
@@ -1382,13 +1387,12 @@ class LBWatchlistView(discord.ui.View):
         if skipped:
             parts.append(f"{skipped} already on your watchlist and skipped.")
         if added:
-            unlocked = achievement_module.evaluate_user(
-                user_id,
-                str(interaction.user),
+            await achievement_module.award_for_user(
+                interaction.client,
+                interaction.user,
                 source_type="watchlist_import",
                 source_id=self.lb_username,
             )
-            await achievement_module.post_unlocks(interaction.client, interaction.user, unlocked)
         await interaction.followup.send(" ".join(parts), ephemeral=True)
 
     async def on_timeout(self):
@@ -1423,7 +1427,20 @@ class _RemoveSelect(discord.ui.Select):
         if not await _defer_component(interaction):
             return
         entry_id = int(self.values[0])
-        db.watchlist_remove_by_id(entry_id, self.watchlist_view.user_id)
+        removed = db.watchlist_remove_by_id(entry_id, self.watchlist_view.user_id)
+        if removed:
+            achievement_module.record_event(
+                self.watchlist_view.user_id,
+                str(interaction.user),
+                "watchlist_remove",
+                str(entry_id),
+            )
+            await achievement_module.award_for_user(
+                interaction.client,
+                interaction.user,
+                source_type="watchlist_remove",
+                source_id=str(entry_id),
+            )
         self.watchlist_view.entries = db.get_watchlist(self.watchlist_view.user_id)
         self.watchlist_view.total_pages = max(
             1,

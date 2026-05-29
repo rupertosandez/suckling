@@ -436,6 +436,12 @@ set the channel where new diary entries from linked letterboxd accounts post. wh
 ### `/setfeed <channel>`
 set the channel where suckling feed posts go, including achievement unlocks.
 
+### `/achievementcatalog <channel>`
+post all earnable achievements in the chosen channel, grouped by category.
+
+### `/postfaq <channel> [thread_name]`
+admin only. create a Suckling FAQ thread in the chosen channel. the bot posts a primary index embed with jump links inside the thread, followed by compact section embeds for lookup, rentals, watchlists, letterboxd, games, achievements, and macguffins.
+
 ### `/toggle <feature> <enabled>`
 enable or disable an auto-posting feature without removing the channel setting.
 
@@ -465,6 +471,9 @@ backfill achievements from existing bot history. leave `user` blank to rescan ev
 
 ### `/achievementsyncroles <user>`
 reapply a member's selected visible achievement badge roles. useful if roles were manually changed in Discord.
+
+### `/achievementrefreshfeed [limit]`
+refresh recent achievement feed posts into the current achievement announcement format.
 
 ### `/version`
 show the bot's current version.

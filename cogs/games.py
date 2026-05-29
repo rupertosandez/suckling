@@ -21,6 +21,16 @@ import achievements as achievement_module
 ROUND_DURATION_SECONDS = 60
 
 
+async def _fetch_award_user(bot: commands.Bot, guild: discord.Guild | None, user_id: str):
+    user = guild.get_member(int(user_id)) if guild else None
+    if user:
+        return user
+    try:
+        return await bot.fetch_user(int(user_id))
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException, ValueError):
+        return None
+
+
 class GamesCog(commands.Cog):
     """Guessing, trivia, and Six Degrees game commands."""
 
@@ -154,15 +164,14 @@ class GamesCog(commands.Cog):
             new_total = db.increment_guess_score(
                 round_obj.winner_id, round_obj.winner_tag, points=points
             )
-            member = interaction.guild.get_member(int(round_obj.winner_id))
+            member = await _fetch_award_user(self.bot, interaction.guild, round_obj.winner_id)
             if member:
-                unlocked = achievement_module.evaluate_user(
-                    round_obj.winner_id,
-                    round_obj.winner_tag,
+                await achievement_module.award_for_user(
+                    self.bot,
+                    member,
                     source_type="guess_win",
                     source_id=str(movie["id"]),
                 )
-                await achievement_module.post_unlocks(self.bot, member, unlocked)
             reveal_embed.description = (
                 f"🏆 <@{round_obj.winner_id}> got it! "
                 f"(+{points} point{'s' if points > 1 else ''} — total: **{new_total}**)"
@@ -247,15 +256,20 @@ class GamesCog(commands.Cog):
             new_total = db.increment_guess_score(
                 round_obj.winner_id, round_obj.winner_tag, points=1
             )
-            member = interaction.guild.get_member(int(round_obj.winner_id))
+            achievement_module.record_event(
+                round_obj.winner_id,
+                round_obj.winner_tag,
+                "trivia_win",
+                category,
+            )
+            member = await _fetch_award_user(self.bot, interaction.guild, round_obj.winner_id)
             if member:
-                unlocked = achievement_module.evaluate_user(
-                    round_obj.winner_id,
-                    round_obj.winner_tag,
+                await achievement_module.award_for_user(
+                    self.bot,
+                    member,
                     source_type="trivia_win",
                     source_id=category,
                 )
-                await achievement_module.post_unlocks(self.bot, member, unlocked)
             reveal_embed = embeds.trivia_reveal_embed(
                 category=category,
                 answer=round_obj.answer,
@@ -396,15 +410,14 @@ class GamesCog(commands.Cog):
                 round_obj.winner_id, round_obj.winner_tag, points=points
             )
             chain_str = " → ".join(round_obj.winning_chain)
-            member = interaction.guild.get_member(int(round_obj.winner_id))
+            member = await _fetch_award_user(self.bot, interaction.guild, round_obj.winner_id)
             if member:
-                unlocked = achievement_module.evaluate_user(
-                    round_obj.winner_id,
-                    round_obj.winner_tag,
+                await achievement_module.award_for_user(
+                    self.bot,
+                    member,
                     source_type="six_win",
                     source_id=str(round_obj.actor_a_id),
                 )
-                await achievement_module.post_unlocks(self.bot, member, unlocked)
             win_embed = discord.Embed(
                 title=f"🏆 {round_obj.winner_tag} wins!",
                 description=(

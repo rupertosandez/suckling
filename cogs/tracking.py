@@ -160,13 +160,12 @@ class TrackingCog(commands.Cog):
                 return
 
             msg = await views._build_track_response(top["id"], movie_title, movie_year)
-            unlocked = achievement_module.evaluate_user(
-                user_id,
-                user_tag,
+            await achievement_module.award_for_user(
+                self.bot,
+                interaction.user,
                 source_type="track",
                 source_id=str(top["id"]),
             )
-            await achievement_module.post_unlocks(self.bot, interaction.user, unlocked)
             await interaction.followup.send(msg)
         else:
             view = views.TrackSelectView(results, added_by=user_tag, added_by_id=user_id)

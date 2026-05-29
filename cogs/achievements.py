@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import re
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 import achievements as achievement_module
 import db
+
+
+def _normalize_lookup_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
 
 
 def _achievement_choices(
@@ -18,7 +24,7 @@ def _achievement_choices(
         achievement = achievement_module.ACHIEVEMENT_BY_ID.get(achievement_id)
         if not achievement:
             continue
-        label = achievement.name
+        label = achievement_module.display_name(achievement)
         if current and current not in label.lower() and current not in achievement_id:
             continue
         choices.append(app_commands.Choice(name=label[:100], value=achievement_id))
@@ -50,14 +56,15 @@ def _achievement_line(user_id: str, achievement_id: str, *, earned: bool) -> str
     achievement = achievement_module.ACHIEVEMENT_BY_ID.get(achievement_id)
     if not achievement:
         return ""
+    name = achievement_module.display_name(achievement)
     if earned:
-        return f"**{achievement.name}** - {achievement.description}"
+        return f"**{name}**\n{achievement.description}"
     progress = achievement_module.progress_for(user_id, achievement_id)
     progress_note = ""
     if progress:
         value, threshold = progress
         progress_note = f" ({min(value, threshold)}/{threshold})"
-    return f"**{achievement.name}** - {achievement.hint}{progress_note}"
+    return f"**{name}**\n{achievement.hint}{progress_note}"
 
 
 def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | None = None) -> discord.Embed:
@@ -67,18 +74,22 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
     displayed_ids = [row["achievement_id"] for row in db.get_displayed_achievements(user_id)]
 
     embed = discord.Embed(
-        title=f"{member.display_name}'s achievements",
+        title="achievement shelf",
         color=achievement_module.ROLE_COLOR,
+    )
+    embed.set_author(
+        name=f"{member.display_name}'s achievements",
+        icon_url=member.display_avatar.url,
     )
     embed.set_thumbnail(url=member.display_avatar.url)
     embed.description = (
-        f"earned **{len(earned_ids)} / {len(achievement_module.ACHIEVEMENTS)}** achievements\n"
-        f"displaying **{len(displayed_ids)} / {achievement_module.MAX_DISPLAYED_ACHIEVEMENTS}** badge roles"
+        f"**{len(earned_ids)} / {len(achievement_module.ACHIEVEMENTS)}** unlocked\n"
+        f"**{len(displayed_ids)} / {achievement_module.MAX_DISPLAYED_ACHIEVEMENTS}** visible badge roles"
     )
 
     if displayed_ids:
         lines = [_achievement_line(user_id, achievement_id, earned=True) for achievement_id in displayed_ids]
-        embed.add_field(name="displayed badges", value="\n".join(filter(None, lines)), inline=False)
+        embed.add_field(name="displayed badges", value="\n\n".join(filter(None, lines)), inline=False)
     else:
         embed.add_field(name="displayed badges", value="none pinned yet.", inline=False)
 
@@ -87,7 +98,10 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
         achievement = achievement_module.ACHIEVEMENT_BY_ID.get(row["achievement_id"])
         if not achievement:
             continue
-        recent_lines.append(f"**{achievement.name}** - <t:{int(_timestamp(row['earned_at']))}:R>")
+        recent_lines.append(
+            f"**{achievement_module.display_name(achievement)}** - "
+            f"<t:{int(_timestamp(row['earned_at']))}:R>"
+        )
     if recent_lines:
         embed.add_field(name="recent unlocks", value="\n".join(recent_lines), inline=False)
 
@@ -100,8 +114,8 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
             if len(next_lines) >= 5:
                 break
         if next_lines:
-            embed.add_field(name="next up", value="\n".join(next_lines), inline=False)
-        embed.set_footer(text="use /achievementdisplay and /achievementhide to pick up to 3 visible badges")
+            embed.add_field(name="next up", value="\n\n".join(next_lines), inline=False)
+        embed.set_footer(text="pin up to 3 badges with /achievementdisplay")
 
     return embed
 
@@ -120,6 +134,90 @@ def datetime_from_iso(value: str):
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed
+
+
+def _find_achievement_in_embed(embed: discord.Embed) -> achievement_module.Achievement | None:
+    parts = [
+        embed.title or "",
+        embed.description or "",
+        embed.author.name if embed.author else "",
+    ]
+    for field in embed.fields:
+        parts.append(field.name or "")
+        parts.append(field.value or "")
+    haystack = _normalize_lookup_text(" ".join(parts))
+    for achievement in achievement_module.ACHIEVEMENTS:
+        if _normalize_lookup_text(achievement.name) in haystack:
+            return achievement
+        if _normalize_lookup_text(achievement_module.display_name(achievement)) in haystack:
+            return achievement
+    return None
+
+
+def _extract_rental_title(embed: discord.Embed) -> str | None:
+    text = embed.description or ""
+    patterns = (
+        r"\*\*rental:\*\*\s*\*([^*]+)\*",
+        r"\*\*rental\*\*\s*\n\s*\*([^*]+)\*",
+        r"returned\s+\*([^*]+)\*\.?",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+    return None
+
+
+def _is_achievement_unlock_embed(embed: discord.Embed) -> bool:
+    text = " ".join([
+        embed.title or "",
+        embed.description or "",
+        " ".join(field.name or "" for field in embed.fields),
+        " ".join(field.value or "" for field in embed.fields),
+    ]).lower()
+    return "achievement unlocked" in text or "earned a new badge" in text
+
+
+def _achievement_catalog_embeds() -> list[discord.Embed]:
+    by_category: dict[str, list[achievement_module.Achievement]] = {}
+    for achievement in achievement_module.ACHIEVEMENTS:
+        by_category.setdefault(achievement.category, []).append(achievement)
+
+    def category_embed(category: str, achievements: list[achievement_module.Achievement]) -> discord.Embed:
+        embed = discord.Embed(
+            title=f"earnable achievements: {category}",
+            description="badges you can unlock by using Suckling.",
+            color=achievement_module.ROLE_COLOR,
+        )
+        for achievement in achievements:
+            embed.add_field(
+                name=achievement_module.display_name(achievement),
+                value=achievement.hint,
+                inline=False,
+            )
+        return embed
+
+    category_order = ("rentals", "reviews", "macguffins", "games", "discovery", "letterboxd")
+    embeds = []
+    for category in category_order:
+        achievements = by_category.get(category)
+        if not achievements:
+            continue
+        embeds.append(category_embed(category, achievements))
+
+    for category, achievements in sorted(by_category.items()):
+        if category in category_order:
+            continue
+        embeds.append(category_embed(category, achievements))
+
+    if embeds:
+        total = len(achievement_module.ACHIEVEMENTS)
+        embeds[0].description = (
+            f"there are **{total}** earnable achievements. "
+            "you can pin up to **3** unlocked badges as visible roles."
+        )
+        embeds[-1].set_footer(text="use /achievements to see your own shelf")
+    return embeds
 
 
 class AchievementsCog(commands.Cog):
@@ -164,7 +262,7 @@ class AchievementsCog(commands.Cog):
         displayed = [row["achievement_id"] for row in db.get_displayed_achievements(user_id)]
         if achievement in displayed:
             await interaction.followup.send(
-                f"**{target.name}** is already displayed.", ephemeral=True
+                f"**{achievement_module.display_name(target)}** is already displayed.", ephemeral=True
             )
             return
         if replace:
@@ -174,7 +272,7 @@ class AchievementsCog(commands.Cog):
             displayed[displayed.index(replace)] = achievement
         elif len(displayed) >= achievement_module.MAX_DISPLAYED_ACHIEVEMENTS:
             names = ", ".join(
-                achievement_module.ACHIEVEMENT_BY_ID[item].name
+                achievement_module.display_name(achievement_module.ACHIEVEMENT_BY_ID[item])
                 for item in displayed
                 if item in achievement_module.ACHIEVEMENT_BY_ID
             )
@@ -190,7 +288,10 @@ class AchievementsCog(commands.Cog):
         db.set_displayed_achievements(user_id, displayed)
         ok, message = await achievement_module.sync_member_roles(interaction.user)
         if ok:
-            await interaction.followup.send(f"displaying **{target.name}**.", ephemeral=True)
+            await interaction.followup.send(
+                f"displaying **{achievement_module.display_name(target)}**.",
+                ephemeral=True,
+            )
         else:
             await interaction.followup.send(message, ephemeral=True)
 
@@ -210,7 +311,8 @@ class AchievementsCog(commands.Cog):
         name = achievement_module.ACHIEVEMENT_BY_ID.get(achievement)
         if ok:
             await interaction.followup.send(
-                f"hid **{name.name if name else achievement}**.", ephemeral=True
+                f"hid **{achievement_module.display_name(name) if name else achievement}**.",
+                ephemeral=True,
             )
         else:
             await interaction.followup.send(message, ephemeral=True)
@@ -234,7 +336,10 @@ class AchievementsCog(commands.Cog):
             for row in recent:
                 achievement = achievement_module.ACHIEVEMENT_BY_ID.get(row["achievement_id"])
                 if achievement:
-                    lines.append(f"**{row['user_tag']}** unlocked **{achievement.name}**")
+                    lines.append(
+                        f"**{row['user_tag']}** unlocked "
+                        f"**{achievement_module.display_name(achievement)}**"
+                    )
             embed.add_field(name="newest unlocks", value="\n".join(lines), inline=False)
         if leaders:
             lines = [
@@ -252,7 +357,7 @@ class AchievementsCog(commands.Cog):
         )[:5]
         if rare:
             lines = [
-                f"**{achievement_module.ACHIEVEMENT_BY_ID[achievement_id].name}** - {count}"
+                f"**{achievement_module.display_name(achievement_module.ACHIEVEMENT_BY_ID[achievement_id])}** - {count}"
                 for achievement_id, count in rare
             ]
             embed.add_field(name="rarest badges", value="\n".join(lines), inline=False)
@@ -274,6 +379,53 @@ class AchievementsCog(commands.Cog):
         db.set_feed_channel_id(channel.id)
         await interaction.response.send_message(
             f"suckling feed will post in {channel.mention}.",
+            ephemeral=True,
+        )
+
+    @app_commands.command(
+        name="achievementcatalog",
+        description="post all earnable achievements in a channel (admin only)",
+    )
+    @app_commands.describe(channel="the channel where the achievement catalog should post")
+    @app_commands.default_permissions(manage_guild=True)
+    async def achievement_catalog(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel,
+    ):
+        perms = channel.permissions_for(interaction.guild.me)
+        if not perms.send_messages or not perms.embed_links:
+            await interaction.response.send_message(
+                f"i need send messages and embed links in {channel.mention}.",
+                ephemeral=True,
+            )
+            return
+
+        embeds = _achievement_catalog_embeds()
+        if not embeds:
+            await interaction.response.send_message(
+                "there are no achievements configured.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        try:
+            for start in range(0, len(embeds), 10):
+                await channel.send(
+                    embeds=embeds[start:start + 10],
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+        except discord.HTTPException as e:
+            await interaction.followup.send(
+                f"failed to post achievement catalog in {channel.mention}: {e}",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.followup.send(
+            f"posted **{len(achievement_module.ACHIEVEMENTS)}** earnable achievements "
+            f"in {channel.mention}.",
             ephemeral=True,
         )
 
@@ -328,6 +480,89 @@ class AchievementsCog(commands.Cog):
         await interaction.response.defer(ephemeral=True)
         ok, message = await achievement_module.sync_member_roles(user)
         await interaction.followup.send(message, ephemeral=True)
+
+    @app_commands.command(
+        name="achievementrefreshfeed",
+        description="refresh recent achievement feed embeds (admin only)",
+    )
+    @app_commands.describe(limit="how many recent feed messages to scan, max 500")
+    @app_commands.default_permissions(manage_guild=True)
+    async def achievement_refresh_feed(
+        self,
+        interaction: discord.Interaction,
+        limit: app_commands.Range[int, 1, 500] = 100,
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        channel_id = db.get_feed_channel_id()
+        if not channel_id:
+            await interaction.followup.send(
+                "the feed channel is not configured yet. use `/setfeed` first.",
+                ephemeral=True,
+            )
+            return
+
+        channel = self.bot.get_channel(channel_id)
+        if channel is None:
+            try:
+                channel = await self.bot.fetch_channel(channel_id)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                channel = None
+        if not channel or not hasattr(channel, "history"):
+            await interaction.followup.send(
+                "i couldn't read the configured feed channel.",
+                ephemeral=True,
+            )
+            return
+
+        scanned = 0
+        updated = 0
+        skipped = 0
+        async for message in channel.history(limit=limit):
+            scanned += 1
+            if message.author.id != self.bot.user.id or not message.embeds:
+                continue
+
+            embed = message.embeds[0]
+            if not _is_achievement_unlock_embed(embed):
+                continue
+
+            achievement = _find_achievement_in_embed(embed)
+            if not achievement:
+                skipped += 1
+                continue
+
+            user = message.mentions[0] if message.mentions else None
+            user_label = (
+                str(user)
+                if user
+                else (embed.author.name if embed.author else "someone")
+            )
+            user_mention = user.mention if user else None
+            icon_url = None
+            if user:
+                icon_url = user.display_avatar.url
+            elif embed.author and embed.author.icon_url:
+                icon_url = embed.author.icon_url
+
+            refreshed = achievement_module.unlock_embed(
+                achievement,
+                user_label=user_label,
+                user_mention=user_mention,
+                icon_url=icon_url,
+                rental_title=_extract_rental_title(embed),
+            )
+            try:
+                await message.edit(embed=refreshed)
+                updated += 1
+            except (discord.Forbidden, discord.HTTPException):
+                skipped += 1
+
+        await interaction.followup.send(
+            f"feed refresh complete. scanned **{scanned}**, updated **{updated}**, "
+            f"skipped **{skipped}**.",
+            ephemeral=True,
+        )
 
 
 async def setup(bot: commands.Bot):

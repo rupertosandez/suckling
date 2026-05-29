@@ -15,6 +15,166 @@ import version
 
 LB_LINKED_PAGE_SIZE = 10
 
+FAQ_SECTIONS = [
+    (
+        "Movie Lookup & Recommendations",
+        "Find a movie, check availability, or let Suckling pick something.",
+        [
+            (
+                "Core Commands",
+                "`/suck <title>` - movie lookup\n"
+                "`/roll` - random recommendation",
+                True,
+            ),
+            (
+                "Filters",
+                "`year` narrows title matches\n"
+                "`decade` and `runtime` shape `/roll`",
+                True,
+            ),
+            (
+                "Movie Cards",
+                "**+ watchlist** saves privately\n"
+                "**rent this** appears for RB9 movies",
+                False,
+            ),
+            (
+                "Examples",
+                "`/suck The Substance`\n"
+                "`/suck Halloween year:1978`\n"
+                "`/roll decade:1980s runtime:short`",
+                False,
+            ),
+        ],
+    ),
+    (
+        "RB9 Rentals",
+        "Check out RB9 movies, post reviews, and build rental history.",
+        [
+            (
+                "Start",
+                "`/rent` - roll random, pick a title, or ask an admin\n"
+                "Up to **3 active rentals** at once",
+                False,
+            ),
+            (
+                "Due Date",
+                "Due at **9:00 PM on the fifth day**\n"
+                "`/timezone` sets your local due time",
+                True,
+            ),
+            (
+                "Return",
+                "`/return` posts your review and records the watch\n"
+                "Returns can unlock achievements or MacGuffins",
+                True,
+            ),
+            (
+                "Useful Commands",
+                "`/myrental` - active rentals\n"
+                "`/extend` - one 24-hour extension\n"
+                "`/rentalstats` - history\n"
+                "`/latefees` - cosmetic leaderboard",
+                False,
+            ),
+        ],
+    ),
+    (
+        "Watchlists & Streaming Tracking",
+        "Save movies for yourself or track releases for the whole server.",
+        [
+            (
+                "Private Watchlist",
+                "`/watchlist add <title>`\n"
+                "`/watchlist show`\n"
+                "`/watchlist remove <title>`",
+                True,
+            ),
+            (
+                "Server Tracking",
+                "`/track <title>`\n"
+                "`/untrack <title>`\n"
+                "`/tracked`",
+                True,
+            ),
+            (
+                "When To Use Each",
+                "**Watchlist:** personal queue\n"
+                "**Tracking:** alert the server when something first hits digital",
+                False,
+            ),
+            (
+                "Shortcut",
+                "Use **+ watchlist** on movie cards to save a film without typing.",
+                False,
+            ),
+        ],
+    ),
+    (
+        "Letterboxd",
+        "Connect Letterboxd for profiles, watchlists, group activity, and taste checks.",
+        [
+            (
+                "Connect",
+                "`/lb link <username>`\n"
+                "`/lb unlink`",
+                True,
+            ),
+            (
+                "Browse",
+                "`/lb profile` - recent diary\n"
+                "`/lb watchlist` - watchlist browser",
+                True,
+            ),
+            (
+                "Community",
+                "`/lb group` - linked member activity\n"
+                "`/lb tastecheck` - compare two accounts",
+                False,
+            ),
+            (
+                "Note",
+                "Accounts must be public. Linked activity may post to the server activity channel if enabled.",
+                False,
+            ),
+        ],
+    ),
+    (
+        "Games, Achievements & MacGuffins",
+        "Play movie games, show off badges, and collect unique movie objects.",
+        [
+            (
+                "Games",
+                "`/guess` - image guessing\n"
+                "`/play` - trivia roulette\n"
+                "`/six` - six degrees challenge\n"
+                "`/giveup` - end a round",
+                False,
+            ),
+            (
+                "Scores",
+                "`/leaderboard`\n"
+                "`/sixleaderboard`",
+                True,
+            ),
+            (
+                "Achievements",
+                "`/achievements` shows your shelf\n"
+                "`/achievementdisplay` pins up to **3** visible badges",
+                True,
+            ),
+            (
+                "MacGuffins",
+                "`/claimguffin` - starter card\n"
+                "`/myguffins` - collection\n"
+                "`/giftguffin` - give one away\n"
+                "Returns can drop more.",
+                False,
+            ),
+        ],
+    ),
+]
+
 
 def _admin_channel_label(channel_id: int | None) -> str:
     return f"<#{channel_id}>" if channel_id else "not set"
@@ -32,6 +192,54 @@ def _format_linked_at(value: str | None) -> str:
     except (TypeError, ValueError):
         return value
     return f"<t:{int(linked_at.timestamp())}:d>"
+
+
+def _faq_index_embed(section_links: dict[str, str] | None = None) -> discord.Embed:
+    section_links = section_links or {}
+    embed = discord.Embed(
+        title="Suckling FAQ",
+        description=(
+            "Suckling is the Return by 9 movie bot. It can look up films, "
+            "recommend movies, manage RB9 rentals, track streaming releases, "
+            "connect Letterboxd accounts, run games, and hand out achievements.\n\n"
+            "Use the links below to jump to each section."
+        ),
+        color=0x8B0000,
+    )
+
+    section_lines = []
+    for index, (title, _, _) in enumerate(FAQ_SECTIONS, start=1):
+        url = section_links.get(title)
+        label = f"{index}. {title}"
+        section_lines.append(f"[{label}]({url})" if url else label)
+
+    embed.add_field(
+        name="Sections",
+        value="\n".join(section_lines),
+        inline=False,
+    )
+    embed.set_footer(text="All commands are slash commands. Type / and look for Suckling.")
+    return embed
+
+
+def _faq_section_embed(title: str, description: str, fields: list[tuple[str, str, bool]]) -> discord.Embed:
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=0x8B0000,
+    )
+    for name, value, inline in fields:
+        embed.add_field(name=name, value=value, inline=inline)
+    return embed
+
+
+def _faq_thread_starter_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="Suckling FAQ",
+        description="Open the thread below for a quick guide to Suckling's main features.",
+        color=0x8B0000,
+    )
+    return embed
 
 
 class AdminCog(commands.Cog):
@@ -297,6 +505,68 @@ class AdminCog(commands.Cog):
             await interaction.followup.send(
                 "⚠️ Failed to post — see PowerShell for details.", ephemeral=True
             )
+
+    @app_commands.command(
+        name="postfaq",
+        description="Post the Suckling FAQ as a thread in a channel (admin only)",
+    )
+    @app_commands.describe(
+        channel="The channel where the FAQ thread should be created",
+        thread_name="Optional name for the FAQ thread",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def postfaq(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel,
+        thread_name: str = "Suckling FAQ",
+    ):
+        perms = channel.permissions_for(interaction.guild.me)
+        if (
+            not perms.send_messages
+            or not perms.embed_links
+            or not perms.create_public_threads
+            or not perms.send_messages_in_threads
+        ):
+            await interaction.response.send_message(
+                f"I need permission to send messages, embed links, create public threads, "
+                f"and send in threads in {channel.mention}.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            starter = await channel.send(
+                embed=_faq_thread_starter_embed(),
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+            thread = await starter.create_thread(
+                name=thread_name[:100],
+                auto_archive_duration=10080,
+            )
+            index_message = await thread.send(embed=_faq_index_embed())
+            section_links = {}
+            for title, description, fields in FAQ_SECTIONS:
+                message = await thread.send(
+                    embed=_faq_section_embed(title, description, fields),
+                    allowed_mentions=discord.AllowedMentions.none(),
+                )
+                section_links[title] = message.jump_url
+
+            await index_message.edit(embed=_faq_index_embed(section_links))
+        except discord.HTTPException as e:
+            await interaction.followup.send(
+                f"Failed to post the FAQ thread in {channel.mention}: {e}",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.followup.send(
+            f"Posted the Suckling FAQ thread in {channel.mention}: {thread.mention}",
+            ephemeral=True,
+        )
 
     @app_commands.command(
         name="lbactivitynow",

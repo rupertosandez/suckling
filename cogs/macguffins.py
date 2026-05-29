@@ -92,13 +92,12 @@ class MacGuffinCog(commands.Cog):
                 )
                 await asyncio.to_thread(db.record_free_claim_used, user_id)
                 await _announce_drop(interaction, card, interaction.user)
-                unlocked = achievement_module.evaluate_user(
-                    user_id,
-                    str(interaction.user),
+                await achievement_module.award_for_user(
+                    self.bot,
+                    interaction.user,
                     source_type="macguffin_claim",
                     source_id=card.get("id"),
                 )
-                await achievement_module.post_unlocks(self.bot, interaction.user, unlocked)
                 await interaction.followup.send("check the channel!", ephemeral=True)
             except macguffin_module.MacGuffinPoolEmpty:
                 await interaction.followup.send(
@@ -189,19 +188,30 @@ class MacGuffinCog(commands.Cog):
             f"{interaction.user.mention} gifted {user.mention} "
             f"the [{rarity}] {emoji} **{name}**"
         )
-        db.record_achievement_event(
+        achievement_module.record_event(
             sender_id,
             str(interaction.user),
             "macguffin_gift_sent",
             macguffin_id,
         )
-        unlocked = achievement_module.evaluate_user(
-            sender_id,
-            str(interaction.user),
+        achievement_module.record_event(
+            recipient_id,
+            str(user),
+            "macguffin_gift_received",
+            macguffin_id,
+        )
+        await achievement_module.award_for_user(
+            self.bot,
+            interaction.user,
             source_type="macguffin_gift",
             source_id=macguffin_id,
         )
-        await achievement_module.post_unlocks(self.bot, interaction.user, unlocked)
+        await achievement_module.award_for_user(
+            self.bot,
+            user,
+            source_type="macguffin_gift",
+            source_id=macguffin_id,
+        )
         await interaction.followup.send("gift sent.", ephemeral=True)
 
     @app_commands.command(name="myguffins", description="view your macguffin collection")
@@ -315,13 +325,12 @@ class MacGuffinCog(commands.Cog):
                 ephemeral=True,
             )
             await _announce_drop(interaction, selected, user)
-            unlocked = achievement_module.evaluate_user(
-                target_id,
-                str(user),
+            await achievement_module.award_for_user(
+                self.bot,
+                user,
                 source_type="macguffin_admin",
                 source_id=selected.get("id"),
             )
-            await achievement_module.post_unlocks(self.bot, user, unlocked)
             return
 
         if not card:
@@ -415,13 +424,12 @@ class MacGuffinCog(commands.Cog):
                     )
                     return
                 await _announce_drop(interaction, selected, user)
-                unlocked = achievement_module.evaluate_user(
-                    target_id,
-                    str(user),
+                await achievement_module.award_for_user(
+                    self.bot,
+                    user,
                     source_type="macguffin_admin",
                     source_id=selected.get("id"),
                 )
-                await achievement_module.post_unlocks(self.bot, user, unlocked)
                 await interaction.followup.send(
                     f"moved {selected.get('emoji', '')} **{selected.get('name')}** "
                     f"from **{existing.get('owner_tag', 'another member')}** to **{user}**.",
@@ -437,13 +445,12 @@ class MacGuffinCog(commands.Cog):
                 "admin",
             )
             await _announce_drop(interaction, selected, user)
-            unlocked = achievement_module.evaluate_user(
-                target_id,
-                str(user),
+            await achievement_module.award_for_user(
+                self.bot,
+                user,
                 source_type="macguffin_admin",
                 source_id=selected.get("id"),
             )
-            await achievement_module.post_unlocks(self.bot, user, unlocked)
             await interaction.followup.send(
                 f"added {selected.get('emoji', '')} **{selected.get('name')}** "
                 f"to **{user}**.",

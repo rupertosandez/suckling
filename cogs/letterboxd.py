@@ -183,13 +183,12 @@ async def lb_link(interaction: discord.Interaction, username: str):
         return
 
     db.link_lb_account(str(interaction.user.id), username)
-    unlocked = achievement_module.evaluate_user(
-        str(interaction.user.id),
-        str(interaction.user),
+    await achievement_module.award_for_user(
+        interaction.client,
+        interaction.user,
         source_type="letterboxd_link",
         source_id=username,
     )
-    await achievement_module.post_unlocks(interaction.client, interaction.user, unlocked)
     await interaction.followup.send(
         f"✅ linked your letterboxd account: **{username}**\n"
         "use `/lb profile` to see your recent watches.",

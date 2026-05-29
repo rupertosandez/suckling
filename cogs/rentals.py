@@ -295,16 +295,11 @@ class RentalsCog(commands.Cog):
         except Exception as e:
             logger.log_exception("macguffin_return_drop", e)
 
-        unlocked = achievement_module.evaluate_user(
-            user_id,
-            str(interaction.user),
-            source_type="rental_return",
-            source_id=str(rental_record["id"]),
-        )
-        await achievement_module.post_unlocks(
+        await achievement_module.award_for_user(
             self.bot,
             interaction.user,
-            unlocked,
+            source_type="rental_return",
+            source_id=str(rental_record["id"]),
             rental=updated_rental,
         )
 

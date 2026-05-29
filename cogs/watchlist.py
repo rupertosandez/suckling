@@ -108,13 +108,12 @@ class WatchlistCog(commands.Cog):
         year_str = f" ({film_year})" if film_year else ""
         film_name = top.get("title", title)
         if added:
-            unlocked = achievement_module.evaluate_user(
-                str(interaction.user.id),
-                str(interaction.user),
+            await achievement_module.award_for_user(
+                self.bot,
+                interaction.user,
                 source_type="watchlist_add",
                 source_id=str(top["id"]),
             )
-            await achievement_module.post_unlocks(self.bot, interaction.user, unlocked)
             await interaction.followup.send(
                 f"\U0001f4cb added **{film_name}{year_str}** to your watchlist.",
                 ephemeral=True,
@@ -132,6 +131,19 @@ class WatchlistCog(commands.Cog):
 
         count = db.watchlist_remove_by_title(str(interaction.user.id), title)
         if count:
+            for _ in range(count):
+                achievement_module.record_event(
+                    str(interaction.user.id),
+                    str(interaction.user),
+                    "watchlist_remove",
+                    title,
+                )
+            await achievement_module.award_for_user(
+                self.bot,
+                interaction.user,
+                source_type="watchlist_remove",
+                source_id=title,
+            )
             await interaction.followup.send(
                 f"\U0001f5d1\ufe0f removed **{count}** film(s) matching \"{title}\" from your watchlist.",
                 ephemeral=True,

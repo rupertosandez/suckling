@@ -25,11 +25,13 @@ import rental as rental_module
 import letterboxd as lb_module
 import macguffin as macguffin_module
 import cleanup as cleanup_module
+import achievements as achievement_module
 import views
 
 LB_ACTIVITY_POST_LIMIT = 20
 LB_ACTIVITY_COMPACT_THRESHOLD = 3
 LB_ACTIVITY_WINDOW_MINUTES = 60
+ACHIEVEMENT_SPEEDRUN_SECONDS = 10
 COG_EXTENSIONS = (
     "cogs.achievements",
     "cogs.discovery",
@@ -638,6 +640,13 @@ async def on_message(message: discord.Message):
             if game.title_matches(message.content, round_obj.title):
                 round_obj.winner_id = str(message.author.id)
                 round_obj.winner_tag = str(message.author)
+                if _is_speedrun_win(round_obj.started_at):
+                    achievement_module.record_event(
+                        str(message.author.id),
+                        str(message.author),
+                        "speedrun_win",
+                        str(round_obj.movie_id),
+                    )
                 round_obj.end_event.set()
                 return
 
@@ -647,6 +656,13 @@ async def on_message(message: discord.Message):
             if trivia_roulette.answer_matches(message.content, trivia_round):
                 trivia_round.winner_id = str(message.author.id)
                 trivia_round.winner_tag = str(message.author)
+                if _is_speedrun_win(trivia_round.started_at):
+                    achievement_module.record_event(
+                        str(message.author.id),
+                        str(message.author),
+                        "speedrun_win",
+                        trivia_round.category,
+                    )
                 trivia_round.end_event.set()
                 return
             
@@ -660,6 +676,13 @@ async def on_message(message: discord.Message):
             await _process_six_submission(message, six_round)
     except Exception as e:
         logger.log_exception("on_message", e)
+
+
+def _is_speedrun_win(started_at: datetime) -> bool:
+    if started_at.tzinfo is None:
+        started_at = started_at.replace(tzinfo=timezone.utc)
+    elapsed = datetime.now(timezone.utc) - started_at.astimezone(timezone.utc)
+    return elapsed.total_seconds() <= ACHIEVEMENT_SPEEDRUN_SECONDS
 
 
 async def _process_six_submission(message: discord.Message, round_obj: "sixdegrees.SixRound"):
