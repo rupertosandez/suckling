@@ -23,6 +23,9 @@ CRASH_WINDOW_SECONDS = 60
 CRASH_LIMIT = 3
 RESTART_DELAY_SECONDS = 2
 STOP_TIMEOUT_SECONDS = 10
+BOT_PID_FILE_NAME = "bot.pid"
+LAUNCHER_ENV_KEY = "SUCKLINGBOT_LAUNCHER_MANAGED"
+REQUESTED_RESTART_EXIT_CODE = 75
 
 
 StateCallback = Callable[[], None]
@@ -113,9 +116,10 @@ class BotProcessManager:
                 self.log("[launcher] bot is already running")
                 return False
 
-            recorded_pid = self.state.bot_pid
+            recorded_pid = self.state.bot_pid or _read_bot_pid_file(self.project_root)
             if recorded_pid is not None and _pid_is_running(recorded_pid):
                 self._external_pid = recorded_pid
+                self.state.set_bot_pid(recorded_pid)
                 self._crashed = False
                 self.log(
                     "[launcher] bot already appears to be running "
@@ -148,6 +152,8 @@ class BotProcessManager:
             self.log(f"[launcher] starting bot with {python_exe}")
             env = os.environ.copy()
             env["PYTHONUNBUFFERED"] = "1"
+            env["PYTHONIOENCODING"] = "utf-8"
+            env[LAUNCHER_ENV_KEY] = "1"
             self._process = subprocess.Popen(
                 [str(python_exe), "-u", "bot.py"],
                 cwd=self.project_root,
@@ -324,6 +330,13 @@ class BotProcessManager:
             self._notify_state()
             return
 
+        if return_code == REQUESTED_RESTART_EXIT_CODE:
+            self.log("[launcher] bot requested restart")
+            self._notify_state()
+            time.sleep(RESTART_DELAY_SECONDS)
+            self.start(reset_crashes=True)
+            return
+
         self.log(f"[launcher] bot exited unexpectedly with code {return_code}")
         self._handle_crash(return_code)
 
@@ -374,6 +387,19 @@ def _pid_is_running(pid: int) -> bool:
     except OSError:
         return False
     return True
+
+
+def _read_bot_pid_file(project_root: Path) -> int | None:
+    path = project_root / "data" / BOT_PID_FILE_NAME
+    try:
+        raw = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    try:
+        pid = int(raw)
+    except ValueError:
+        return None
+    return pid if pid > 0 else None
 
 
 def _terminate_pid(pid: int) -> bool:

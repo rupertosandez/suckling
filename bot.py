@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import os
 import signal
 import sys
@@ -83,9 +84,24 @@ scheduler = AsyncIOScheduler()
 _shutdown_started = False
 _bot_loop: asyncio.AbstractEventLoop | None = None
 _instance_lock_handle = None
+_PID_FILE_NAME = "bot.pid"
+_LAUNCHER_ENV_KEY = "SUCKLINGBOT_LAUNCHER_MANAGED"
+_LAUNCHER_RESTART_EXIT_CODE = 75
 
 
 UPDATE_ANNOUNCEMENT_CHANNEL_ID = 1446966452669255761
+
+
+def _configure_console_encoding() -> None:
+    """Keep scheduled print output from failing on Windows cp1252 consoles."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
 
 
 def _acquire_instance_lock() -> bool:
@@ -118,6 +134,27 @@ def _acquire_instance_lock() -> bool:
     return True
 
 
+def _pid_file_path() -> Path:
+    return Path(config.DATA_DIR) / _PID_FILE_NAME
+
+
+def _write_pid_file() -> None:
+    try:
+        config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        _pid_file_path().write_text(str(os.getpid()), encoding="utf-8")
+    except Exception as e:
+        logger.log_exception("bot_pid_write", e)
+
+
+def _clear_pid_file() -> None:
+    try:
+        path = _pid_file_path()
+        if path.exists() and path.read_text(encoding="utf-8").strip() == str(os.getpid()):
+            path.unlink()
+    except Exception as e:
+        logger.log_exception("bot_pid_clear", e)
+
+
 async def _shutdown_from_signal(signal_name: str) -> None:
     """Close the bot cleanly when the launcher asks the process to stop."""
     global _shutdown_started
@@ -136,6 +173,7 @@ async def _shutdown_from_signal(signal_name: str) -> None:
     try:
         await bot.close()
     finally:
+        _clear_pid_file()
         print("[shutdown] closed sucklingbot")
 
 
@@ -258,6 +296,11 @@ async def _restart_process(delay_seconds: float = 1.0) -> None:
         await cleanup_module.close_session()
     except Exception as e:
         logger.log_exception("restart_cleanup_close", e)
+
+    if os.getenv(_LAUNCHER_ENV_KEY):
+        print("[restart] Handing restart to launcher")
+        _clear_pid_file()
+        os._exit(_LAUNCHER_RESTART_EXIT_CODE)
 
     try:
         os.execv(sys.executable, [sys.executable, *sys.argv])
@@ -742,10 +785,13 @@ bot.suckling_run_unpopularity_audit = cleanup_module.run_unpopularity_audit
 
 
 if __name__ == "__main__":
+    _configure_console_encoding()
     logger.setup_logging()
     if not _acquire_instance_lock():
         print("[startup] another sucklingbot instance is already running; exiting")
         sys.exit(0)
+    _write_pid_file()
+    atexit.register(_clear_pid_file)
     print(f"[startup] sucklingbot v{version.VERSION}")
     db.init_db()
     print("Database initialized")
@@ -759,4 +805,7 @@ if __name__ == "__main__":
     else:
         print("[trivia] No trivia content loaded — /play will be unavailable")
     _start_launcher_stdin_listener()
-    bot.run(config.DISCORD_TOKEN)
+    try:
+        bot.run(config.DISCORD_TOKEN)
+    finally:
+        _clear_pid_file()
