@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.7] - 2026-05-30
+
+### Added
+
+- Added more RB9 library achievements, including actor-reference badges, title-theme badges, country/genre badges, and review-style badges.
+
+## [2.5.6] - 2026-05-30
+
+### Added
+
+- Added RB9 library metadata achievements that use returned rentals and the persisted Plex library snapshot.
+
+## [2.5.5] - 2026-05-30
+
+### Fixed
+
+- Fixed achievement title casing in announcement embeds, including numbered achievements.
+- Shortened the `/restart` acknowledgement to `restart initiated.`
+
+## [2.5.4] - 2026-05-30
+
+### Changed
+
+- Updated achievement unlock embeds to the gold announcement format.
+- Added admin functionality for posting the achievement catalog and refreshing recent achievement feed embeds.
+
 ## [2.5.3] - 2026-05-28
 
 ### Added

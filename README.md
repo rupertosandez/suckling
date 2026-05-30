@@ -1,6 +1,6 @@
 # sucklingbot
 
-a discord bot built specifically for the **return by 9** movie community. looks up films, tracks streaming availability, posts daily recommendations, runs poster/still guessing games and six degrees of separation rounds, pulls random picks and stats from the return by 9 plex library, and runs a video-store-themed rental system where members can check out films until 9 pm on the fifth day and post reviews.
+a discord bot built specifically for the **return by 9** movie community. looks up films, tracks streaming availability, posts daily recommendations, runs poster/still guessing games and six degrees of separation rounds, pulls random picks and stats from the return by 9 plex library, runs a video-store-themed rental system where members can check out films until 9 pm on the fifth day and post reviews, and awards achievement badges for movie-club activity.
 
 built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 
@@ -17,6 +17,7 @@ built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 - `/extend` - one-time 24-hour rental extension, also available from reminder DMs
 - `/latefees` - leaderboard of accumulated late fees
 - `/rentalstats` - personal rental history
+- `/achievements` - badge shelf for rental, rb9 library, review, macguffin, game, discovery, and Letterboxd milestones
 - `/track` - community watchlist with first-time streaming alerts
 - `/guess` - poster + still guessing game with scaled scoring (1 pt easy, 2 pts hard)
 - `/play` - trivia roulette game with four categories (quote, emoji, tagline, trivia)
@@ -24,7 +25,9 @@ built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 - 📼 rent buttons on `/rb9`, `/rb9randomscene`, `/suck`, `/roll`, and the daily rec (shown when the film is in the library)
 - daily streaming announcements at 9 am, with first-time-only filtering (no re-promotion noise)
 - daily recommendations at noon, with 30-day no-repeat window
-- toggle controls for both auto-posting features
+- optional Letterboxd activity posts for linked members
+- achievement unlocks in the configured Suckling feed channel
+- toggle controls for scheduled auto-posting features
 - persistent sqlite for tracked films, leaderboards, provider snapshots, and rental records
 - in-memory caching for tmdb calls
 - error logging to `data/bot.log`
@@ -137,6 +140,14 @@ to enable the rental system, create a discord forum channel, add **rental** and 
 
 the bot will confirm it found the tags. if tags are missing it will tell you what to create.
 
+to enable achievement unlock announcements, choose a feed channel:
+
+```
+/setfeed <channel>
+```
+
+achievement badge roles are created by the bot when members pin badges with `/achievementdisplay`. the bot needs **manage roles**, and its own Discord role must be above the achievement badge roles it creates or edits.
+
 then optionally toggle features off if you want them disabled:
 
 ```
@@ -153,6 +164,7 @@ sucklingbot/
 ├── bot.py                    runtime entry, scheduler, message routing
 ├── cogs/                     slash command groups
 │   ├── admin.py              admin dashboard, toggles, manual checks
+│   ├── achievements.py       achievement shelf, feed, roles, and admin tools
 │   ├── discovery.py          /suck, /roll, daily recommendations
 │   ├── games.py              /guess, /play, /six, leaderboards
 │   ├── letterboxd.py         /lb commands
@@ -164,6 +176,7 @@ sucklingbot/
 │   └── watchlist.py          personal watchlist commands
 ├── config.py                 loads .env, exposes config constants
 ├── version.py                version constant
+├── achievements.py           achievement definitions, evaluation, feed embeds, role sync
 ├── tmdb.py                   tmdb api wrapper + caching
 ├── embeds.py                 discord embed builders
 ├── views.py                  discord ui components (dropdowns, rental views)
@@ -207,6 +220,7 @@ sucklingbot/
 - `bot.py` owns runtime setup, scheduled jobs, startup/shutdown handling, and message routing.
 - `launcher.py` is the normal runtime supervisor: it starts one bot child process, tracks its pid, blocks duplicate launcher instances, and owns tray controls.
 - slash commands live in `cogs/`, grouped by feature area and loaded during startup.
+- `achievements.py` is the achievement registry and evaluator. watched-movie achievements use returned rentals as the source of truth.
 - `rental.py` never imports `bot.py` — takes `bot: discord.Client` as a parameter, same pattern as `tracker.py`.
 - `tmdb.py` uses the cache transparently — pass `force=True` to bypass when fresh data is needed.
 - `tracker.py` uses `force=True` everywhere because it needs fresh data to detect changes.
@@ -228,6 +242,11 @@ sucklingbot/
 | `guess_scores`       | leaderboard for poster/still guessing                                  |
 | `six_scores`         | leaderboard for six degrees game                                       |
 | `rentals`            | full rental lifecycle: status, plex key snapshot, thread IDs, rating, late fee, extension count, notification flags |
+| `plex_library_cache` | persisted Plex library snapshot, including searchable metadata used by rb9 achievements |
+| `achievement_earned` | unlocked achievement records                                           |
+| `achievement_display` | each member's selected visible badge roles                            |
+| `achievement_roles`  | Discord role IDs created for achievement badges                        |
+| `achievement_events` | event counters for achievement progress that is not stored elsewhere   |
 
 ---
 
@@ -239,7 +258,7 @@ three scheduled jobs run via apscheduler:
 - **12:00 pm** local time - daily recommendation
 - **every hour** - rental overdue DMs (once per rental when due_at passes) and 12-hour reminders (once per rental when <12h remain)
 
-both auto-posting features can be disabled at runtime with `/toggle` without removing channel configuration.
+scheduled auto-posting features can be disabled at runtime with `/toggle` without removing channel configuration.
 
 manual triggers are available via `/checknow`, `/checknowlive`, and `/dailynow` — these run regardless of toggle state.
 
@@ -248,7 +267,7 @@ manual triggers are available via `/checknow`, `/checknowlive`, and `/dailynow` 
 ## adding a new command
 
 1. add any new helper functions in the appropriate module (`tmdb.py`, `db.py`, `plex.py`, etc.)
-2. add the command to `bot.py` using the `@bot.tree.command(...)` decorator pattern
+2. add the command to the appropriate `cogs/*.py` module using the `app_commands` pattern
 3. add an embed builder in `embeds.py` if the response needs visual structure
 4. bump `version.py` and add a `changelog.md` entry
 5. restart the bot — slash commands re-sync to the configured guild on every startup

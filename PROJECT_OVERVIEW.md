@@ -1,7 +1,7 @@
 # Sucklingbot Project Overview
 
-**Last updated:** May 24, 2026
-**Current version:** 2.4.4
+**Last updated:** May 30, 2026
+**Current version:** 2.5.7
 **Maintainer:** rupertosandez (GitHub)
 
 ---
@@ -48,6 +48,20 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - **`/cancelrental @user [reason]`** - Admin: cancel rental with no fee
 - **`/assignrental @user <title> [year]`** - Admin: assign specific rental to user
 
+### Achievements
+- **`/achievements [user]`** - Member achievement shelf with visible badges, recent unlocks, and progress hints
+- **`/achievementdisplay <achievement> [replace]`** - Pin an earned achievement as one of up to 3 visible Discord badge roles
+- **`/achievementhide <achievement>`** - Remove one visible achievement badge role without losing the unlock
+- **`/achievementclear`** - Remove all visible achievement badge roles
+- **`/achievementboard`** - Community board for newest unlocks, top shelves, and rare badges
+- **`/setfeed <channel>`** - Admin: configure the Suckling feed for achievement unlock announcements
+- **`/achievementcatalog <channel>`** - Admin: post a public catalog of all earnable achievements
+- **`/achievementrescan [user]`** - Admin: backfill achievements from existing bot history and announce new unlocks
+- **`/achievementsyncroles <user>`** - Admin: repair selected visible badge roles
+- **`/achievementrefreshfeed [limit]`** - Admin: refresh recent achievement feed embeds into the current format
+
+Watched-movie achievements use returned rentals as the source of truth. RB9 library achievements rely on the persisted Plex library cache metadata.
+
 ### MacGuffins
 - **Drop on `/return`** - Globally unique collectible movie objects awarded after successful rental returns
 - **`/claimguffin`** - One free starter MacGuffin per member
@@ -67,6 +81,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - **Daily recommendations** - Noon, random pick from TMDB
 - **Streaming announcements** - 9am, new digital availability (first-time only, re-promotion prevention)
 - **Letterboxd activity** - Hourly check for new diary entries from linked accounts, compacting big single-member catch-ups
+- **Achievement feed** - Unlock announcements post when members earn badges or when admin backfill awards new badges
 - **Feature toggles:** `/toggle feature:streaming-announcements enabled:False` etc.
 - **Manual triggers:** `/checknow` (dry-run), `/checknowlive` (post live), `/dailynow`, `/lbactivitynow`
 
@@ -90,6 +105,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `bot.py` | Runtime entry point: bot setup, scheduler, signal handling, startup, and message routing |
 | `cogs/` | Slash command cogs grouped by feature area |
 | `cogs/admin.py` | Admin dashboard, toggles, manual checks, cache tools |
+| `cogs/achievements.py` | Achievement shelf, badge display, feed, catalog, and admin repair commands |
 | `cogs/discovery.py` | `/suck`, `/roll`, daily recommendation posting |
 | `cogs/games.py` | `/guess`, `/play`, `/six`, `/giveup`, game leaderboards |
 | `cogs/letterboxd.py` | `/lb` account, profile, watchlist, group, and tastecheck commands |
@@ -118,7 +134,8 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `logger.py` | File logging (data/bot.log, 1MB rotating) |
 | `launcher.py` | Windows system tray launcher wrapper |
 | `launcher/` | Tray UI, subprocess mgmt, auto-updates, state persistence |
-| `version.py` | Version constant (currently 2.4.4) |
+| `achievements.py` | Achievement registry, progress evaluation, unlock embeds, feed posting, and role sync |
+| `version.py` | Version constant (currently 2.5.7) |
 
 ### Design Patterns
 
@@ -133,6 +150,8 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - Plex: persisted SQLite library snapshot, hourly incremental refresh, weekly full reconcile, refresh lock
 - Picker: 24-hour candidate pool of ~1000 films
 - Six Degrees: 24-hour actor pool
+
+**Achievements:** `achievements.py` owns definitions and progress evaluators. Feature cogs call `award_for_user()` or record lightweight events when user actions happen. Rental and RB9-library achievements read returned rental records plus Plex cache metadata, so UX copy should treat `/return` as the official watched-film action.
 
 **Persistent state:** SQLite only. Loseable: in-memory caches, active game rounds, active rental view state (restart restarts cleanly).
 
@@ -155,6 +174,10 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 | `plex_library_cache` | Persisted Plex library snapshot for fast RB9 reads |
 | `macguffins` | Globally unique MacGuffin ownership records |
 | `macguffin_free_claims` | One-time free claim tracking per user |
+| `achievement_earned` | Achievement unlock records |
+| `achievement_display` | Up to 3 visible achievement badges per member |
+| `achievement_roles` | Discord role IDs for achievement badge roles |
+| `achievement_events` | Event counters for progress not stored in another feature table |
 
 ### Scheduled Jobs (APScheduler)
 
@@ -166,6 +189,28 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 Auto-posting jobs can be toggled with `/toggle` without losing configuration.
 
 ---
+
+## Key Recent Changes (v2.5.7 - May 30)
+
+**Achievements**
+- Expanded the earnable achievement set with more RB9 library badges, actor-reference badges, title-theme badges, country/genre badges, and review-style badges
+- Achievement names display with matching emoji in shelves, feed announcements, catalog posts, and badge roles
+
+## Key Recent Changes (v2.5.4 - May 30)
+
+**Achievement feed and admin tools**
+- Achievement unlock embeds now use the gold announcement format
+- `/achievementcatalog` posts all earnable achievements into a chosen channel for easy browsing
+- `/achievementrefreshfeed` refreshes recent feed embeds after formatting changes
+- `/achievementrescan` can backfill achievements from existing history and announce newly awarded badges
+
+## Key Recent Changes (v2.5.0 - May 28)
+
+**Achievements**
+- Members earn badges from rentals, RB9 library metadata, reviews, MacGuffins, games, discovery, and Letterboxd linking
+- Members can pin up to 3 earned badges as visible Discord roles
+- `/setfeed` configures where achievement unlocks post
+- Admin repair tools can rescan achievement progress and resync visible badge roles
 
 ## Key Recent Changes (v2.3.0 - May 19)
 
@@ -210,6 +255,7 @@ sucklingbot/
 ├── bot.py                    # Runtime entry, scheduler, message routing
 ├── cogs/                     # Slash command groups
 │   ├── admin.py              # Admin dashboard, toggles, manual checks
+│   ├── achievements.py       # Achievement shelf, feed, roles, and admin tools
 │   ├── discovery.py          # /suck, /roll, daily recommendations
 │   ├── games.py              # /guess, /play, /six, leaderboards
 │   ├── letterboxd.py         # /lb commands
@@ -220,7 +266,8 @@ sucklingbot/
 │   ├── tracking.py           # Streaming watchlist setup and tracking
 │   └── watchlist.py          # Personal watchlist commands
 ├── config.py                 # .env → config constants
-├── version.py                # VERSION = "2.4.4"
+├── achievements.py           # Achievement definitions, evaluation, embeds, and role sync
+├── version.py                # VERSION = "2.5.7"
 ├── tmdb.py                   # TMDB API wrapper (cached, deduped, backoff)
 ├── plex.py                   # Plex library async wrapper
 ├── db.py                      # SQLite CRUD
@@ -347,6 +394,11 @@ Site is for community members (casual tone, user-facing copy) not maintainers (n
 - [ ] Run `/setreviews <forum_channel>` as admin
 - [ ] Bot has "create public threads" + "send messages in threads" permissions
 
+### Achievement roles don't apply
+- [ ] Bot has "manage roles"
+- [ ] Bot's own Discord role is above the achievement badge roles
+- [ ] Run `/achievementsyncroles <user>` after fixing permissions or manual role edits
+
 ### Rent button missing on `/suck`, `/roll`
 - [ ] Film must be confirmed in Plex library (missing = no button, not broken state)
 
@@ -368,6 +420,7 @@ Site is for community members (casual tone, user-facing copy) not maintainers (n
 
 - **Six Degrees chain validation:** Fuzzy on punctuation/case, but doesn't handle name variants well (accents, last-first conventions). If a correct chain is rejected, the TMDB-listed name might differ from the common name.
 - **Streaming detection:** Announces first-time digital availability only; doesn't track moves between services or additions to extra services.
+- **Achievement role assignment:** Discord only lets the bot manage roles below its own highest role.
 - **Rent button timeout:** 2 minutes before disappearing (user can still call `/rent` command).
 - **Game round timeout:** Dropdown selections and game rounds time out after 60 seconds.
 

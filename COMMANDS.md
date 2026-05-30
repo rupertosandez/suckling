@@ -199,6 +199,8 @@ earn movie-club badges by using suckling. rentals are the official record for wa
 
 members can earn as many achievements as they want, but only **3** can be pinned as visible Discord badge roles at once.
 
+achievement unlocks post to the Suckling feed channel once an admin configures it with `/setfeed`.
+
 ### `/achievements [user]`
 view an achievement shelf.
 
@@ -318,13 +320,17 @@ show the top scorers for `/six`.
 
 ## auto-posting features
 
-the bot automatically posts in two ways (admins configure the channels):
+the bot automatically posts in four ways (admins configure the channels):
 
 🩸 **daily recommendation** - every day at noon, the bot drops a random pick in the configured channel. if the film is in the library, it includes a 📼 rent button.
 
 📺 **streaming announcements** - when a movie becomes available digitally for the first time (shudder, netflix, max, etc.), the bot announces it in the configured channel. shudder additions get a special highlight.
 
 the streaming feature only announces films hitting digital for the first time — not when they move between services or get added to additional ones.
+
+🏆 **achievement feed** - when members unlock badges, suckling posts a gold achievement embed to the configured feed channel.
+
+📗 **letterboxd activity** - when admins enable it, suckling posts recent diary activity from linked members.
 
 ---
 
@@ -334,7 +340,7 @@ the streaming feature only announces films hitting digital for the first time �
 - the dropdown menu that appears for ambiguous titles times out after 60 seconds — just run the command again if it expires
 - both games and tracking are server-wide — anyone can add to the tracked list and play
 - leaderboards are separate for `/guess` and `/six` — winning at one doesn't affect the other
-- you can only have one active rental at a time
+- you can have up to 3 active rentals at a time
 - the 5-day clock starts the moment you confirm — not when you start browsing
 - rent buttons on embeds time out after 2 minutes. the command is still there if you miss it
 
@@ -436,8 +442,12 @@ set the channel where new diary entries from linked letterboxd accounts post. wh
 ### `/setfeed <channel>`
 set the channel where suckling feed posts go, including achievement unlocks.
 
+the bot needs send-message and embed-link permissions in the chosen channel.
+
 ### `/achievementcatalog <channel>`
 post all earnable achievements in the chosen channel, grouped by category.
+
+useful for pinning a public achievement reference somewhere members can browse.
 
 ### `/postfaq <channel> [thread_name]`
 admin only. create a Suckling FAQ thread in the chosen channel. the bot posts a primary index embed with jump links inside the thread, followed by compact section embeds for lookup, rentals, watchlists, letterboxd, games, achievements, and macguffins.
@@ -471,6 +481,8 @@ backfill achievements from existing bot history. leave `user` blank to rescan ev
 
 ### `/achievementsyncroles <user>`
 reapply a member's selected visible achievement badge roles. useful if roles were manually changed in Discord.
+
+the bot needs manage roles, and its own Discord role must be above the achievement badge roles.
 
 ### `/achievementrefreshfeed [limit]`
 refresh recent achievement feed posts into the current achievement announcement format.
