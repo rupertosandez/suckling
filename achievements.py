@@ -159,6 +159,24 @@ def _perfect_rating_count(user_id: str) -> int:
     return sum(1 for rental in _returned_rentals(user_id) if rental.get("rating") == 10)
 
 
+def _long_thought_count(user_id: str) -> int:
+    return sum(1 for rental in _returned_rentals(user_id) if len((rental.get("thoughts") or "").strip()) >= 500)
+
+
+def _hard_sell_count(user_id: str) -> int:
+    return sum(
+        1 for rental in _returned_rentals(user_id)
+        if rental.get("recommended") and isinstance(rental.get("rating"), int) and rental["rating"] <= 5
+    )
+
+
+def _soft_pass_count(user_id: str) -> int:
+    return sum(
+        1 for rental in _returned_rentals(user_id)
+        if rental.get("recommended") == 0 and isinstance(rental.get("rating"), int) and rental["rating"] >= 8
+    )
+
+
 def _same_day_return_count(user_id: str) -> int:
     tz = _user_timezone(user_id)
     counts: dict[str, int] = {}
@@ -368,6 +386,18 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("sicario", "sicario", "returned 4 Denis Villeneuve rentals.", "return 4 Denis Villeneuve movies from rb9.", "rb9 library", 4, _metadata_count("directors", "Denis Villeneuve"), "🎯"),
     Achievement("cage", "cage", "returned 5 Nicolas Cage rentals.", "return 5 Nicolas Cage movies from rb9.", "rb9 library", 5, _metadata_count("actors", "Nicolas Cage"), "🐝"),
     Achievement("whoa", "whoa", "returned 5 Keanu Reeves rentals.", "return 5 Keanu Reeves movies from rb9.", "rb9 library", 5, _metadata_count("actors", "Keanu Reeves"), "💊"),
+    Achievement("on-a-boat", "on a boat", "returned a rental with Andy Samberg.", "return a movie with Andy Samberg in it.", "rb9 library", 1, _metadata_count("actors", "Andy Samberg"), "⛵"),
+    Achievement("mclovin", "mclovin", "returned a rental with Christopher Mintz-Plasse.", "return a movie with Christopher Mintz-Plasse in it.", "rb9 library", 1, _metadata_count("actors", "Christopher Mintz-Plasse"), "🪪"),
+    Achievement("alright-alright-alright", "alright alright alright", "returned a rental with Matthew McConaughey.", "return a movie with Matthew McConaughey in it.", "rb9 library", 1, _metadata_count("actors", "Matthew McConaughey"), "🚗"),
+    Achievement("good-soup", "good soup", "returned a rental with Adam Driver.", "return a movie with Adam Driver in it.", "rb9 library", 1, _metadata_count("actors", "Adam Driver"), "🥣"),
+    Achievement("not-quite-my-tempo", "not quite my tempo", "returned a rental with J.K. Simmons.", "return a movie with J.K. Simmons in it.", "rb9 library", 1, _metadata_count("actors", "J.K. Simmons"), "🥁"),
+    Achievement("groovy", "groovy", "returned a rental with Bruce Campbell.", "return a movie with Bruce Campbell in it.", "rb9 library", 1, _metadata_count("actors", "Bruce Campbell"), "🪚"),
+    Achievement("ill-be-back", "i'll be back", "returned a rental with Arnold Schwarzenegger.", "return a movie with Arnold Schwarzenegger in it.", "rb9 library", 1, _metadata_count("actors", "Arnold Schwarzenegger"), "🤖"),
+    Achievement("life-finds-a-way", "life finds a way", "returned a rental with Jeff Goldblum.", "return a movie with Jeff Goldblum in it.", "rb9 library", 1, _metadata_count("actors", "Jeff Goldblum"), "🧬"),
+    Achievement("you-shall-not-pass", "you shall not pass", "returned a rental with Ian McKellen.", "return a movie with Ian McKellen in it.", "rb9 library", 1, _metadata_count("actors", "Ian McKellen"), "🧙"),
+    Achievement("im-just-ken", "i'm just ken", "returned a rental with Ryan Gosling.", "return a movie with Ryan Gosling in it.", "rb9 library", 1, _metadata_count("actors", "Ryan Gosling"), "🕺"),
+    Achievement("she-doesnt-even-go-here", "she doesn't even go here", "returned a rental with Rachel McAdams.", "return a movie with Rachel McAdams in it.", "rb9 library", 1, _metadata_count("actors", "Rachel McAdams"), "💅"),
+    Achievement("as-you-wish", "as you wish", "returned a rental with Cary Elwes.", "return a movie with Cary Elwes in it.", "rb9 library", 1, _metadata_count("actors", "Cary Elwes"), "🗡️"),
     Achievement("kaiju", "kaiju", "returned 3 Godzilla or Kong rentals.", "return 3 Godzilla or Kong movies from rb9.", "rb9 library", 3, _title_contains_any_count(("godzilla", "kong")), "🦖"),
     Achievement("precious", "precious", "returned 3 Lord of the Rings rentals.", "return the Lord of the Rings trilogy from rb9.", "rb9 library", 3, _title_contains_any_count(("the lord of the rings",)), "💍"),
     Achievement("matrix", "matrix", "returned 3 Matrix rentals.", "return 3 Matrix movies from rb9.", "rb9 library", 3, _title_contains_any_count(("matrix",)), "🕶️"),
@@ -378,6 +408,17 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("night", "night", "returned 5 rentals with night in the title.", "return 5 rb9 movies with night in the title.", "rb9 library", 5, _title_word_count("night"), "🌙"),
     Achievement("evil", "evil", "returned 3 rentals with evil in the title.", "return 3 rb9 movies with evil in the title.", "rb9 library", 3, _title_word_count("evil"), "😈"),
     Achievement("intermission", "intermission", "returned 3 rentals over 3 hours.", "return 3 rb9 movies that run at least 3 hours.", "rb9 library", 3, _long_runtime_count, "⏸️"),
+    Achievement("houseguest", "houseguest", "returned 3 rentals with house in the title.", "return 3 rb9 movies with house in the title.", "rb9 library", 3, _title_word_count("house"), "🏚️"),
+    Achievement("ghosted", "ghosted", "returned 3 rentals with ghost in the title.", "return 3 rb9 movies with ghost in the title.", "rb9 library", 3, _title_word_count("ghost"), "👻"),
+    Achievement("bloodline", "bloodline", "returned 2 rentals with blood in the title.", "return both rb9 movies with blood in the title.", "rb9 library", 2, _title_word_count("blood"), "🩸"),
+    Achievement("blue-velvet", "blue velvet", "returned 3 rentals with blue in the title.", "return 3 rb9 movies with blue in the title.", "rb9 library", 3, _title_word_count("blue"), "💙"),
+    Achievement("hallyu", "hallyu", "returned 5 South Korean rentals.", "return 5 rb9 movies from South Korea.", "rb9 library", 5, _metadata_count("countries", "Republic of Korea"), "🇰🇷"),
+    Achievement("toonami", "toonami", "returned 5 animated rentals.", "return 5 animated rb9 movies.", "rb9 library", 5, _metadata_count("genres", "Animation"), "📺"),
+    Achievement("doc-holiday", "doc holiday", "returned 3 documentary rentals.", "return 3 documentary rb9 movies.", "rb9 library", 3, _metadata_count("genres", "Documentary"), "🎥"),
+    Achievement("multipass", "multipass", "returned a rental with Milla Jovovich.", "return a movie with Milla Jovovich in it.", "rb9 library", 1, _metadata_count("actors", "Milla Jovovich"), "🪪"),
+    Achievement("hold-onto-your-butts", "hold onto your butts", "returned a rental with Samuel L. Jackson.", "return a movie with Samuel L. Jackson in it.", "rb9 library", 1, _metadata_count("actors", "Samuel L. Jackson"), "🚬"),
+    Achievement("why-so-serious", "why so serious", "returned a rental with Heath Ledger.", "return a movie with Heath Ledger in it.", "rb9 library", 1, _metadata_count("actors", "Heath Ledger"), "🃏"),
+    Achievement("wilson", "wilson", "returned a rental with Tom Hanks.", "return a movie with Tom Hanks in it.", "rb9 library", 1, _metadata_count("actors", "Tom Hanks"), "🏐"),
     Achievement("two-thumbs-up", "two thumbs up", "recommended 10 returned rentals.", "recommend 10 rentals when returning them.", "reviews", 10, _recommended_count, "👍"),
     Achievement("easy-recommend", "easy recommend", "recommended 25 returned rentals.", "recommend 25 rentals when returning them.", "reviews", 25, _recommended_count, "❤️"),
     Achievement("not-for-me", "not for me", "marked 5 rentals as not recommended.", "mark 5 rentals as not recommended.", "reviews", 5, _not_recommended_count, "🚫"),
@@ -386,6 +427,9 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("taste-has-spoken", "taste has spoken", "gave three rentals a 10/10.", "give three returned rentals a 10/10.", "reviews", 3, _perfect_rating_count, "💯"),
     Achievement("notes-app-auteur", "notes app auteur", "left written thoughts on 10 returned rentals.", "leave thoughts on 10 rental returns.", "reviews", 10, _written_review_count, "📝"),
     Achievement("film-critic", "film critic", "left written thoughts on 25 returned rentals.", "leave thoughts on 25 rental returns.", "reviews", 25, _written_review_count, "📝"),
+    Achievement("essayist", "essayist", "left a long written rental review.", "leave thoughts over 500 characters on a rental return.", "reviews", 1, _long_thought_count, "✍️"),
+    Achievement("hard-sell", "hard sell", "recommended a rental rated 5 or lower.", "recommend a rental you rated 5/10 or lower.", "reviews", 1, _hard_sell_count, "📣"),
+    Achievement("soft-pass", "soft pass", "did not recommend a rental rated 8 or higher.", "mark a rental you rated 8/10 or higher as not recommended.", "reviews", 1, _soft_pass_count, "🤔"),
     Achievement("it-belongs-in-a-museum", "it belongs in a museum", "claimed your first macguffin.", "get your first macguffin.", "macguffins", 1, _macguffin_count, "🏛️"),
     Achievement("prop-department", "prop department", "owned 5 macguffins.", "own 5 macguffins.", "macguffins", 5, _macguffin_count, "🗝️"),
     Achievement("cursed-object-enjoyer", "cursed object enjoyer", "owned 10 macguffins.", "own 10 macguffins.", "macguffins", 10, _macguffin_count, "🔮"),
