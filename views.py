@@ -117,6 +117,34 @@ async def _rent_from_tmdb_id(
     )
 
 
+async def _send_embed_rent_prompt(
+    interaction: discord.Interaction,
+    bot: discord.Client,
+    *,
+    movie: dict | None = None,
+    title: str | None = None,
+    year: int | None = None,
+) -> None:
+    if not await _defer_component(interaction, ephemeral=True):
+        return
+
+    view = EmbedRentView(
+        bot=bot,
+        user_id=str(interaction.user.id),
+        user_name=str(interaction.user),
+        movie=movie,
+        title=title,
+        year=year,
+        initiated_by="selected",
+    )
+    display_title = (movie or {}).get("title") or title or "that movie"
+    await interaction.followup.send(
+        f"📼 rent **{display_title}**?",
+        view=view,
+        ephemeral=True,
+    )
+
+
 def _record_existing_providers(movie_id: int, providers: dict) -> list[str]:
     """
     Record any current subscription providers as seen, so the daily job won't
@@ -333,6 +361,10 @@ async def _defer_component(
         return True
     except discord.NotFound:
         return False
+    except discord.HTTPException as e:
+        if getattr(e, "code", None) == 40060:
+            return False
+        raise
 
 
 async def _send_component_denied(
@@ -1008,20 +1040,18 @@ class FilmCardView(discord.ui.View):
             _title = title
             _year = year
             _plex_movie = plex_movie
+            _tmdb_id = tmdb_id
 
             async def rent_cb(interaction: discord.Interaction):
-                view = EmbedRentView(
-                    bot=_bot,
-                    user_id=str(interaction.user.id),
-                    user_name=str(interaction.user),
+                if _tmdb_id:
+                    await _rent_from_tmdb_id(interaction, _tmdb_id)
+                    return
+                await _send_embed_rent_prompt(
+                    interaction,
+                    _bot,
                     movie=_plex_movie,
                     title=_title,
                     year=_year,
-                )
-                await interaction.response.send_message(
-                    f"📼 rent **{_title}**?",
-                    view=view,
-                    ephemeral=True,
                 )
 
             rent_btn.callback = rent_cb
@@ -1055,18 +1085,12 @@ class RentThisView(discord.ui.View):
         _plex_movie = plex_movie
 
         async def rent_cb(interaction: discord.Interaction):
-            view = EmbedRentView(
-                bot=_bot,
-                user_id=str(interaction.user.id),
-                user_name=str(interaction.user),
+            await _send_embed_rent_prompt(
+                interaction,
+                _bot,
                 movie=_plex_movie,
                 title=_title,
                 year=_year,
-            )
-            await interaction.response.send_message(
-                f"📼 rent **{_title}**?",
-                view=view,
-                ephemeral=True,
             )
 
         rent_btn.callback = rent_cb
