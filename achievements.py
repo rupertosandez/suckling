@@ -472,6 +472,25 @@ def display_name(achievement: Achievement) -> str:
     return visible_name(achievement)
 
 
+def catalog_entries() -> list[dict[str, object]]:
+    return [
+        {
+            "id": achievement.id,
+            "name": achievement.name,
+            "title_name": _title_case_name(achievement.name),
+            "display_name": display_name(achievement),
+            "description": achievement.description,
+            "hint": achievement.hint,
+            "category": achievement.category,
+            "threshold": achievement.threshold,
+            "emoji": achievement.emoji,
+            "hidden": achievement.hidden,
+        }
+        for achievement in ACHIEVEMENTS
+        if not achievement.hidden
+    ]
+
+
 def legacy_visible_name(achievement: Achievement) -> str:
     return f"badge: {achievement.name}"
 
@@ -513,22 +532,10 @@ def unlock_embed(
         "",
         achievement.description,
     ]
-    if rental_title:
-        lines.extend([
-            "",
-            "**rental**",
-            f"*{rental_title}*",
-        ])
-
     embed = discord.Embed(
         title="🏆 Achievement Unlocked!",
         description="\n".join(lines),
         color=UNLOCK_COLOR,
-    )
-    embed.add_field(
-        name="category",
-        value=achievement.category,
-        inline=True,
     )
     embed.set_footer(text="use /achievements to see your shelf")
     if icon_url:

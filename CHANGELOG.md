@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.8] - 2026-05-30
+
+### Changed
+
+- `/achievementcatalog` now posts a compact catalog link instead of dumping the full achievement list into Discord.
+- Added a JSON export path for the public website achievement catalog.
+
 ## [2.5.7] - 2026-05-30
 
 ### Added

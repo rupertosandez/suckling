@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import achievements as achievement_module
+import config
 import db
 
 
@@ -178,48 +179,6 @@ def _is_achievement_unlock_embed(embed: discord.Embed) -> bool:
     return "achievement unlocked" in text or "earned a new badge" in text
 
 
-def _achievement_catalog_embeds() -> list[discord.Embed]:
-    by_category: dict[str, list[achievement_module.Achievement]] = {}
-    for achievement in achievement_module.ACHIEVEMENTS:
-        by_category.setdefault(achievement.category, []).append(achievement)
-
-    def category_embed(category: str, achievements: list[achievement_module.Achievement]) -> discord.Embed:
-        embed = discord.Embed(
-            title=f"earnable achievements: {category}",
-            description="badges you can unlock by using Suckling.",
-            color=achievement_module.ROLE_COLOR,
-        )
-        for achievement in achievements:
-            embed.add_field(
-                name=achievement_module.display_name(achievement),
-                value=achievement.hint,
-                inline=False,
-            )
-        return embed
-
-    category_order = ("rentals", "rb9 library", "reviews", "macguffins", "games", "discovery", "letterboxd")
-    embeds = []
-    for category in category_order:
-        achievements = by_category.get(category)
-        if not achievements:
-            continue
-        embeds.append(category_embed(category, achievements))
-
-    for category, achievements in sorted(by_category.items()):
-        if category in category_order:
-            continue
-        embeds.append(category_embed(category, achievements))
-
-    if embeds:
-        total = len(achievement_module.ACHIEVEMENTS)
-        embeds[0].description = (
-            f"there are **{total}** earnable achievements. "
-            "you can pin up to **3** unlocked badges as visible roles."
-        )
-        embeds[-1].set_footer(text="use /achievements to see your own shelf")
-    return embeds
-
-
 class AchievementsCog(commands.Cog):
     """Achievement profile, display, feed, and admin commands."""
 
@@ -384,9 +343,9 @@ class AchievementsCog(commands.Cog):
 
     @app_commands.command(
         name="achievementcatalog",
-        description="post all earnable achievements in a channel (admin only)",
+        description="post the achievement catalog link in a channel (admin only)",
     )
-    @app_commands.describe(channel="the channel where the achievement catalog should post")
+    @app_commands.describe(channel="the channel where the achievement catalog link should post")
     @app_commands.default_permissions(manage_guild=True)
     async def achievement_catalog(
         self,
@@ -401,21 +360,31 @@ class AchievementsCog(commands.Cog):
             )
             return
 
-        embeds = _achievement_catalog_embeds()
-        if not embeds:
-            await interaction.response.send_message(
-                "there are no achievements configured.",
-                ephemeral=True,
-            )
-            return
-
         await interaction.response.defer(ephemeral=True)
+        embed = discord.Embed(
+            title="achievement catalog",
+            description=(
+                f"browse all **{len(achievement_module.catalog_entries())}** earnable badges, "
+                "grouped by category.\n\n"
+                "you can pin up to **3** unlocked achievements as visible Discord badge roles."
+            ),
+            color=achievement_module.ROLE_COLOR,
+            url=config.ACHIEVEMENT_CATALOG_URL,
+        )
+        embed.set_footer(text="use /achievements to see your own shelf")
+        view = discord.ui.View()
+        view.add_item(
+            discord.ui.Button(
+                label="view full catalog",
+                url=config.ACHIEVEMENT_CATALOG_URL,
+            )
+        )
         try:
-            for start in range(0, len(embeds), 10):
-                await channel.send(
-                    embeds=embeds[start:start + 10],
-                    allowed_mentions=discord.AllowedMentions.none(),
-                )
+            await channel.send(
+                embed=embed,
+                view=view,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
         except discord.HTTPException as e:
             await interaction.followup.send(
                 f"failed to post achievement catalog in {channel.mention}: {e}",
@@ -424,8 +393,7 @@ class AchievementsCog(commands.Cog):
             return
 
         await interaction.followup.send(
-            f"posted **{len(achievement_module.ACHIEVEMENTS)}** earnable achievements "
-            f"in {channel.mention}.",
+            f"posted the achievement catalog link in {channel.mention}.",
             ephemeral=True,
         )
 

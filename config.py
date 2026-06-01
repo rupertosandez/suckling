@@ -25,6 +25,10 @@ TAUTULLI_URL = (os.getenv("TAUTULLI_URL") or "").rstrip("/")
 TAUTULLI_API_KEY = os.getenv("TAUTULLI_API_KEY")
 PLEX_CLEANUP_ENABLED = os.getenv("PLEX_CLEANUP_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 BOT_TIMEZONE = os.getenv("BOT_TIMEZONE", "America/Los_Angeles")
+ACHIEVEMENT_CATALOG_URL = (
+    os.getenv("ACHIEVEMENT_CATALOG_URL")
+    or "https://rupertosandez.github.io/sucklingsite/achievements/"
+)
 
 if not DISCORD_TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set in .env")

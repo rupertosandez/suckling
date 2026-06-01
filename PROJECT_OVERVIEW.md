@@ -1,7 +1,7 @@
 # Sucklingbot Project Overview
 
 **Last updated:** May 30, 2026
-**Current version:** 2.5.7
+**Current version:** 2.5.8
 **Maintainer:** rupertosandez (GitHub)
 
 ---
@@ -55,7 +55,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 - **`/achievementclear`** - Remove all visible achievement badge roles
 - **`/achievementboard`** - Community board for newest unlocks, top shelves, and rare badges
 - **`/setfeed <channel>`** - Admin: configure the Suckling feed for achievement unlock announcements
-- **`/achievementcatalog <channel>`** - Admin: post a public catalog of all earnable achievements
+- **`/achievementcatalog <channel>`** - Admin: post a public link to the website achievement catalog
 - **`/achievementrescan [user]`** - Admin: backfill achievements from existing bot history and announce new unlocks
 - **`/achievementsyncroles <user>`** - Admin: repair selected visible badge roles
 - **`/achievementrefreshfeed [limit]`** - Admin: refresh recent achievement feed embeds into the current format
@@ -135,7 +135,7 @@ Watched-movie achievements use returned rentals as the source of truth. RB9 libr
 | `launcher.py` | Windows system tray launcher wrapper |
 | `launcher/` | Tray UI, subprocess mgmt, auto-updates, state persistence |
 | `achievements.py` | Achievement registry, progress evaluation, unlock embeds, feed posting, and role sync |
-| `version.py` | Version constant (currently 2.5.7) |
+| `version.py` | Version constant (currently 2.5.8) |
 
 ### Design Patterns
 
@@ -190,6 +190,12 @@ Auto-posting jobs can be toggled with `/toggle` without losing configuration.
 
 ---
 
+## Key Recent Changes (v2.5.8 - May 30)
+
+**Achievement catalog**
+- The website now hosts the full achievement catalog from a JSON export
+- `/achievementcatalog` posts a compact link embed instead of the full list in Discord
+
 ## Key Recent Changes (v2.5.7 - May 30)
 
 **Achievements**
@@ -200,7 +206,7 @@ Auto-posting jobs can be toggled with `/toggle` without losing configuration.
 
 **Achievement feed and admin tools**
 - Achievement unlock embeds now use the gold announcement format
-- `/achievementcatalog` posts all earnable achievements into a chosen channel for easy browsing
+- `/achievementcatalog` posts the achievement catalog into a chosen channel for easy browsing
 - `/achievementrefreshfeed` refreshes recent feed embeds after formatting changes
 - `/achievementrescan` can backfill achievements from existing history and announce newly awarded badges
 
@@ -267,7 +273,7 @@ sucklingbot/
 │   └── watchlist.py          # Personal watchlist commands
 ├── config.py                 # .env → config constants
 ├── achievements.py           # Achievement definitions, evaluation, embeds, and role sync
-├── version.py                # VERSION = "2.5.7"
+├── version.py                # VERSION = "2.5.8"
 ├── tmdb.py                   # TMDB API wrapper (cached, deduped, backoff)
 ├── plex.py                   # Plex library async wrapper
 ├── db.py                      # SQLite CRUD
@@ -326,6 +332,7 @@ PLEX_LIBRARY=Movies                      # Optional; default "Movies"
 BOT_TIMEZONE=America/Los_Angeles         # Optional; local timezone for rental due dates
 SUCKLINGBOT_DATA_DIR=C:\path\to\sucklingbot\data  # Optional; custom data folder
 SUCKLINGBOT_ASSETS_DIR=C:\path\to\sucklingbot\assets  # Optional; custom assets folder
+ACHIEVEMENT_CATALOG_URL=https://rupertosandez.github.io/sucklingsite/achievements/  # Optional
 ```
 
 ---

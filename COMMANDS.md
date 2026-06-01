@@ -445,9 +445,9 @@ set the channel where suckling feed posts go, including achievement unlocks.
 the bot needs send-message and embed-link permissions in the chosen channel.
 
 ### `/achievementcatalog <channel>`
-post all earnable achievements in the chosen channel, grouped by category.
+post an achievement catalog embed and website link in the chosen channel.
 
-useful for pinning a public achievement reference somewhere members can browse.
+useful for pinning a public achievement reference without dumping the full badge list into Discord.
 
 ### `/postfaq <channel> [thread_name]`
 admin only. create a Suckling FAQ thread in the chosen channel. the bot posts a primary index embed with jump links inside the thread, followed by compact section embeds for lookup, rentals, watchlists, letterboxd, games, achievements, and macguffins.

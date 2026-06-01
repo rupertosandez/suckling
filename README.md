@@ -75,6 +75,7 @@ PLEX_TOKEN=your_plex_token
 PLEX_LIBRARY=Movies
 BOT_TIMEZONE=America/Los_Angeles
 SUCKLINGBOT_DATA_DIR=C:\path\to\sucklingbot\data
+ACHIEVEMENT_CATALOG_URL=https://rupertosandez.github.io/sucklingsite/achievements/
 ```
 
 | variable                 | required | notes                                         |
@@ -87,6 +88,7 @@ SUCKLINGBOT_DATA_DIR=C:\path\to\sucklingbot\data
 | `BOT_TIMEZONE`           | no       | local timezone for rental due dates (default: `America/Los_Angeles`) |
 | `SUCKLINGBOT_DATA_DIR`   | no       | custom data folder; useful for worktree testing |
 | `SUCKLINGBOT_ASSETS_DIR` | no       | custom assets folder; defaults to project assets |
+| `ACHIEVEMENT_CATALOG_URL` | no      | website page linked by `/achievementcatalog` |
 
 the `.env` file is gitignored — never commit it.
 
@@ -147,6 +149,12 @@ to enable achievement unlock announcements, choose a feed channel:
 ```
 
 achievement badge roles are created by the bot when members pin badges with `/achievementdisplay`. the bot needs **manage roles**, and its own Discord role must be above the achievement badge roles it creates or edits.
+
+to refresh the website achievement catalog after changing `achievements.py`:
+
+```
+venv\Scripts\python.exe scripts\export_achievement_catalog.py
+```
 
 then optionally toggle features off if you want them disabled:
 
