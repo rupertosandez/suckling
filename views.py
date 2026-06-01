@@ -145,6 +145,82 @@ async def _send_embed_rent_prompt(
     )
 
 
+class RentalHistoryView(discord.ui.View):
+    """Paginated view for /rentalstats."""
+
+    def __init__(self, user_tag: str, history: list[dict]):
+        super().__init__(timeout=120)
+        self.user_tag = user_tag
+        self.history = history
+        self.page = 0
+        self.total_pages = max(1, -(-len(history) // embeds.RENTAL_HISTORY_PAGE_SIZE))
+        self._rebuild()
+
+    @classmethod
+    def for_page(
+        cls,
+        user_tag: str,
+        history: list[dict],
+        page: int,
+    ) -> "RentalHistoryView":
+        view = cls(user_tag=user_tag, history=history)
+        view.page = page
+        view._rebuild()
+        return view
+
+    def _rebuild(self):
+        self.clear_items()
+        if self.page > 0:
+            prev_btn = discord.ui.Button(
+                label="< prev",
+                style=discord.ButtonStyle.secondary,
+            )
+            prev_btn.callback = self._prev
+            self.add_item(prev_btn)
+
+        if self.page < self.total_pages - 1:
+            next_btn = discord.ui.Button(
+                label="next >",
+                style=discord.ButtonStyle.secondary,
+            )
+            next_btn.callback = self._next
+            self.add_item(next_btn)
+
+    async def _prev(self, interaction: discord.Interaction):
+        if not await _defer_component(interaction):
+            return
+        next_view = RentalHistoryView.for_page(
+            user_tag=self.user_tag,
+            history=self.history,
+            page=max(0, self.page - 1),
+        )
+        embed = embeds.rental_stats_embed(
+            next_view.history,
+            next_view.user_tag,
+            next_view.page,
+            next_view.total_pages,
+        )
+        self.stop()
+        await interaction.edit_original_response(embed=embed, view=next_view)
+
+    async def _next(self, interaction: discord.Interaction):
+        if not await _defer_component(interaction):
+            return
+        next_view = RentalHistoryView.for_page(
+            user_tag=self.user_tag,
+            history=self.history,
+            page=min(self.total_pages - 1, self.page + 1),
+        )
+        embed = embeds.rental_stats_embed(
+            next_view.history,
+            next_view.user_tag,
+            next_view.page,
+            next_view.total_pages,
+        )
+        self.stop()
+        await interaction.edit_original_response(embed=embed, view=next_view)
+
+
 def _record_existing_providers(movie_id: int, providers: dict) -> list[str]:
     """
     Record any current subscription providers as seen, so the daily job won't

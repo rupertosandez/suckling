@@ -254,6 +254,45 @@ async def edit_thread_returned(
         print(f"[rental] Failed to edit thread after return: {e}")
 
 
+async def edit_thread_returned_unwatched(
+    bot: discord.Client,
+    rental: dict,
+) -> None:
+    """Edit the forum thread's starter message to show an unwatched return."""
+    thread_id = rental.get("thread_id")
+    message_id = rental.get("message_id")
+    if not thread_id or not message_id:
+        return
+
+    try:
+        thread = bot.get_channel(int(thread_id))
+        if thread is None:
+            thread = await bot.fetch_channel(int(thread_id))
+
+        msg = await thread.fetch_message(int(message_id))
+
+        movie = {
+            "title": rental["title"],
+            "year": rental.get("year"),
+            "poster_url": rental.get("poster_url"),
+        }
+        embed = embeds.rental_unwatched_return_embed(
+            movie=movie,
+            user_tag=rental["user_name"],
+            returned_at_iso=rental["returned_at"],
+            late_fee=rental.get("late_fee_dollars", 0.0),
+            reason=rental.get("thoughts"),
+        )
+        await msg.edit(embed=embed)
+
+        forum = await _get_forum_channel(bot)
+        if forum:
+            await thread.edit(applied_tags=_get_applied_tags(forum, recommend=False))
+
+    except (discord.NotFound, discord.Forbidden, discord.HTTPException) as e:
+        print(f"[rental] Failed to edit thread after unwatched return: {e}")
+
+
 async def edit_thread_cancelled(
     bot: discord.Client,
     rental: dict,

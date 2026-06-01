@@ -117,17 +117,19 @@ run it with no options to check your current rental timezone.
 
 ---
 
-### `/return <recommend> [rating] [thoughts] [rental]`
-return a rental and post a review to the forum.
+### `/return [rental] [recommend] [rating] [thoughts]`
+return a rental with a private popup flow.
 
-- `recommend` (required): checkbox — would you recommend this to the group?
-- `rating` (optional): your score out of 10 (1-10)
-- `thoughts` (optional): your review, as brief or long as you like
 - `rental` (optional): rental id or part of the title, needed if you have more than one active rental
+- `recommend` (optional): fast path checkbox if you want to skip the popup
+- `rating` (optional): fast path score out of 10 (1-10)
+- `thoughts` (optional): fast path review text
 
-on return, the forum thread is edited in-place: updated with your rating if you gave one and your review, renamed from "checked out" to "reviewed", and the **recommendation** forum tag is added if you checked yes.
+with no review options, `/return` opens a private menu. choose the rental, pick **watched it** or **didn't watch**, then fill out the popup.
 
-if you return it late, a late fee is calculated: **$1 for every day (or part of a day) overdue**. fees are cosmetic — tracked in the ledger but not collected.
+watched returns post a review to the forum, can drop a macguffin, and count toward watched-rental achievements. unwatched returns close the rental without a review, rating, recommendation, macguffin drop, or watched achievement credit.
+
+if you return it late, a late fee is calculated: **$1 for every day (or part of a day) overdue**. fees are cosmetic - tracked in the ledger but not collected.
 
 ---
 
@@ -160,7 +162,7 @@ leaderboard of accumulated late fees. shows total fees, total rentals, and late 
 ---
 
 ### `/rentalstats [user]`
-your full rental history and stats: total rentals, on-time vs late, total fees, currently renting (if applicable), and your last 5 returns with ratings.
+your full rental history and stats: total rentals, on-time vs late, total fees, currently renting (if applicable), and paginated movie cards with status, rating, and recommendation.
 
 - `user` (optional): check another member's stats
 

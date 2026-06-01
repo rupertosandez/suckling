@@ -979,6 +979,21 @@ def mark_rental_returned(
         )
 
 
+def mark_rental_returned_unwatched(
+    rental_id: int,
+    returned_at: str,
+    reason: str | None,
+    late_fee_dollars: float,
+) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE rentals SET status = 'returned_unwatched', returned_at = ?, "
+            "rating = NULL, thoughts = ?, recommended = NULL, "
+            "late_fee_dollars = ? WHERE id = ?",
+            (returned_at, reason, late_fee_dollars, rental_id),
+        )
+
+
 def extend_rental_due_at(
     rental_id: int,
     due_at: str,
@@ -1076,7 +1091,7 @@ def get_late_fees_leaderboard(limit: int = 10) -> list[dict]:
             "  COUNT(*) AS total_rentals, "
             "  SUM(CASE WHEN late_fee_dollars > 0 THEN 1 ELSE 0 END) AS late_count "
             "FROM rentals "
-            "WHERE status = 'returned' "
+            "WHERE status IN ('returned', 'returned_unwatched') "
             "GROUP BY user_id "
             "HAVING total_fees > 0 "
             "ORDER BY total_fees DESC "

@@ -127,11 +127,316 @@ async def _resolve_active_rental_for_command(
     return None
 
 
+def _rental_label(rental: dict) -> str:
+    year = f" ({rental.get('year')})" if rental.get("year") else ""
+    return f"{rental.get('title', 'unknown')}{year}"
+
+
+async def _send_component_denied(
+    interaction: discord.Interaction,
+    message: str,
+) -> None:
+    if interaction.response.is_done():
+        await interaction.followup.send(message, ephemeral=True)
+    else:
+        await interaction.response.send_message(message, ephemeral=True)
+
+
+def _parse_yes_no(value: str) -> bool | None:
+    normalized = (value or "").strip().lower()
+    if normalized in {"yes", "y", "true", "t", "1", "recommend", "recommended"}:
+        return True
+    if normalized in {"no", "n", "false", "f", "0", "not recommended"}:
+        return False
+    return None
+
+
+class ReturnRentalSelect(discord.ui.Select):
+    def __init__(self, parent: "ReturnRentalPickerView"):
+        self.parent_view = parent
+        options = []
+        for rental_record in parent.rentals[:25]:
+            label = _rental_label(rental_record)
+            options.append(
+                discord.SelectOption(
+                    label=label[:100],
+                    value=str(rental_record["id"]),
+                    description="choose this rental to return",
+                )
+            )
+        super().__init__(
+            placeholder="choose a rental to return",
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.parent_view.user_id:
+            await _send_component_denied(interaction, "this return menu isn't for you.")
+            return
+
+        rental_record = db.get_active_rental_by_id(
+            self.parent_view.user_id,
+            int(self.values[0]),
+        )
+        if not rental_record:
+            await interaction.response.edit_message(
+                content="that rental is no longer active.",
+                view=None,
+            )
+            return
+
+        view = ReturnChoiceView(self.parent_view.cog, self.parent_view.user_id, rental_record)
+        await interaction.response.edit_message(
+            content=(
+                f"returning **{_rental_label(rental_record)}**\n\n"
+                "did you watch it?"
+            ),
+            view=view,
+        )
+
+
+class ReturnRentalPickerView(discord.ui.View):
+    def __init__(self, cog: "RentalsCog", user_id: str, rentals: list[dict]):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.user_id = user_id
+        self.rentals = rentals
+        self.add_item(ReturnRentalSelect(self))
+
+
+class ReturnChoiceView(discord.ui.View):
+    def __init__(self, cog: "RentalsCog", user_id: str, rental_record: dict):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.user_id = user_id
+        self.rental_record = rental_record
+
+    async def _ensure_owner(self, interaction: discord.Interaction) -> bool:
+        if str(interaction.user.id) == self.user_id:
+            return True
+        await _send_component_denied(interaction, "this return menu isn't for you.")
+        return False
+
+    @discord.ui.button(label="watched it", style=discord.ButtonStyle.primary)
+    async def watched(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
+    ):
+        if not await self._ensure_owner(interaction):
+            return
+        await interaction.response.send_modal(
+            WatchedReturnModal(self.cog, self.rental_record["id"])
+        )
+
+    @discord.ui.button(label="didn't watch", style=discord.ButtonStyle.secondary)
+    async def unwatched(
+        self,
+        interaction: discord.Interaction,
+        button: discord.ui.Button,
+    ):
+        if not await self._ensure_owner(interaction):
+            return
+        await interaction.response.send_modal(
+            UnwatchedReturnModal(self.cog, self.rental_record["id"])
+        )
+
+
+class WatchedReturnModal(discord.ui.Modal, title="return watched rental"):
+    rating_input = discord.ui.TextInput(
+        label="rating (optional)",
+        placeholder="1-10",
+        required=False,
+        max_length=2,
+    )
+    recommended_input = discord.ui.TextInput(
+        label="recommended?",
+        placeholder="yes or no",
+        required=True,
+        max_length=20,
+    )
+    thoughts_input = discord.ui.TextInput(
+        label="thoughts (optional)",
+        placeholder="drop a short review if you want",
+        required=False,
+        max_length=1000,
+        style=discord.TextStyle.paragraph,
+    )
+
+    def __init__(self, cog: "RentalsCog", rental_id: int):
+        super().__init__()
+        self.cog = cog
+        self.rental_id = rental_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        rating_text = str(self.rating_input.value or "").strip()
+        rating = None
+        if rating_text:
+            if not rating_text.isdigit() or not 1 <= int(rating_text) <= 10:
+                await interaction.response.send_message(
+                    "⚠️ rating has to be a number from 1 to 10.",
+                    ephemeral=True,
+                )
+                return
+            rating = int(rating_text)
+
+        recommend = _parse_yes_no(str(self.recommended_input.value))
+        if recommend is None:
+            await interaction.response.send_message(
+                "⚠️ recommended has to be `yes` or `no`.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        await self.cog._complete_watched_return(
+            interaction=interaction,
+            rental_id=self.rental_id,
+            rating=rating,
+            recommend=recommend,
+            thoughts=str(self.thoughts_input.value or "").strip() or None,
+        )
+
+
+class UnwatchedReturnModal(discord.ui.Modal, title="return unwatched rental"):
+    reason_input = discord.ui.TextInput(
+        label="reason (optional)",
+        placeholder="ran out of time, picked the wrong vibe, etc.",
+        required=False,
+        max_length=500,
+        style=discord.TextStyle.paragraph,
+    )
+
+    def __init__(self, cog: "RentalsCog", rental_id: int):
+        super().__init__()
+        self.cog = cog
+        self.rental_id = rental_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        await self.cog._complete_unwatched_return(
+            interaction=interaction,
+            rental_id=self.rental_id,
+            reason=str(self.reason_input.value or "").strip() or None,
+        )
+
+
 class RentalsCog(commands.Cog):
     """Video store rental commands and rental admin tools."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    async def _complete_watched_return(
+        self,
+        interaction: discord.Interaction,
+        rental_id: int,
+        rating: int | None,
+        recommend: bool,
+        thoughts: str | None,
+    ) -> None:
+        user_id = str(interaction.user.id)
+        rental_record = db.get_active_rental_by_id(user_id, rental_id)
+        if not rental_record:
+            await interaction.followup.send(
+                "that rental is no longer active.",
+                ephemeral=True,
+            )
+            return
+
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        late_fee = rental_module.compute_late_fee(rental_record["due_at"], now_iso)
+
+        db.mark_rental_returned(
+            rental_id=rental_record["id"],
+            returned_at=now_iso,
+            rating=rating,
+            thoughts=thoughts,
+            recommended=recommend,
+            late_fee_dollars=late_fee,
+        )
+
+        updated_rental = db.get_rental_by_id(rental_record["id"])
+        await rental_module.edit_thread_returned(self.bot, updated_rental)
+
+        title = rental_record.get("title", "your film")
+        late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
+        rec_note = "recommended" if recommend else "not recommended"
+        rating_note = f"rating: {rating}/10, " if rating is not None else ""
+
+        await interaction.followup.send(
+            f"✅ **{title}** returned. {rating_note}{rec_note}.{late_note}\n"
+            f"-# review posted to the forum.",
+            ephemeral=True,
+        )
+        try:
+            card = await asyncio.to_thread(
+                macguffin_module.drop_macguffin,
+                user_id,
+                str(interaction.user),
+                f"return:{rental_record.get('initiated_by', 'selected')}",
+                _macguffin_weights_for_rental(rental_record),
+            )
+            claimed = await asyncio.to_thread(db.get_claimed_macguffin_ids)
+            total = len(macguffin_module.CARDS)
+            drop_embed = embeds.macguffin_drop_embed(
+                card,
+                interaction.user.mention,
+                len(claimed),
+                total,
+            )
+            if interaction.channel:
+                await interaction.channel.send(embed=drop_embed)
+        except macguffin_module.MacGuffinPoolEmpty:
+            pass
+        except Exception as e:
+            logger.log_exception("macguffin_return_drop", e)
+
+        await achievement_module.award_for_user(
+            self.bot,
+            interaction.user,
+            source_type="rental_return",
+            source_id=str(rental_record["id"]),
+            rental=updated_rental,
+        )
+
+    async def _complete_unwatched_return(
+        self,
+        interaction: discord.Interaction,
+        rental_id: int,
+        reason: str | None,
+    ) -> None:
+        rental_record = db.get_active_rental_by_id(str(interaction.user.id), rental_id)
+        if not rental_record:
+            await interaction.followup.send(
+                "that rental is no longer active.",
+                ephemeral=True,
+            )
+            return
+
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        late_fee = rental_module.compute_late_fee(rental_record["due_at"], now_iso)
+
+        db.mark_rental_returned_unwatched(
+            rental_id=rental_record["id"],
+            returned_at=now_iso,
+            reason=reason,
+            late_fee_dollars=late_fee,
+        )
+
+        updated_rental = db.get_rental_by_id(rental_record["id"])
+        await rental_module.edit_thread_returned_unwatched(self.bot, updated_rental)
+
+        late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
+        await interaction.followup.send(
+            f"↩ **{rental_record['title']}** returned unwatched.{late_note}\n"
+            "-# no review posted, no achievements or macguffin drop.",
+            ephemeral=True,
+        )
 
     @app_commands.command(name="rent", description="rent from rb9 - roll random, pick one, or ask an admin")
     async def rent(self, interaction: discord.Interaction):
@@ -218,89 +523,93 @@ class RentalsCog(commands.Cog):
             ephemeral=True,
         )
 
-    @app_commands.command(name="return", description="return your current rental and post a review to the forum")
+    @app_commands.command(name="return", description="return a rental")
     @app_commands.describe(
-        recommend="would you recommend this to the group?",
-        rating="your rating out of 10 (optional)",
-        thoughts="your review (optional but encouraged)",
         rental="rental id or part of the title, if you have more than one active rental",
+        recommend="fast path: would you recommend this to the group?",
+        rating="fast path: your rating out of 10",
+        thoughts="fast path: your review",
     )
     async def return_film(
         self,
         interaction: discord.Interaction,
-        recommend: bool,
+        rental: str | None = None,
+        recommend: bool | None = None,
         rating: int | None = None,
         thoughts: str | None = None,
-        rental: str | None = None,
     ):
-        await interaction.response.defer(ephemeral=True)
-
         user_id = str(interaction.user.id)
 
-        if rating is not None and not 1 <= rating <= 10:
-            await interaction.followup.send(
-                "⚠️ rating has to be between 1 and 10.", ephemeral=True
+        if recommend is None and (rating is not None or thoughts):
+            await interaction.response.send_message(
+                "warning: add `recommend` too, or run `/return` without review fields to use the popup.",
+                ephemeral=True,
             )
             return
 
-        rental_record = await _resolve_active_rental_for_command(interaction, rental)
-        if not rental_record:
+        if recommend is not None:
+            await interaction.response.defer(ephemeral=True)
+
+            if rating is not None and not 1 <= rating <= 10:
+                await interaction.followup.send(
+                    "warning: rating has to be between 1 and 10.", ephemeral=True
+                )
+                return
+
+            rental_record = await _resolve_active_rental_for_command(interaction, rental)
+            if not rental_record:
+                return
+
+            await self._complete_watched_return(
+                interaction=interaction,
+                rental_id=rental_record["id"],
+                rating=rating,
+                recommend=recommend,
+                thoughts=thoughts,
+            )
             return
 
-        now = datetime.now(timezone.utc)
-        now_iso = now.isoformat()
-        late_fee = rental_module.compute_late_fee(rental_record["due_at"], now_iso)
+        active = db.get_active_rentals(user_id)
+        if not active:
+            await interaction.response.send_message(
+                "you don't have an active rental. use `/rent` to grab something.",
+                ephemeral=True,
+            )
+            return
 
-        db.mark_rental_returned(
-            rental_id=rental_record["id"],
-            returned_at=now_iso,
-            rating=rating,
-            thoughts=thoughts,
-            recommended=recommend,
-            late_fee_dollars=late_fee,
-        )
+        if rental:
+            matches = db.find_active_rental(user_id, rental)
+            if not matches:
+                await interaction.response.send_message(
+                    f"couldn't find an active rental matching **{rental}**.",
+                    ephemeral=True,
+                )
+                return
+            if len(matches) > 1:
+                await interaction.response.send_message(
+                    "that matched more than one active rental:\n"
+                    f"{_format_active_rental_options(matches)}\n\n"
+                    "try again with the rental id.",
+                    ephemeral=True,
+                )
+                return
+            active = matches
 
-        updated_rental = db.get_rental_by_id(rental_record["id"])
-        await rental_module.edit_thread_returned(self.bot, updated_rental)
+        if len(active) == 1:
+            rental_record = active[0]
+            view = ReturnChoiceView(self, user_id, rental_record)
+            await interaction.response.send_message(
+                f"returning **{_rental_label(rental_record)}**\n\n"
+                "did you watch it?",
+                view=view,
+                ephemeral=True,
+            )
+            return
 
-        title = rental_record.get("title", "your film")
-        late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
-        rec_note = "recommended" if recommend else "not recommended"
-        rating_note = f"rating: {rating}/10, " if rating is not None else ""
-
-        await interaction.followup.send(
-            f"✅ **{title}** returned. {rating_note}{rec_note}.{late_note}\n"
-            f"-# review posted to the forum.",
+        await interaction.response.send_message(
+            "which rental are you returning?",
+            view=ReturnRentalPickerView(self, user_id, active),
             ephemeral=True,
-        )
-        try:
-            card = await asyncio.to_thread(
-                macguffin_module.drop_macguffin,
-                user_id,
-                str(interaction.user),
-                f"return:{rental_record.get('initiated_by', 'selected')}",
-                _macguffin_weights_for_rental(rental_record),
-            )
-            claimed = await asyncio.to_thread(db.get_claimed_macguffin_ids)
-            total = len(macguffin_module.CARDS)
-            drop_embed = embeds.macguffin_drop_embed(
-                card,
-                interaction.user.mention,
-                len(claimed),
-                total,
-            )
-            await interaction.channel.send(embed=drop_embed)
-        except macguffin_module.MacGuffinPoolEmpty:
-            pass
-        except Exception as e:
-            logger.log_exception("macguffin_return_drop", e)
-
-        await achievement_module.award_for_user(
-            self.bot,
-            interaction.user,
-            source_type="rental_return",
-            source_id=str(rental_record["id"]),
-            rental=updated_rental,
         )
 
     @app_commands.command(name="myrental", description="check your current rental and time remaining")
@@ -360,8 +669,14 @@ class RentalsCog(commands.Cog):
         await interaction.response.defer()
         target = user or interaction.user
         history = db.get_user_rental_history(str(target.id))
-        embed = embeds.rental_stats_embed(history, str(target))
-        await interaction.followup.send(embed=embed)
+        total_pages = max(1, -(-len(history) // embeds.RENTAL_HISTORY_PAGE_SIZE))
+        embed = embeds.rental_stats_embed(history, str(target), page=0, total_pages=total_pages)
+        view = (
+            views.RentalHistoryView(str(target), history)
+            if total_pages > 1
+            else None
+        )
+        await interaction.followup.send(embed=embed, view=view)
 
     @app_commands.command(
         name="setreviews",

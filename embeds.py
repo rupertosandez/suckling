@@ -784,6 +784,45 @@ def rental_review_embed(
     return embed
 
 
+def rental_unwatched_return_embed(
+    movie: dict,
+    user_tag: str,
+    returned_at_iso: str,
+    late_fee: float,
+    reason: str | None = None,
+) -> discord.Embed:
+    """Replaces the confirmed embed when a rental is returned unwatched."""
+    title = movie.get("title", "Unknown")
+    year = movie.get("year") or "?"
+    is_late = late_fee > 0
+
+    try:
+        returned_dt = datetime.fromisoformat(returned_at_iso)
+        returned_ts = int(returned_dt.timestamp())
+        returned_str = f"<t:{returned_ts}:F>"
+    except (ValueError, TypeError):
+        returned_str = "unknown"
+
+    embed = discord.Embed(
+        title=f"ðŸ“¼ {title} ({year})",
+        description=(
+            f"**↩ returned unwatched by {user_tag}**\n\n"
+            "no review posted, no rating recorded."
+            + (f"\n\nreason: {reason}" if reason else "")
+        ),
+        color=0x808080 if not is_late else 0xED4245,
+    )
+    embed.add_field(name="returned", value=returned_str, inline=True)
+    if is_late:
+        embed.add_field(name="late fee", value=f"${late_fee:.2f}", inline=True)
+
+    if movie.get("poster_url") or movie.get("thumb_url"):
+        embed.set_thumbnail(url=movie.get("poster_url") or movie.get("thumb_url"))
+
+    embed.set_footer(text="from the return by 9 library")
+    return embed
+
+
 def rental_cancelled_embed(
     movie: dict,
     user_tag: str,
@@ -926,7 +965,86 @@ def late_fees_embed(rows: list[dict]) -> discord.Embed:
     return embed
 
 
-def rental_stats_embed(history: list[dict], user_tag: str) -> discord.Embed:
+RENTAL_HISTORY_PAGE_SIZE = 8
+
+
+def _clip_text(value: str, limit: int) -> str:
+    return value if len(value) <= limit else value[: limit - 3].rstrip() + "..."
+
+
+def _rental_history_status(rental: dict) -> str:
+    status = rental.get("status", "unknown")
+    late_fee = float(rental.get("late_fee_dollars") or 0)
+    if late_fee > 0:
+        return "🔴 late"
+
+    if status == "returned_unwatched":
+        return "↩ skipped"
+
+    if status == "active":
+        try:
+            due = datetime.fromisoformat(rental.get("due_at", ""))
+            if due < datetime.now(due.tzinfo):
+                return "🔴 late"
+        except (ValueError, TypeError):
+            pass
+        return "📼 active"
+
+    if status == "returned":
+        return "✅ returned"
+
+    if status == "cancelled":
+        return "⚪ cancelled"
+
+    return status
+
+
+
+def _rental_history_title(rental: dict) -> str:
+    title = rental.get("title", "Unknown")
+    year = rental.get("year")
+    year_str = f" ({year})" if year else ""
+    return _clip_text(f"{_rental_history_status(rental)} - {title}{year_str}", 256)
+
+
+def _rental_history_details(rental: dict, *, include_divider: bool = False) -> str:
+    rating = f"{rental['rating']}/10" if rental.get("rating") else "-"
+    if rental.get("recommended") is None:
+        recommended = "-"
+    else:
+        recommended = "👍 yes" if rental.get("recommended") else "👎 no"
+
+    details = [
+        f"rating: **{rating}**",
+        f"recommended: **{recommended}**",
+    ]
+
+    if rental.get("status") == "active":
+        try:
+            due = datetime.fromisoformat(rental.get("due_at", ""))
+            details.append(f"due: <t:{int(due.timestamp())}:R>")
+        except (ValueError, TypeError):
+            pass
+
+    late_fee = float(rental.get("late_fee_dollars") or 0)
+    if late_fee > 0:
+        details.append(f"late fee: **${late_fee:.2f}**")
+
+    if rental.get("status") == "returned_unwatched":
+        details.append("no review posted")
+
+    detail_text = " · ".join(details)
+    if include_divider:
+        detail_text += "\n────────────"
+    return detail_text
+
+
+def rental_stats_embed(
+    history: list[dict],
+    user_tag: str,
+    page: int = 0,
+    total_pages: int | None = None,
+) -> discord.Embed:
     """Personal rental stats for /rentalstats."""
     if not history:
         return discord.Embed(
@@ -936,9 +1054,12 @@ def rental_stats_embed(history: list[dict], user_tag: str) -> discord.Embed:
         )
 
     total = len(history)
-    returned = [r for r in history if r["status"] == "returned"]
-    on_time = [r for r in returned if r.get("late_fee_dollars", 0) == 0]
-    late = [r for r in returned if r.get("late_fee_dollars", 0) > 0]
+    completed = [
+        r for r in history
+        if r["status"] in ("returned", "returned_unwatched")
+    ]
+    on_time = [r for r in completed if r.get("late_fee_dollars", 0) == 0]
+    late = [r for r in completed if r.get("late_fee_dollars", 0) > 0]
     total_fees = sum(r.get("late_fee_dollars", 0) for r in history)
     active = [r for r in history if r["status"] == "active"]
 
@@ -966,17 +1087,23 @@ def rental_stats_embed(history: list[dict], user_tag: str) -> discord.Embed:
         active_str = "\n".join(active_lines)
         embed.add_field(name="currently renting", value=active_str, inline=False)
 
-    # Last 5 returned
-    recent = [r for r in returned[:5]]
-    if recent:
-        lines = []
-        for r in recent:
-            rating_str = f"{r['rating']}/10" if r.get("rating") else "no rating"
-            rec_str = " - recommended" if r.get("recommended") else ""
-            lines.append(f"- **{r['title']}** ({r.get('year', '?')}) - {rating_str}{rec_str}")
-        embed.add_field(name="recent returns", value="\n".join(lines), inline=False)
+    total_pages = total_pages or max(1, -(-len(history) // RENTAL_HISTORY_PAGE_SIZE))
+    page = min(max(page, 0), total_pages - 1)
+    start = page * RENTAL_HISTORY_PAGE_SIZE
+    page_history = history[start : start + RENTAL_HISTORY_PAGE_SIZE]
 
-    embed.set_footer(text="from the return by 9 library")
+    if page_history:
+        for index, rental in enumerate(page_history):
+            embed.add_field(
+                name=_rental_history_title(rental),
+                value=_rental_history_details(
+                    rental,
+                    include_divider=index < len(page_history) - 1,
+                ),
+                inline=False,
+            )
+
+    embed.set_footer(text=f"{total} rental(s) - page {page + 1}/{total_pages}")
     return embed
 
 

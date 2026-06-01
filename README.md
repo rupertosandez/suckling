@@ -13,7 +13,7 @@ built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
 - `/rb9` + 9 stat commands - pick from the return by 9 library, plus stats (longest, shortest, oldest, decade breakdown, genres, etc.)
 - `/rent` - rent a random library film, due by 9 pm on the fifth day, with up to 2 rerolls. past rentals excluded forever
 - `/timezone` - set your timezone so rentals are due at 9 pm where you are
-- `/return` - return your rental and post a review to a configurable forum channel, with late-fee tracking
+- `/return` - return your rental with a popup; watched returns post reviews, unwatched returns close cleanly
 - `/extend` - one-time 24-hour rental extension, also available from reminder DMs
 - `/latefees` - leaderboard of accumulated late fees
 - `/rentalstats` - personal rental history
