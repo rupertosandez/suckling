@@ -972,31 +972,31 @@ def _clip_text(value: str, limit: int) -> str:
     return value if len(value) <= limit else value[: limit - 3].rstrip() + "..."
 
 
-def _rental_history_status(rental: dict) -> str:
+def _rental_history_status_emoji(rental: dict) -> str:
     status = rental.get("status", "unknown")
+    if status == "returned_unwatched":
+        return "↩"
+
     late_fee = float(rental.get("late_fee_dollars") or 0)
     if late_fee > 0:
-        return "🔴 late"
-
-    if status == "returned_unwatched":
-        return "↩ skipped"
+        return "🔴"
 
     if status == "active":
         try:
             due = datetime.fromisoformat(rental.get("due_at", ""))
             if due < datetime.now(due.tzinfo):
-                return "🔴 late"
+                return "🔴"
         except (ValueError, TypeError):
             pass
-        return "📼 active"
+        return "📼"
 
     if status == "returned":
-        return "✅ returned"
+        return "✅"
 
     if status == "cancelled":
-        return "⚪ cancelled"
+        return "⚪"
 
-    return status
+    return "•"
 
 
 
@@ -1004,38 +1004,24 @@ def _rental_history_title(rental: dict) -> str:
     title = rental.get("title", "Unknown")
     year = rental.get("year")
     year_str = f" ({year})" if year else ""
-    return _clip_text(f"{_rental_history_status(rental)} - {title}{year_str}", 256)
+    return _clip_text(f"{_rental_history_status_emoji(rental)} {title}{year_str}", 256)
 
 
 def _rental_history_details(rental: dict, *, include_divider: bool = False) -> str:
-    rating = f"{rental['rating']}/10" if rental.get("rating") else "-"
-    if rental.get("recommended") is None:
-        recommended = "-"
+    status = rental.get("status")
+    if status == "returned_unwatched":
+        details = ["unwatched"]
+    elif status == "cancelled":
+        details = ["cancelled"]
     else:
-        recommended = "👍 yes" if rental.get("recommended") else "👎 no"
+        details = [f"{rental['rating']}/10" if rental.get("rating") else "unrated"]
 
-    details = [
-        f"rating: **{rating}**",
-        f"recommended: **{recommended}**",
-    ]
-
-    if rental.get("status") == "active":
-        try:
-            due = datetime.fromisoformat(rental.get("due_at", ""))
-            details.append(f"due: <t:{int(due.timestamp())}:R>")
-        except (ValueError, TypeError):
-            pass
-
-    late_fee = float(rental.get("late_fee_dollars") or 0)
-    if late_fee > 0:
-        details.append(f"late fee: **${late_fee:.2f}**")
-
-    if rental.get("status") == "returned_unwatched":
-        details.append("no review posted")
+    if rental.get("recommended") is not None:
+        details.append("👍" if rental.get("recommended") else "👎")
 
     detail_text = " · ".join(details)
     if include_divider:
-        detail_text += "\n────────────"
+        detail_text += "\n\n────────────"
     return detail_text
 
 
@@ -1061,8 +1047,6 @@ def rental_stats_embed(
     on_time = [r for r in completed if r.get("late_fee_dollars", 0) == 0]
     late = [r for r in completed if r.get("late_fee_dollars", 0) > 0]
     total_fees = sum(r.get("late_fee_dollars", 0) for r in history)
-    active = [r for r in history if r["status"] == "active"]
-
     embed = discord.Embed(
         title=f"📼 rental history - {user_tag}",
         color=0xE5A00D,
@@ -1074,18 +1058,6 @@ def rental_stats_embed(
 
     if total_fees > 0:
         embed.add_field(name="total late fees", value=f"${total_fees:.2f}", inline=True)
-
-    if active:
-        active_lines = []
-        for r in active[:5]:
-            try:
-                due = datetime.fromisoformat(r["due_at"])
-                due_ts = int(due.timestamp())
-                active_lines.append(f"- **{r['title']}** - due <t:{due_ts}:R>")
-            except (ValueError, TypeError):
-                active_lines.append(f"- **{r['title']}**")
-        active_str = "\n".join(active_lines)
-        embed.add_field(name="currently renting", value=active_str, inline=False)
 
     total_pages = total_pages or max(1, -(-len(history) // RENTAL_HISTORY_PAGE_SIZE))
     page = min(max(page, 0), total_pages - 1)
