@@ -131,7 +131,7 @@ class GamesCog(commands.Cog):
             return
 
         file = discord.File(io.BytesIO(puzzle_bytes), filename="puzzle.jpg")
-        type_label = "movie still" if diff_val == "easy" else "cropped poster"
+        type_label = "Movie Still" if diff_val == "easy" else "Cropped Poster"
         intro_embed = discord.Embed(
             title=f"🎬 Guess this {type_label}!",
             description=(

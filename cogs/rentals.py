@@ -161,11 +161,10 @@ class ReturnRentalSelect(discord.ui.Select):
                 discord.SelectOption(
                     label=label[:100],
                     value=str(rental_record["id"]),
-                    description="choose this rental to return",
                 )
             )
         super().__init__(
-            placeholder="choose a rental to return",
+            placeholder="Choose a rental to return",
             min_values=1,
             max_values=1,
             options=options,
@@ -244,22 +243,22 @@ class ReturnChoiceView(discord.ui.View):
         )
 
 
-class WatchedReturnModal(discord.ui.Modal, title="return watched rental"):
+class WatchedReturnModal(discord.ui.Modal, title="Return Watched Rental"):
     rating_input = discord.ui.TextInput(
-        label="rating (optional)",
+        label="Rating (optional)",
         placeholder="1-10",
         required=False,
         max_length=2,
     )
     recommended_input = discord.ui.TextInput(
-        label="recommended?",
+        label="Recommended?",
         placeholder="yes or no",
         required=True,
         max_length=20,
     )
     thoughts_input = discord.ui.TextInput(
-        label="thoughts (optional)",
-        placeholder="drop a short review if you want",
+        label="Thoughts (optional)",
+        placeholder="Drop a short review if you want",
         required=False,
         max_length=1000,
         style=discord.TextStyle.paragraph,
@@ -276,7 +275,7 @@ class WatchedReturnModal(discord.ui.Modal, title="return watched rental"):
         if rating_text:
             if not rating_text.isdigit() or not 1 <= int(rating_text) <= 10:
                 await interaction.response.send_message(
-                    "⚠️ rating has to be a number from 1 to 10.",
+                    "⚠️ Rating has to be a number from 1 to 10.",
                     ephemeral=True,
                 )
                 return
@@ -285,7 +284,7 @@ class WatchedReturnModal(discord.ui.Modal, title="return watched rental"):
         recommend = _parse_yes_no(str(self.recommended_input.value))
         if recommend is None:
             await interaction.response.send_message(
-                "⚠️ recommended has to be `yes` or `no`.",
+                "⚠️ Recommended has to be `yes` or `no`.",
                 ephemeral=True,
             )
             return
@@ -300,10 +299,10 @@ class WatchedReturnModal(discord.ui.Modal, title="return watched rental"):
         )
 
 
-class UnwatchedReturnModal(discord.ui.Modal, title="return unwatched rental"):
+class UnwatchedReturnModal(discord.ui.Modal, title="Return Unwatched Rental"):
     reason_input = discord.ui.TextInput(
-        label="reason (optional)",
-        placeholder="ran out of time, picked the wrong vibe, etc.",
+        label="Reason (optional)",
+        placeholder="Ran out of time, picked the wrong vibe, etc.",
         required=False,
         max_length=500,
         style=discord.TextStyle.paragraph,

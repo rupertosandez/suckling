@@ -179,7 +179,7 @@ def streaming_announcement_embed(details: dict, new_providers: list[str]) -> dis
 
 def _cleanup_date_label(value) -> str:
     if not value:
-        return "never watched"
+        return "Never watched"
     try:
         return value.strftime("%b %-d, %Y")
     except ValueError:
@@ -188,16 +188,16 @@ def _cleanup_date_label(value) -> str:
 
 def plex_cleanup_embed(candidates: list) -> discord.Embed:
     embed = discord.Embed(
-        title="plex cleanup candidates",
+        title="Plex Cleanup Candidates",
         description=(
-            "big, quiet titles that are easy to stream elsewhere. "
-            "nothing has been removed; this is just the monthly review pile."
+            "Big, quiet titles that are easy to stream elsewhere. "
+            "Nothing has been removed; this is just the monthly review pile."
         ),
         color=0x8B0000,
     )
 
     if not candidates:
-        embed.description = "no cleanup candidates found this time."
+        embed.description = "No cleanup candidates this month."
         return embed
 
     for index, candidate in enumerate(candidates, start=1):
@@ -208,8 +208,8 @@ def plex_cleanup_embed(candidates: list) -> discord.Embed:
         last_played = _cleanup_date_label(candidate.last_played)
         year = candidate.year or "????"
         value = (
-            f"{candidate.size_gb:.1f} gb • {candidate.play_count} play(s) • {last_played}\n"
-            f"streaming on {providers}"
+            f"{candidate.size_gb:.1f} GB • {candidate.play_count} play(s) • {last_played}\n"
+            f"Streaming on {providers}"
         )
         embed.add_field(
             name=f"{index}. {candidate.title} ({year})",
@@ -261,7 +261,6 @@ def rb9_pick_embed(movie: dict) -> discord.Embed:
     year = movie.get("year") or "?"
     summary = movie.get("summary") or "*No summary available.*"
     duration = movie.get("duration_minutes")
-    rating = movie.get("rating")
 
     if len(summary) > 500:
         summary = summary[:497].rstrip() + "..."
@@ -274,8 +273,6 @@ def rb9_pick_embed(movie: dict) -> discord.Embed:
 
     if duration:
         embed.add_field(name="Runtime", value=f"{duration} min", inline=True)
-    if rating:
-        embed.add_field(name="Rated", value=rating, inline=True)
 
     if movie.get("thumb_url"):
         embed.set_thumbnail(url=movie["thumb_url"])
@@ -336,22 +333,6 @@ def rb9_stats_embed(stats: dict) -> discord.Embed:
             inline=True,
         )
 
-    if stats.get("oldest"):
-        oldest = stats["oldest"]
-        embed.add_field(
-            name="Oldest",
-            value=f"{oldest['title']} ({oldest['year']})",
-            inline=True,
-        )
-
-    if stats.get("newest_by_year"):
-        newest = stats["newest_by_year"]
-        embed.add_field(
-            name="Newest",
-            value=f"{newest['title']} ({newest['year']})",
-            inline=True,
-        )
-
     if stats.get("newest_added"):
         added = stats["newest_added"]
         embed.add_field(
@@ -369,14 +350,10 @@ def rb9_single_movie_embed(movie: dict, label: str, emoji: str = "📀") -> disc
     title = movie.get("title", "Unknown")
     year = movie.get("year") or "?"
     duration = movie.get("duration_minutes")
-    summary = movie.get("summary") or ""
-
-    if len(summary) > 300:
-        summary = summary[:297].rstrip() + "..."
 
     embed = discord.Embed(
         title=f"{emoji} {label}",
-        description=f"**{title} ({year})**" + (f"\n\n{summary}" if summary else ""),
+        description=f"**{title} ({year})**",
         color=0xE5A00D,
     )
 
@@ -401,7 +378,6 @@ def rb9_total_runtime_embed(stats: dict) -> discord.Embed:
     desc_lines = [
         f"Return by 9 has **{count:,} movies** with a combined runtime of:",
         "",
-        f"- **{total_minutes:,} minutes**",
         f"- **{days:.1f} days** of nonstop watching",
         f"- **{weeks:.1f} weeks**",
         "",
@@ -503,11 +479,11 @@ def trivia_prompt_embed(category: str, prompt: str, started_by: str) -> discord.
     color = meta.get("color", 0x808080)
 
     embed = discord.Embed(
-        title=f"{cat_emoji} rb9 roulette: {cat_label}!",
+        title=f"{cat_emoji} RB9 Roulette: {cat_label}!",
         description=prompt,
         color=color,
     )
-    embed.set_footer(text=f"started by {started_by} · 30 seconds to guess")
+    embed.set_footer(text=f"Started by {started_by} · 30 seconds to guess")
     return embed
 
 
@@ -535,11 +511,11 @@ def trivia_reveal_embed(
         if new_total is not None:
             description += f"\n\n+1 point · total: **{new_total}**"
     else:
-        title = "⏰ time's up!"
-        description = f"the answer was **{answer}**{year_str}"
+        title = "⏰ Time's Up!"
+        description = f"The answer was **{answer}**{year_str}"
 
     embed = discord.Embed(title=title, description=description, color=color)
-    embed.set_footer(text=f"category: {cat_label}")
+    embed.set_footer(text=f"Category: {cat_label}")
     return embed
 
 
@@ -548,7 +524,7 @@ def trivia_reveal_embed(
 def info_embed(version: str, uptime_seconds: float, guild_count: int) -> discord.Embed:
     """About card for /info. References attachment://logo.png for the wordmark banner."""
     embed = discord.Embed(
-        title=f"sucklingbot v{version}",
+        title=f"Suckling v{version}",
         description=BOT_DESCRIPTION,
         color=0x8B0000,
     )
@@ -678,7 +654,7 @@ def rental_offer_embed(movie: dict, is_last_reroll: bool = False) -> discord.Emb
         )
 
     embed = discord.Embed(
-        title=f"📼 your rental: {title} ({year})",
+        title=f"📼 Your Rental: {title} ({year})",
         description=desc,
         color=0xE5A00D,
     )
@@ -689,7 +665,7 @@ def rental_offer_embed(movie: dict, is_last_reroll: bool = False) -> discord.Emb
     if movie.get("thumb_url"):
         embed.set_thumbnail(url=movie["thumb_url"])
 
-    embed.set_footer(text="from the return by 9 library")
+    embed.set_footer(text="From the Return by 9 library")
     return embed
 
 
@@ -714,11 +690,11 @@ def rental_confirmed_embed(movie: dict, user_tag: str, due_at: datetime) -> disc
         color=0xE5A00D,
     )
 
-    embed.add_field(name="checked out by", value=user_tag, inline=True)
+    embed.add_field(name="Checked Out By", value=user_tag, inline=True)
     if duration:
-        embed.add_field(name="runtime", value=f"{duration} min", inline=True)
+        embed.add_field(name="Runtime", value=f"{duration} min", inline=True)
     embed.add_field(
-        name="due back",
+        name="Due Back",
         value=f"<t:{due_ts}:F> (<t:{due_ts}:R>)",
         inline=False,
     )
@@ -726,7 +702,7 @@ def rental_confirmed_embed(movie: dict, user_tag: str, due_at: datetime) -> disc
     if movie.get("thumb_url"):
         embed.set_thumbnail(url=movie["thumb_url"])
 
-    embed.set_footer(text="use /return to post your review when you're done")
+    embed.set_footer(text="Use /return to post your review when you're done")
     return embed
 
 
@@ -747,7 +723,7 @@ def rental_review_embed(
     is_late = late_fee > 0
 
     color = 0xED4245 if is_late else 0x57F287  # red if late, green if on time
-    header = f"{'🔴 late return' if is_late else '✅ returned'} by {user_tag}"
+    header = f"{'🔴 Late Return' if is_late else '✅ Returned'} by {user_tag}"
 
     try:
         returned_dt = datetime.fromisoformat(returned_at_iso)
@@ -767,20 +743,19 @@ def rental_review_embed(
     embed.description = "\n".join(desc_parts)
 
     if rating is None:
-        embed.add_field(name="rating", value="no rating", inline=False)
+        embed.add_field(name="Rating", value="No rating", inline=False)
     else:
-        stars = "⭐" * rating + "☆" * (10 - rating)
-        embed.add_field(name="rating", value=f"{rating}/10  {stars}", inline=False)
-    embed.add_field(name="recommend?", value="yes" if recommend else "no", inline=True)
-    embed.add_field(name="returned", value=returned_str, inline=True)
+        embed.add_field(name="Rating", value=f"{rating}/10", inline=False)
+    embed.add_field(name="Recommend?", value="👍" if recommend else "👎", inline=True)
+    embed.add_field(name="Returned", value=returned_str, inline=True)
 
     if is_late:
-        embed.add_field(name="late fee", value=f"${late_fee:.2f}", inline=True)
+        embed.add_field(name="Late Fee", value=f"${late_fee:.2f}", inline=True)
 
     if movie.get("poster_url") or movie.get("thumb_url"):
         embed.set_thumbnail(url=movie.get("poster_url") or movie.get("thumb_url"))
 
-    embed.set_footer(text="from the return by 9 library")
+    embed.set_footer(text="From the Return by 9 library")
     return embed
 
 
@@ -804,22 +779,22 @@ def rental_unwatched_return_embed(
         returned_str = "unknown"
 
     embed = discord.Embed(
-        title=f"ðŸ“¼ {title} ({year})",
+        title=f"📼 {title} ({year})",
         description=(
-            f"**↩ returned unwatched by {user_tag}**\n\n"
-            "no review posted, no rating recorded."
-            + (f"\n\nreason: {reason}" if reason else "")
+            f"**↩ Returned unwatched by {user_tag}**\n\n"
+            "No review posted, no rating recorded."
+            + (f"\n\nReason: {reason}" if reason else "")
         ),
         color=0x808080 if not is_late else 0xED4245,
     )
-    embed.add_field(name="returned", value=returned_str, inline=True)
+    embed.add_field(name="Returned", value=returned_str, inline=True)
     if is_late:
-        embed.add_field(name="late fee", value=f"${late_fee:.2f}", inline=True)
+        embed.add_field(name="Late Fee", value=f"${late_fee:.2f}", inline=True)
 
     if movie.get("poster_url") or movie.get("thumb_url"):
         embed.set_thumbnail(url=movie.get("poster_url") or movie.get("thumb_url"))
 
-    embed.set_footer(text="from the return by 9 library")
+    embed.set_footer(text="From the Return by 9 library")
     return embed
 
 
@@ -834,15 +809,15 @@ def rental_cancelled_embed(
 
     embed = discord.Embed(
         title=f"📼 {title} ({year})",
-        description=f"rental by **{user_tag}** was cancelled by an admin."
-        + (f"\n\nreason: {reason}" if reason else ""),
+        description=f"Rental by **{user_tag}** was cancelled by an admin."
+        + (f"\n\nReason: {reason}" if reason else ""),
         color=0x808080,
     )
 
     if movie.get("poster_url") or movie.get("thumb_url"):
         embed.set_thumbnail(url=movie.get("poster_url") or movie.get("thumb_url"))
 
-    embed.set_footer(text="from the return by 9 library")
+    embed.set_footer(text="From the Return by 9 library")
     return embed
 
 
@@ -872,29 +847,28 @@ def rental_status_embed(rental: dict) -> discord.Embed:
         rented_str = "unknown"
 
     color = 0xED4245 if is_overdue else 0xE5A00D
-    status = "overdue!" if is_overdue else "checked out"
 
     embed = discord.Embed(
         title=f"📼 {title} ({year})",
-        description=f"status: **{status}**",
+        description="⚠️ This rental is overdue." if is_overdue else None,
         color=color,
     )
 
-    embed.add_field(name="checked out", value=rented_str, inline=True)
-    embed.add_field(name="due back", value=due_str, inline=True)
+    embed.add_field(name="Checked Out", value=rented_str, inline=True)
+    embed.add_field(name="Due Back", value=due_str, inline=True)
 
     rerolls = rental.get("rerolls_used", 0)
     if rerolls:
-        embed.add_field(name="rerolls used", value=str(rerolls), inline=True)
+        embed.add_field(name="Rerolls Used", value=str(rerolls), inline=True)
 
     extensions = rental.get("extensions_used", 0)
     if extensions:
-        embed.add_field(name="extensions used", value=str(extensions), inline=True)
+        embed.add_field(name="Extensions Used", value=str(extensions), inline=True)
 
     thread_id = rental.get("thread_id")
     if thread_id:
         embed.add_field(
-            name="forum thread",
+            name="Forum Thread",
             value=f"<#{thread_id}>",
             inline=False,
         )
@@ -902,7 +876,7 @@ def rental_status_embed(rental: dict) -> discord.Embed:
     if rental.get("poster_url"):
         embed.set_thumbnail(url=rental["poster_url"])
 
-    embed.set_footer(text="use /return to post your review when you're done")
+    embed.set_footer(text="Use /return to post your review when you're done")
     return embed
 
 
@@ -913,7 +887,7 @@ def rental_status_list_embed(
 ) -> discord.Embed:
     """Shown by /myrental when a user has multiple active rentals."""
     embed = discord.Embed(
-        title=f"📼 active rentals - {user_tag}",
+        title=f"📼 Active Rentals - {user_tag}",
         color=0xE5A00D,
     )
 
@@ -930,7 +904,7 @@ def rental_status_list_embed(
 
     embed.description = "\n".join(lines)
     embed.set_footer(
-        text=f"{len(rentals)}/{max_active} active - use rental id with /return or /extend"
+        text=f"{len(rentals)}/{max_active} active - use rental ID with /return or /extend"
     )
     return embed
 
@@ -939,8 +913,8 @@ def late_fees_embed(rows: list[dict]) -> discord.Embed:
     """Leaderboard of accumulated late fees."""
     if not rows:
         return discord.Embed(
-            title="🏪 late fee ledger",
-            description="no late fees on record. everyone's been returning on time.",
+            title="🏪 Late Fee Ledger",
+            description="No late fees on record. Everyone's been returning on time.",
             color=0xE5A00D,
         )
 
@@ -957,7 +931,7 @@ def late_fees_embed(rows: list[dict]) -> discord.Embed:
         )
 
     embed = discord.Embed(
-        title="🏪 late fee ledger",
+        title="🏪 Late Fee Ledger",
         description="\n".join(lines),
         color=0xE5A00D,
     )
@@ -1010,11 +984,11 @@ def _rental_history_title(rental: dict) -> str:
 def _rental_history_details(rental: dict, *, include_divider: bool = False) -> str:
     status = rental.get("status")
     if status == "returned_unwatched":
-        details = ["unwatched"]
+        details = ["Unwatched"]
     elif status == "cancelled":
-        details = ["cancelled"]
+        details = ["Cancelled"]
     else:
-        details = [f"{rental['rating']}/10" if rental.get("rating") else "unrated"]
+        details = [f"{rental['rating']}/10" if rental.get("rating") else "Unrated"]
 
     if rental.get("recommended") is not None:
         details.append("👍" if rental.get("recommended") else "👎")
@@ -1034,8 +1008,8 @@ def rental_stats_embed(
     """Personal rental stats for /rentalstats."""
     if not history:
         return discord.Embed(
-            title=f"📼 rental history - {user_tag}",
-            description="no rentals yet.",
+            title=f"📼 Rental History - {user_tag}",
+            description="No rentals yet.",
             color=0xE5A00D,
         )
 
@@ -1048,16 +1022,16 @@ def rental_stats_embed(
     late = [r for r in completed if r.get("late_fee_dollars", 0) > 0]
     total_fees = sum(r.get("late_fee_dollars", 0) for r in history)
     embed = discord.Embed(
-        title=f"📼 rental history - {user_tag}",
+        title=f"📼 Rental History - {user_tag}",
         color=0xE5A00D,
     )
 
-    embed.add_field(name="total rentals", value=str(total), inline=True)
-    embed.add_field(name="returned on time", value=str(len(on_time)), inline=True)
-    embed.add_field(name="returned late", value=str(len(late)), inline=True)
+    embed.add_field(name="Total Rentals", value=str(total), inline=True)
+    embed.add_field(name="Returned on Time", value=str(len(on_time)), inline=True)
+    embed.add_field(name="Returned Late", value=str(len(late)), inline=True)
 
     if total_fees > 0:
-        embed.add_field(name="total late fees", value=f"${total_fees:.2f}", inline=True)
+        embed.add_field(name="Total Late Fees", value=f"${total_fees:.2f}", inline=True)
 
     total_pages = total_pages or max(1, -(-len(history) // RENTAL_HISTORY_PAGE_SIZE))
     page = min(max(page, 0), total_pages - 1)
@@ -1136,7 +1110,7 @@ def lb_profile_embed(lb_username: str, entries: list[dict], discord_tag: str | N
         lines.append(line)
 
     embed.description = "\n\n".join(lines)
-    embed.set_footer(text=f"letterboxd - {lb_username}")
+    embed.set_footer(text=f"Letterboxd - {lb_username}")
     return embed
 
 
@@ -1159,12 +1133,12 @@ def lb_activity_embed(
     embed = discord.Embed(
         title=f"{title}{year_str}",
         url=link or None,
-        description=f"**{who}** logged a watch on letterboxd.",
+        description=f"**{who}** logged a watch on Letterboxd.",
         color=_LB_COLOR,
     )
 
     rating_text = _lb_rating_text(entry)
-    embed.add_field(name="stars awarded", value=rating_text, inline=True)
+    embed.add_field(name="Rating", value=rating_text, inline=True)
 
     details = []
     if watch_date:
@@ -1172,14 +1146,14 @@ def lb_activity_embed(
     if rewatch:
         details.append("rewatch")
     if details:
-        embed.add_field(name="watch info", value=" - ".join(details), inline=True)
+        embed.add_field(name="Watched", value=" - ".join(details), inline=True)
 
     if review:
-        embed.add_field(name="review", value=f"*{review}*", inline=False)
+        embed.add_field(name="Review", value=f"*{review}*", inline=False)
 
     if thumb:
         embed.set_thumbnail(url=thumb)
-    embed.set_footer(text=f"letterboxd - {lb_username}")
+    embed.set_footer(text=f"Letterboxd - {lb_username}")
     return embed
 
 
@@ -1197,7 +1171,7 @@ def lb_activity_compact_embed(
     lines = []
     shown = 0
     max_description_chars = 3900
-    intro = f"**{who}** logged {count} {noun} on letterboxd."
+    intro = f"**{who}** logged {count} {noun} on Letterboxd."
     for entry in entries:
         title = entry.get("film_title", "Unknown")
         year = entry.get("year")
@@ -1232,15 +1206,15 @@ def lb_activity_compact_embed(
     if lines:
         description += "\n\n" + "\n".join(lines)
     if shown < count:
-        description += f"\n\nplus {count - shown} more."
+        description += f"\n\nPlus {count - shown} more."
 
     embed = discord.Embed(
-        title="letterboxd catch-up",
+        title="Letterboxd Catch-Up",
         url=lb_url,
         description=description,
         color=_LB_COLOR,
     )
-    embed.set_footer(text=f"letterboxd - {lb_username}")
+    embed.set_footer(text=f"Letterboxd - {lb_username}")
     return embed
 
 
@@ -1255,13 +1229,13 @@ def lb_watchlist_embed(
     total = len(films)
 
     embed = discord.Embed(
-        title=f"📋 {lb_username}'s letterboxd watchlist",
+        title=f"📋 {lb_username}'s Letterboxd Watchlist",
         url=lb_url,
         color=_LB_COLOR,
     )
 
     if not films:
-        embed.description = "watchlist is empty or private."
+        embed.description = "Watchlist is empty or private."
         return embed
 
     start = page * 5
@@ -1280,7 +1254,7 @@ def lb_watchlist_embed(
             lines.append(f"**{title}{year_str}**")
 
     embed.description = "\n".join(lines)
-    embed.set_footer(text=f"{total} films - page {page + 1}/{total_pages} - letterboxd")
+    embed.set_footer(text=f"{total} films - page {page + 1}/{total_pages} - Letterboxd")
     return embed
 
 
@@ -1290,14 +1264,14 @@ def lb_group_embed(activity: list[dict]) -> discord.Embed:
     activity = list of {discord_tag, lb_username, entries: list[dict]}
     """
     embed = discord.Embed(
-        title="🎬 what everyone's been watching",
+        title="🎬 What Everyone's Been Watching",
         color=_LB_COLOR,
     )
 
     if not activity:
         embed.description = (
-            "no linked letterboxd accounts yet. "
-            "use `/lb link <username>` to connect yours."
+            "No linked Letterboxd accounts yet. "
+            "Use `/lb link <username>` to connect yours."
         )
         return embed
 
@@ -1329,9 +1303,9 @@ def lb_group_embed(activity: list[dict]) -> discord.Embed:
 
         field_name = _trim(f"{tag} ({lb_user})", 256)
         if member.get("error"):
-            value = "couldn't fetch recent watches"
+            value = "Couldn't fetch recent watches"
         elif not entries:
-            value = "no recent public watches"
+            value = "No recent public watches"
         else:
             films = []
             for entry in entries[:2]:
@@ -1360,7 +1334,7 @@ def lb_group_embed(activity: list[dict]) -> discord.Embed:
         used_chars += field_chars
         shown += 1
 
-    footer = f"letterboxd - showing {shown}/{len(activity)} linked member(s)"
+    footer = f"Letterboxd - showing {shown}/{len(activity)} linked member(s)"
     if len(activity) > shown:
         footer += " - newest activity first"
     embed.set_footer(text=footer)
@@ -1398,49 +1372,38 @@ def lb_tastecheck_embed(payload: dict, watchlist_note: str | None = None) -> dis
     right = payload["label_b"]
 
     embed = discord.Embed(
-        title=f"🎞️ tastecheck: {left} x {right}",
+        title=f"🎞️ Tastecheck: {left} x {right}",
         description=f"**{score}% - {label}**",
         color=_LB_COLOR,
     )
 
     stats = [
-        f"shared recent watches: **{payload['shared_count']}**",
-        f"rated overlap: **{payload['rated_overlap_count']}**",
-        f"shared watchlist wants: **{payload['shared_watchlist_count']}**",
+        f"Shared recent watches: **{payload['shared_count']}**",
+        f"Rated overlap: **{payload['rated_overlap_count']}**",
+        f"Shared watchlist wants: **{payload['shared_watchlist_count']}**",
     ]
     if payload.get("avg_diff") is not None:
-        stats.append(f"avg rating gap: **{payload['avg_diff']:.1f} stars**")
-    embed.add_field(name="readout", value="\n".join(stats), inline=False)
-
-    shared = payload.get("shared", [])
-    if shared:
-        lines = [_film_line(item, include_ratings=True) for item in shared[:5]]
-        embed.add_field(name="both recently watched", value="\n".join(lines), inline=False)
-    else:
-        embed.add_field(
-            name="both recently watched",
-            value="no overlap in the recent diary feeds.",
-            inline=False,
-        )
+        stats.append(f"Avg rating gap: **{payload['avg_diff']:.1f} stars**")
+    embed.add_field(name="Overview", value="\n".join(stats), inline=False)
 
     agreements = payload.get("agreements", [])
     if agreements:
         lines = [_film_line(item, include_ratings=True) for item in agreements[:3]]
-        embed.add_field(name="closest agreements", value="\n".join(lines), inline=False)
+        embed.add_field(name="Closest Agreements", value="\n".join(lines), inline=False)
 
     disagreements = payload.get("disagreements", [])
     if disagreements:
         lines = [_film_line(item, include_ratings=True) for item in disagreements[:3]]
-        embed.add_field(name="biggest splits", value="\n".join(lines), inline=False)
+        embed.add_field(name="Biggest Splits", value="\n".join(lines), inline=False)
 
     shared_watchlist = payload.get("shared_watchlist", [])
     if shared_watchlist:
-        lines = [_film_line(item) for item in shared_watchlist[:8]]
-        embed.add_field(name="shared watchlist wants", value="\n".join(lines), inline=False)
+        lines = [_film_line(item) for item in shared_watchlist[:5]]
+        embed.add_field(name="Shared Watchlist Wants", value="\n".join(lines), inline=False)
     elif watchlist_note:
-        embed.add_field(name="shared watchlist wants", value=watchlist_note, inline=False)
+        embed.add_field(name="Shared Watchlist Wants", value=watchlist_note, inline=False)
 
-    embed.set_footer(text="based on recent letterboxd activity and public watchlists")
+    embed.set_footer(text="Based on recent Letterboxd activity and public watchlists")
     return embed
 
 
@@ -1515,14 +1478,13 @@ def _macguffin_color(card: dict) -> int:
 
 def _macguffin_description(card: dict) -> str:
     emoji = card.get("emoji", "")
-    name = card.get("name", "unknown macguffin")
     flavor = card.get("flavor", "")
-    return f"{emoji}\n\n### {name}\n*{flavor}*"
+    return f"{emoji}\n\n*{flavor}*"
 
 
 def _macguffin_drop_title(card: dict) -> str:
     emoji = str(card.get("emoji") or "").strip()
-    name = card.get("name", "unknown macguffin")
+    name = card.get("name", "Unknown MacGuffin")
     return f"{emoji}\n{name}" if emoji else str(name)
 
 
@@ -1567,18 +1529,13 @@ def macguffin_drop_embed(
     embed.set_author(
         name=_MACGUFFIN_TITLES.get(rarity, _MACGUFFIN_TITLES["common"]),
     )
-    embed.add_field(
-        name="RARITY",
-        value=_MACGUFFIN_RARITIES.get(rarity, rarity),
-        inline=True,
-    )
-    embed.add_field(name="FROM", value=card.get("source", "unknown"), inline=True)
+    embed.add_field(name="FROM", value=card.get("source", "Unknown"), inline=True)
     embed.add_field(
         name="CLAIMED BY",
         value=_macguffin_owner_text(owner_tag),
         inline=False,
     )
-    embed.set_footer(text=f"macguffin {claimed_count} of {total_count} claimed")
+    embed.set_footer(text=f"MacGuffin {claimed_count} of {total_count} claimed")
     return embed
 
 
@@ -1586,7 +1543,7 @@ def macguffin_card_embed(card: dict, record: dict) -> discord.Embed:
     """Single-card view for a user's MacGuffin inventory."""
     rarity = str(card.get("rarity", "common")).lower()
     embed = discord.Embed(
-        title=card.get("name", "unknown macguffin"),
+        title=card.get("name", "Unknown MacGuffin"),
         description=_macguffin_description(card),
         color=_macguffin_color(card),
     )
@@ -1595,7 +1552,7 @@ def macguffin_card_embed(card: dict, record: dict) -> discord.Embed:
         value=_MACGUFFIN_RARITIES.get(rarity, rarity),
         inline=True,
     )
-    embed.add_field(name="FROM", value=card.get("source", "unknown"), inline=True)
+    embed.add_field(name="FROM", value=card.get("source", "Unknown"), inline=True)
     embed.add_field(
         name="ACQUIRED",
         value=_format_macguffin_acquired(record.get("acquired_at")),
@@ -1603,7 +1560,7 @@ def macguffin_card_embed(card: dict, record: dict) -> discord.Embed:
     )
     embed.add_field(
         name="VIA",
-        value=record.get("acquired_via", "unknown"),
+        value=record.get("acquired_via", "Unknown"),
         inline=True,
     )
     return embed
@@ -1617,13 +1574,13 @@ def macguffin_list_embed(
 ) -> discord.Embed:
     """Paginated view of a user's MacGuffin collection."""
     embed = discord.Embed(
-        title=f"{user_tag}'s macguffins",
+        title=f"{user_tag}'s MacGuffins",
         color=0x5865F2,
     )
 
     total_count = len(cards)
     if not cards:
-        embed.description = "you don't have any macguffins yet."
+        embed.description = "You don't have any MacGuffins yet."
         return embed
 
     start = page * MACGUFFIN_PAGE_SIZE
@@ -1631,10 +1588,10 @@ def macguffin_list_embed(
     lines = []
     for card in page_cards:
         emoji = card.get("emoji", "")
-        name = card.get("name", "unknown macguffin")
+        name = card.get("name", "Unknown MacGuffin")
         rarity = card.get("rarity", "unknown")
         lines.append(f"{emoji} **{name}** - {rarity}")
 
     embed.description = "\n".join(lines)
-    embed.set_footer(text=f"{total_count} macguffins - page {page + 1}/{total_pages}")
+    embed.set_footer(text=f"{total_count} MacGuffins - page {page + 1}/{total_pages}")
     return embed

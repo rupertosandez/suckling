@@ -356,7 +356,7 @@ async def edit_thread_due_at(
                     inline=field.inline,
                 )
             embed.add_field(
-                name="due back",
+                name="Due Back",
                 value=f"<t:{due_ts}:F> (<t:{due_ts}:R>)",
                 inline=False,
             )
@@ -370,7 +370,7 @@ async def edit_thread_due_at(
             embed = embeds.rental_confirmed_embed(movie, rental["user_name"], due_at)
         if rental.get("extensions_used", 0):
             embed.add_field(
-                name="extension",
+                name="Extension",
                 value=f"+{RENTAL_EXTENSION_HOURS} hours",
                 inline=True,
             )

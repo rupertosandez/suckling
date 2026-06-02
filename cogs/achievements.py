@@ -75,14 +75,13 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
     displayed_ids = [row["achievement_id"] for row in db.get_displayed_achievements(user_id)]
 
     embed = discord.Embed(
-        title="achievement shelf",
+        title="Achievement Shelf",
         color=achievement_module.ROLE_COLOR,
     )
     embed.set_author(
         name=f"{member.display_name}'s achievements",
         icon_url=member.display_avatar.url,
     )
-    embed.set_thumbnail(url=member.display_avatar.url)
     embed.description = (
         f"**{len(earned_ids)} / {len(achievement_module.ACHIEVEMENTS)}** unlocked\n"
         f"**{len(displayed_ids)} / {achievement_module.MAX_DISPLAYED_ACHIEVEMENTS}** visible badge roles"
@@ -90,9 +89,9 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
 
     if displayed_ids:
         lines = [_achievement_line(user_id, achievement_id, earned=True) for achievement_id in displayed_ids]
-        embed.add_field(name="displayed badges", value="\n\n".join(filter(None, lines)), inline=False)
+        embed.add_field(name="Displayed Badges", value="\n\n".join(filter(None, lines)), inline=False)
     else:
-        embed.add_field(name="displayed badges", value="none pinned yet.", inline=False)
+        embed.add_field(name="Displayed Badges", value="None pinned yet.", inline=False)
 
     recent_lines = []
     for row in earned_rows[:5]:
@@ -104,7 +103,7 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
             f"<t:{int(_timestamp(row['earned_at']))}:R>"
         )
     if recent_lines:
-        embed.add_field(name="recent unlocks", value="\n".join(recent_lines), inline=False)
+        embed.add_field(name="Recent Unlocks", value="\n".join(recent_lines), inline=False)
 
     if viewer_id == user_id:
         next_lines = []
@@ -115,8 +114,8 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
             if len(next_lines) >= 5:
                 break
         if next_lines:
-            embed.add_field(name="next up", value="\n\n".join(next_lines), inline=False)
-        embed.set_footer(text="pin up to 3 badges with /achievementdisplay")
+            embed.add_field(name="Next Up", value="\n\n".join(next_lines), inline=False)
+        embed.set_footer(text="Pin up to 3 badges with /achievementdisplay")
 
     return embed
 
@@ -289,7 +288,7 @@ class AchievementsCog(commands.Cog):
         leaders = db.get_achievement_counts_by_user(limit=5)
         rarity = db.get_achievement_rarity_counts()
 
-        embed = discord.Embed(title="achievement board", color=achievement_module.ROLE_COLOR)
+        embed = discord.Embed(title="Achievement Board", color=achievement_module.ROLE_COLOR)
         if recent:
             lines = []
             for row in recent:
@@ -299,13 +298,13 @@ class AchievementsCog(commands.Cog):
                         f"**{row['user_tag']}** unlocked "
                         f"**{achievement_module.display_name(achievement)}**"
                     )
-            embed.add_field(name="newest unlocks", value="\n".join(lines), inline=False)
+            embed.add_field(name="Newest Unlocks", value="\n".join(lines), inline=False)
         if leaders:
             lines = [
                 f"#{index + 1} **{row['user_tag']}** - {row['total']}"
                 for index, row in enumerate(leaders)
             ]
-            embed.add_field(name="top shelves", value="\n".join(lines), inline=False)
+            embed.add_field(name="Top Collectors", value="\n".join(lines), inline=False)
         rare = sorted(
             (
                 (achievement_id, count)
@@ -319,9 +318,9 @@ class AchievementsCog(commands.Cog):
                 f"**{achievement_module.display_name(achievement_module.ACHIEVEMENT_BY_ID[achievement_id])}** - {count}"
                 for achievement_id, count in rare
             ]
-            embed.add_field(name="rarest badges", value="\n".join(lines), inline=False)
+            embed.add_field(name="Rarest Badges", value="\n".join(lines), inline=False)
         if not embed.fields:
-            embed.description = "no achievement unlocks yet."
+            embed.description = "No achievement unlocks yet."
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="setfeed", description="set the channel for Suckling feed posts (admin only)")
@@ -362,20 +361,20 @@ class AchievementsCog(commands.Cog):
 
         await interaction.response.defer(ephemeral=True)
         embed = discord.Embed(
-            title="achievement catalog",
+            title="Achievement Catalog",
             description=(
-                f"browse all **{len(achievement_module.catalog_entries())}** earnable badges, "
+                f"Browse all **{len(achievement_module.catalog_entries())}** earnable badges, "
                 "grouped by category.\n\n"
-                "you can pin up to **3** unlocked achievements as visible Discord badge roles."
+                "You can pin up to **3** unlocked achievements as visible Discord badge roles."
             ),
             color=achievement_module.ROLE_COLOR,
             url=config.ACHIEVEMENT_CATALOG_URL,
         )
-        embed.set_footer(text="use /achievements to see your own shelf")
+        embed.set_footer(text="Use /achievements to see your own shelf")
         view = discord.ui.View()
         view.add_item(
             discord.ui.Button(
-                label="view full catalog",
+                label="View Full Catalog",
                 url=config.ACHIEVEMENT_CATALOG_URL,
             )
         )

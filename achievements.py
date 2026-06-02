@@ -524,11 +524,8 @@ def unlock_embed(
     icon_url: str | None = None,
     rental_title: str | None = None,
 ) -> discord.Embed:
-    label = user_mention or f"**{user_label}**"
     lines = [
         f"**{display_name(achievement)}**",
-        "",
-        f"{label} earned a new badge.",
         "",
         achievement.description,
     ]
@@ -537,7 +534,7 @@ def unlock_embed(
         description="\n".join(lines),
         color=UNLOCK_COLOR,
     )
-    embed.set_footer(text="use /achievements to see your shelf")
+    embed.set_footer(text="Use /achievements to see your shelf")
     if icon_url:
         embed.set_author(name=user_label, icon_url=icon_url)
     else:
