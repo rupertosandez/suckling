@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.9] - 2026-06-01
+
+### Changed
+
+- Embed formatting cleaned up across the board: titles and field names are consistently capitalized, body text and footers use sentence case.
+- Redundant or low-value embed content trimmed: `/rb9stats` no longer duplicates oldest/newest films, `/rb9totalruntime` drops raw minutes, macguffin cards no longer repeat the card name, macguffin drop no longer shows a separate rarity field.
+- Rental review recommend field now shows 👍/👎 instead of "yes"/"no".
+- Rental status embed only surfaces the overdue notice when actually overdue.
+- Achievement unlock posts no longer include a redundant "earned a new badge" line; avatar was also rendering twice (fixed).
+- Achievement board "Top Shelves" renamed to "Top Collectors".
+- Return modal titles, labels, and placeholders are properly formatted.
+- Letterboxd, MacGuffin, and RB9 consistently capitalized throughout all embeds.
+
 ## [2.5.8] - 2026-05-30
 
 ### Changed
