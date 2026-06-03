@@ -39,7 +39,7 @@ A Discord bot built for the "Return by 9" movie community. Integrates TMDB for m
 ### Video Store Rental System
 - **`/rent`** - Rent a random film (due by 9 pm on the fifth day, 2 re-rolls, permanent exclusion of past rentals)
 - **`/timezone [timezone_name] [clear]`** - Set personal rental timezone for 9 pm due dates
-- **`/return [rental]`** - Popup flow for watched review returns or unwatched returns
+- **`/return`** - Popup flow for watched review returns or unwatched returns
 - **`/extend`** - Extend active rental by 24 hours (once per rental)
 - **`/myrental`** - Current rental status with live countdown
 - **`/latefees`** - Late fee leaderboard (cosmetic $1/day)

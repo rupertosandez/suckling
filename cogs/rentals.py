@@ -522,51 +522,12 @@ class RentalsCog(commands.Cog):
             ephemeral=True,
         )
 
-    @app_commands.command(name="return", description="return a rental")
-    @app_commands.describe(
-        rental="rental id or part of the title, if you have more than one active rental",
-        recommend="fast path: would you recommend this to the group?",
-        rating="fast path: your rating out of 10",
-        thoughts="fast path: your review",
-    )
+    @app_commands.command(name="return", description="start the private return flow")
     async def return_film(
         self,
         interaction: discord.Interaction,
-        rental: str | None = None,
-        recommend: bool | None = None,
-        rating: int | None = None,
-        thoughts: str | None = None,
     ):
         user_id = str(interaction.user.id)
-
-        if recommend is None and (rating is not None or thoughts):
-            await interaction.response.send_message(
-                "warning: add `recommend` too, or run `/return` without review fields to use the popup.",
-                ephemeral=True,
-            )
-            return
-
-        if recommend is not None:
-            await interaction.response.defer(ephemeral=True)
-
-            if rating is not None and not 1 <= rating <= 10:
-                await interaction.followup.send(
-                    "warning: rating has to be between 1 and 10.", ephemeral=True
-                )
-                return
-
-            rental_record = await _resolve_active_rental_for_command(interaction, rental)
-            if not rental_record:
-                return
-
-            await self._complete_watched_return(
-                interaction=interaction,
-                rental_id=rental_record["id"],
-                rating=rating,
-                recommend=recommend,
-                thoughts=thoughts,
-            )
-            return
 
         active = db.get_active_rentals(user_id)
         if not active:
@@ -575,24 +536,6 @@ class RentalsCog(commands.Cog):
                 ephemeral=True,
             )
             return
-
-        if rental:
-            matches = db.find_active_rental(user_id, rental)
-            if not matches:
-                await interaction.response.send_message(
-                    f"couldn't find an active rental matching **{rental}**.",
-                    ephemeral=True,
-                )
-                return
-            if len(matches) > 1:
-                await interaction.response.send_message(
-                    "that matched more than one active rental:\n"
-                    f"{_format_active_rental_options(matches)}\n\n"
-                    "try again with the rental id.",
-                    ephemeral=True,
-                )
-                return
-            active = matches
 
         if len(active) == 1:
             rental_record = active[0]

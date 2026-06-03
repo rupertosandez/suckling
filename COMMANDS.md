@@ -117,15 +117,10 @@ run it with no options to check your current rental timezone.
 
 ---
 
-### `/return [rental] [recommend] [rating] [thoughts]`
-return a rental with a private popup flow.
+### `/return`
+start the private return flow.
 
-- `rental` (optional): rental id or part of the title, needed if you have more than one active rental
-- `recommend` (optional): fast path checkbox if you want to skip the popup
-- `rating` (optional): fast path score out of 10 (1-10)
-- `thoughts` (optional): fast path review text
-
-with no review options, `/return` opens a private menu. choose the rental, pick **watched it** or **didn't watch**, then fill out the popup.
+`/return` opens a private menu. choose the rental, pick **watched it** or **didn't watch**, then fill out the popup.
 
 watched returns post a review to the forum, can drop a macguffin, and count toward watched-rental achievements. unwatched returns close the rental without a review, rating, recommendation, macguffin drop, or watched achievement credit.
 
