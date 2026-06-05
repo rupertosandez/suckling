@@ -19,6 +19,7 @@ REVIEWS_CHANNEL_KEY = "reviews_channel_id"
 RENTAL_REQUEST_CHANNEL_KEY = "rental_request_channel_id"
 RENTAL_TAG_KEY = "rental_tag_id"
 RECOMMENDATION_TAG_KEY = "recommendation_tag_id"
+REVIEW_TAG_KEY = "review_tag_id"
 LAST_UPDATE_ANNOUNCED_VERSION_KEY = "last_update_announced_version"
 FEED_CHANNEL_KEY = "feed_channel_id"
 
@@ -564,6 +565,15 @@ def get_recommendation_tag_id() -> int | None:
 
 def set_recommendation_tag_id(tag_id: int) -> None:
     set_setting(RECOMMENDATION_TAG_KEY, str(tag_id))
+
+
+def get_review_tag_id() -> int | None:
+    raw = get_setting(REVIEW_TAG_KEY)
+    return int(raw) if raw else None
+
+
+def set_review_tag_id(tag_id: int) -> None:
+    set_setting(REVIEW_TAG_KEY, str(tag_id))
 
 
 def get_last_update_announced_version() -> str | None:

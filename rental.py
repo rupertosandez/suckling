@@ -159,16 +159,20 @@ async def _get_forum_channel(bot: discord.Client) -> discord.ForumChannel | None
 def _get_applied_tags(
     forum: discord.ForumChannel,
     recommend: bool | None = None,
+    has_review: bool = False,
 ) -> list[discord.ForumTag]:
     """Build the list of ForumTag objects to apply based on stored tag IDs."""
     tags = []
     rental_tag_id = db.get_rental_tag_id()
     rec_tag_id = db.get_recommendation_tag_id()
+    review_tag_id = db.get_review_tag_id()
 
     for tag in forum.available_tags:
         if rental_tag_id and tag.id == rental_tag_id:
             tags.append(tag)
         if recommend and rec_tag_id and tag.id == rec_tag_id:
+            tags.append(tag)
+        if has_review and review_tag_id and tag.id == review_tag_id:
             tags.append(tag)
 
     return tags
@@ -244,10 +248,14 @@ async def edit_thread_returned(
         )
         await msg.edit(embed=embed)
 
-        # Update tags (add recommendation tag if applicable) — title stays the same
+        # Update tags (add recommendation/review tags if applicable) — title stays the same
         forum = await _get_forum_channel(bot)
         if forum:
-            applied_tags = _get_applied_tags(forum, recommend=bool(rental.get("recommended")))
+            applied_tags = _get_applied_tags(
+                forum,
+                recommend=bool(rental.get("recommended")),
+                has_review=bool((rental.get("thoughts") or "").strip()),
+            )
             await thread.edit(applied_tags=applied_tags)
 
     except (discord.NotFound, discord.Forbidden, discord.HTTPException) as e:

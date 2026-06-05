@@ -650,11 +650,18 @@ class RentalsCog(commands.Cog):
              if t.name.lower() in ("recommendation", "recommended", "recommend")),
             None,
         )
+        review_tag = next(
+            (t for t in channel.available_tags
+             if t.name.lower() in ("review", "reviews")),
+            None,
+        )
 
         if rental_tag:
             db.set_rental_tag_id(rental_tag.id)
         if rec_tag:
             db.set_recommendation_tag_id(rec_tag.id)
+        if review_tag:
+            db.set_review_tag_id(review_tag.id)
 
         tag_note = ""
         if not rental_tag:
@@ -662,11 +669,16 @@ class RentalsCog(commands.Cog):
         if not rec_tag:
             tag_note += "\n⚠️ no **recommendation** tag found. create it in the forum settings and run `/setreviews` again."
 
+        if not review_tag:
+            tag_note += "\n⚠️ no **review** tag found. create it in the forum settings and run `/setreviews` again."
+
         found = []
         if rental_tag:
             found.append("rental")
         if rec_tag:
             found.append("recommendation")
+        if review_tag:
+            found.append("review")
         found_str = f" tags found: {', '.join(found)}." if found else ""
 
         await interaction.response.send_message(

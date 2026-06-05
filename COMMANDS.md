@@ -411,7 +411,7 @@ admin dashboard for the bot: version, uptime, latency, cache size, configured ch
 list linked letterboxd accounts. shows each discord member, their letterboxd profile, and when they linked it. use `page` if the list is long.
 
 ### `/setreviews <forum_channel>`
-set the forum channel where rental reviews post. the bot needs **create public threads** and **send messages in threads** permissions. auto-detects **rental** and **recommendation** forum tags if they exist (create them in the forum's settings first, then run this command).
+set the forum channel where rental reviews post. the bot needs **create public threads** and **send messages in threads** permissions. auto-detects **rental**, **review**, and **recommendation** forum tags if they exist (create them in the forum's settings first, then run this command).
 
 ### `/cancelrental @user [reason]`
 cancel a user's active rental. no late fee applied. edits the forum thread to a grey "cancelled" state and DMs the user. optionally include a reason — it shows in the thread and the DM.

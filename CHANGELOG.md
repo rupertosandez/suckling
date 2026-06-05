@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.6.1] - 2026-06-05
+
+### Fixed
+
+- Rental forum threads now add the **review** tag when a member returns a rental with written thoughts.
+- `/setreviews` now detects the forum's **review** tag alongside the existing rental and recommendation tags.
+
 ## [2.6.0] - 2026-06-05
 
 ### Added
