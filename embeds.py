@@ -2,6 +2,7 @@ from datetime import datetime
 
 import discord
 
+import macguffin as macguffin_module
 import tmdb
 import trivia_roulette
 
@@ -1469,6 +1470,7 @@ _MACGUFFIN_RARITIES = {
     "rare": "\U0001F535 rare",
     "iconic": "\U0001F31F iconic",
 }
+_EMBED_SPACER = "\u200b"
 
 
 def _macguffin_color(card: dict) -> int:
@@ -1497,6 +1499,11 @@ def _macguffin_owner_text(owner_tag: str) -> str:
     if owner_tag.startswith("@") or owner_tag.startswith("<@"):
         return owner_tag
     return f"@{owner_tag}"
+
+
+def _macguffin_set_text(card: dict) -> str:
+    labels = macguffin_module.set_labels_for_card(str(card.get("id", "")))
+    return ", ".join(labels)
 
 
 def _format_macguffin_acquired(value) -> str:
@@ -1530,6 +1537,7 @@ def macguffin_drop_embed(
         name=_MACGUFFIN_TITLES.get(rarity, _MACGUFFIN_TITLES["common"]),
     )
     embed.add_field(name="FROM", value=card.get("source", "Unknown"), inline=True)
+    embed.add_field(name="SET", value=_macguffin_set_text(card), inline=True)
     embed.add_field(
         name="CLAIMED BY",
         value=_macguffin_owner_text(owner_tag),
@@ -1553,6 +1561,7 @@ def macguffin_card_embed(card: dict, record: dict) -> discord.Embed:
         inline=True,
     )
     embed.add_field(name="FROM", value=card.get("source", "Unknown"), inline=True)
+    embed.add_field(name="SET", value=_macguffin_set_text(card), inline=True)
     embed.add_field(
         name="ACQUIRED",
         value=_format_macguffin_acquired(record.get("acquired_at")),
@@ -1563,6 +1572,7 @@ def macguffin_card_embed(card: dict, record: dict) -> discord.Embed:
         value=record.get("acquired_via", "Unknown"),
         inline=True,
     )
+    embed.add_field(name=_EMBED_SPACER, value=_EMBED_SPACER, inline=True)
     return embed
 
 

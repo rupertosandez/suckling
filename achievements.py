@@ -303,6 +303,10 @@ def _macguffin_count(user_id: str) -> int:
     return len(db.get_macguffin_inventory(user_id))
 
 
+def _owned_macguffin_ids(user_id: str) -> set[str]:
+    return {record["macguffin_id"] for record in db.get_macguffin_inventory(user_id)}
+
+
 def _owns_suckling_macguffin(user_id: str) -> int:
     return 1 if db.user_owns_macguffin(user_id, "the-suckling") else 0
 
@@ -319,6 +323,26 @@ def _owns_iconic_macguffin(user_id: str) -> int:
         if card and card.get("rarity") == "iconic":
             return 1
     return 0
+
+
+def _owns_macguffin_set(set_id: str) -> Callable[[str], int]:
+    def progress(user_id: str) -> int:
+        try:
+            if not macguffin_module.SETS:
+                macguffin_module.load_sets()
+            item_set = macguffin_module.SETS.get(set_id)
+        except Exception as e:
+            logger.log_exception(f"achievement_macguffin_set_load:{set_id}", e)
+            return 0
+
+        if not item_set:
+            return 0
+        required_ids = set(item_set.get("macguffin_ids", []))
+        if not required_ids:
+            return 0
+        return 1 if required_ids <= _owned_macguffin_ids(user_id) else 0
+
+    return progress
 
 
 def _game_wins(user_id: str) -> int:
@@ -353,6 +377,31 @@ def _letterboxd_linked(user_id: str) -> int:
 
 def _event_count(event_type: str) -> Callable[[str], int]:
     return lambda user_id: db.achievement_event_count(user_id, event_type)
+
+
+def _macguffin_set_achievements() -> tuple[Achievement, ...]:
+    try:
+        item_sets = macguffin_module.all_sets()
+    except Exception as e:
+        logger.log_exception("achievement_macguffin_sets_load", e)
+        return ()
+
+    return tuple(
+        Achievement(
+            str(item_set["achievement_id"]),
+            str(item_set["achievement_name"]),
+            str(item_set["description"]),
+            str(item_set["hint"]),
+            "macguffins",
+            1,
+            _owns_macguffin_set(str(item_set["id"])),
+            str(item_set.get("emoji") or "🏆"),
+        )
+        for item_set in item_sets
+    )
+
+
+MACGUFFIN_SET_ACHIEVEMENTS = _macguffin_set_achievements()
 
 
 ACHIEVEMENTS: tuple[Achievement, ...] = (
@@ -439,6 +488,7 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("community-chest", "community chest", "gifted 3 macguffins.", "gift 3 macguffins.", "macguffins", 3, _event_count("macguffin_gift_sent"), "🤲"),
     Achievement("pass-it-on", "pass it on", "received a gifted macguffin.", "receive a gifted macguffin.", "macguffins", 1, _event_count("macguffin_gift_received"), "🔁"),
     Achievement("mutant-mommy", "mutant mommy", "held the iconic the suckling macguffin.", "hold the iconic the suckling macguffin.", "macguffins", 1, _owns_suckling_macguffin, "🍼"),
+    *MACGUFFIN_SET_ACHIEVEMENTS,
     Achievement("first-blood", "first blood", "won your first game.", "win any Suckling game.", "games", 1, _game_wins, "🎯"),
     Achievement("poster-child", "poster child", "won 5 guess/trivia rounds.", "win 5 /guess or /play rounds.", "games", 5, _guess_wins, "🎬"),
     Achievement("poster-child-ii", "poster child II", "won 25 guess/trivia rounds.", "win 25 /guess or /play rounds.", "games", 25, _guess_wins, "🎬"),

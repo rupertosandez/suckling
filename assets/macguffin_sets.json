@@ -1,0 +1,420 @@
+[
+  {
+    "id": "paddys",
+    "label": "Paddy's",
+    "achievement_id": "set-paddys-dayman",
+    "achievement_name": "dayman",
+    "description": "completed the Paddy's MacGuffin set.",
+    "hint": "complete the Paddy's MacGuffin set.",
+    "emoji": "\u2600\ufe0f",
+    "macguffin_ids": [
+      "kitten-mittens",
+      "rum-ham",
+      "green-man-suit",
+      "the-duster",
+      "fight-milk",
+      "dennis-system-binder",
+      "ratbat",
+      "wolf-cola"
+    ]
+  },
+  {
+    "id": "anchorman",
+    "label": "Anchorman",
+    "achievement_id": "set-anchorman-newsman",
+    "achievement_name": "newsman",
+    "description": "completed the Anchorman MacGuffin set.",
+    "hint": "complete the Anchorman MacGuffin set.",
+    "emoji": "\ud83d\udcf0",
+    "macguffin_ids": [
+      "jazz-flute",
+      "sex-panther",
+      "burgundy-scotch",
+      "sex-panther-display",
+      "baxter-the-dog"
+    ]
+  },
+  {
+    "id": "bttf",
+    "label": "BTTF",
+    "achievement_id": "set-bttf-gigawatt",
+    "achievement_name": "gigawatt",
+    "description": "completed the Back to the Future MacGuffin set.",
+    "hint": "complete the Back to the Future MacGuffin set.",
+    "emoji": "\u26a1",
+    "macguffin_ids": [
+      "delorean",
+      "flux-capacitor",
+      "orange-life-vest",
+      "self-lacing-nikes",
+      "hoverboard"
+    ]
+  },
+  {
+    "id": "spongebob",
+    "label": "SpongeBob",
+    "achievement_id": "set-spongebob-conch",
+    "achievement_name": "conch",
+    "description": "completed the SpongeBob MacGuffin set.",
+    "hint": "complete the SpongeBob MacGuffin set.",
+    "emoji": "\ud83d\udc1a",
+    "macguffin_ids": [
+      "krabby-patty-formula",
+      "magic-conch",
+      "spongebob-ripped-pants",
+      "patricks-wallet"
+    ]
+  },
+  {
+    "id": "toystory",
+    "label": "Toybox",
+    "achievement_id": "set-toystory-star-command",
+    "achievement_name": "star command",
+    "description": "completed the Toy Story MacGuffin set.",
+    "hint": "complete the Toy Story MacGuffin set.",
+    "emoji": "\ud83d\ude80",
+    "macguffin_ids": [
+      "buzz-lightyear",
+      "mr-potato-head",
+      "pizza-planet-cup",
+      "andys-cowboy-hat",
+      "forky"
+    ]
+  },
+  {
+    "id": "shining",
+    "label": "Shining",
+    "achievement_id": "set-shining-caretaker",
+    "achievement_name": "caretaker",
+    "description": "completed the Shining MacGuffin set.",
+    "hint": "complete the Shining MacGuffin set.",
+    "emoji": "\ud83e\ude93",
+    "macguffin_ids": [
+      "redrum-axe",
+      "room-237-key",
+      "overlook-typewriter"
+    ]
+  },
+  {
+    "id": "oz",
+    "label": "Oz",
+    "achievement_id": "set-oz-homebound",
+    "achievement_name": "homebound",
+    "description": "completed the Wizard of Oz MacGuffin set.",
+    "hint": "complete the Wizard of Oz MacGuffin set.",
+    "emoji": "\ud83d\udc60",
+    "macguffin_ids": [
+      "ruby-slippers",
+      "witchs-broomstick",
+      "dorothy-basket"
+    ]
+  },
+  {
+    "id": "python",
+    "label": "Python",
+    "achievement_id": "set-python-grailseeker",
+    "achievement_name": "grailseeker",
+    "description": "completed the Monty Python MacGuffin set.",
+    "hint": "complete the Monty Python MacGuffin set.",
+    "emoji": "\ud83c\udfc6",
+    "macguffin_ids": [
+      "holy-hand-grenade",
+      "coconut-halves",
+      "black-knight-helmet"
+    ]
+  },
+  {
+    "id": "lebowski",
+    "label": "Lebowski",
+    "achievement_id": "set-lebowski-dude",
+    "achievement_name": "dude",
+    "description": "completed the Big Lebowski MacGuffin set.",
+    "hint": "complete the Big Lebowski MacGuffin set.",
+    "emoji": "\ud83e\udd5b",
+    "macguffin_ids": [
+      "the-dudes-rug",
+      "dudes-white-russian",
+      "bowling-ball-bag"
+    ]
+  },
+  {
+    "id": "invincible",
+    "label": "Invincible",
+    "achievement_id": "set-invincible-viltrumite",
+    "achievement_name": "viltrumite",
+    "description": "completed the Invincible MacGuffin set.",
+    "hint": "complete the Invincible MacGuffin set.",
+    "emoji": "\ud83d\udcaa",
+    "macguffin_ids": [
+      "skull-of-argall",
+      "donald",
+      "cecils-pocket-teleporter"
+    ]
+  },
+  {
+    "id": "wonka",
+    "label": "Wonka",
+    "achievement_id": "set-wonka-dreamer",
+    "achievement_name": "dreamer",
+    "description": "completed the Wonka MacGuffin set.",
+    "hint": "complete the Wonka MacGuffin set.",
+    "emoji": "\ud83c\udf6c",
+    "macguffin_ids": [
+      "golden-ticket",
+      "everlasting-gobstopper"
+    ]
+  },
+  {
+    "id": "indy",
+    "label": "Indy",
+    "achievement_id": "set-indy-archaeologist",
+    "achievement_name": "archaeologist",
+    "description": "completed the Indiana Jones MacGuffin set.",
+    "hint": "complete the Indiana Jones MacGuffin set.",
+    "emoji": "\ud83c\udffa",
+    "macguffin_ids": [
+      "holy-grail",
+      "indys-fedora",
+      "golden-idol"
+    ]
+  },
+  {
+    "id": "ghostbusters",
+    "label": "Ghostbusters",
+    "achievement_id": "set-ghostbusters-buster",
+    "achievement_name": "buster",
+    "description": "completed the Ghostbusters MacGuffin set.",
+    "hint": "complete the Ghostbusters MacGuffin set.",
+    "emoji": "\ud83d\udc7b",
+    "macguffin_ids": [
+      "proton-pack",
+      "stay-puft-figurine"
+    ]
+  },
+  {
+    "id": "beetlejuice",
+    "label": "Beetlejuice",
+    "achievement_id": "set-beetlejuice-bioexorcist",
+    "achievement_name": "bioexorcist",
+    "description": "completed the Beetlejuice MacGuffin set.",
+    "hint": "complete the Beetlejuice MacGuffin set.",
+    "emoji": "\ud83e\uddf5",
+    "macguffin_ids": [
+      "handbook-recently-deceased",
+      "beetlejuice-jacket"
+    ]
+  },
+  {
+    "id": "alien",
+    "label": "Alien",
+    "achievement_id": "set-alien-nostromo",
+    "achievement_name": "nostromo",
+    "description": "completed the Alien MacGuffin set.",
+    "hint": "complete the Alien MacGuffin set.",
+    "emoji": "\ud83d\udc7d",
+    "macguffin_ids": [
+      "facehugger",
+      "chestburster-jar"
+    ]
+  },
+  {
+    "id": "slashers",
+    "label": "Slashers",
+    "achievement_id": "set-slashers-survivor",
+    "achievement_name": "survivor",
+    "description": "completed the Slashers MacGuffin set.",
+    "hint": "complete the Slashers MacGuffin set.",
+    "emoji": "\ud83d\udd2a",
+    "macguffin_ids": [
+      "freddys-glove",
+      "jasons-mask",
+      "myers-mask",
+      "ghostface-mask",
+      "leatherfaces-chainsaw",
+      "chucky"
+    ]
+  },
+  {
+    "id": "cursed",
+    "label": "Cursed",
+    "achievement_id": "set-cursed-hexed",
+    "achievement_name": "hexed",
+    "description": "completed the Cursed MacGuffin set.",
+    "hint": "complete the Cursed MacGuffin set.",
+    "emoji": "\ud83d\udd2e",
+    "macguffin_ids": [
+      "lament-configuration",
+      "necronomicon",
+      "the-ring-tape",
+      "babadook-book",
+      "demonic-embalmed-hand",
+      "paimon-crown",
+      "cursed-coat-button",
+      "tannis-root-charm"
+    ]
+  },
+  {
+    "id": "food",
+    "label": "Food",
+    "achievement_id": "set-food-snacklord",
+    "achievement_name": "snacklord",
+    "description": "completed the Food MacGuffin set.",
+    "hint": "complete the Food MacGuffin set.",
+    "emoji": "\ud83c\udf7f",
+    "macguffin_ids": [
+      "royale-with-cheese",
+      "cornetto",
+      "reeses-pieces",
+      "box-of-chocolates",
+      "buddy-spaghetti",
+      "everlasting-gobstopper",
+      "rum-ham",
+      "truffonis-sloppy-steaks"
+    ]
+  },
+  {
+    "id": "scifi",
+    "label": "SciFi",
+    "achievement_id": "set-scifi-technomancer",
+    "achievement_name": "technomancer",
+    "description": "completed the SciFi MacGuffin set.",
+    "hint": "complete the SciFi MacGuffin set.",
+    "emoji": "\ud83d\udef8",
+    "macguffin_ids": [
+      "lightsaber",
+      "flux-capacitor",
+      "omnitrix",
+      "noisy-cricket",
+      "warp-ring",
+      "cecils-pocket-teleporter",
+      "meeseeks-box",
+      "protomolecule-sample"
+    ]
+  },
+  {
+    "id": "marvel",
+    "label": "Marvel",
+    "achievement_id": "set-marvel-excelsior",
+    "achievement_name": "excelsior",
+    "description": "completed the Marvel MacGuffin set.",
+    "hint": "complete the Marvel MacGuffin set.",
+    "emoji": "\ud83d\udd34",
+    "macguffin_ids": [
+      "awesome-mix-vol-2",
+      "blind-mans-cane",
+      "kimoyo-beads",
+      "sling-ring",
+      "orange-slices"
+    ]
+  },
+  {
+    "id": "whedon",
+    "label": "Whedon",
+    "achievement_id": "set-whedon-browncoat",
+    "achievement_name": "browncoat",
+    "description": "completed the Whedon MacGuffin set.",
+    "hint": "complete the Whedon MacGuffin set.",
+    "emoji": "\ud83e\udde5",
+    "macguffin_ids": [
+      "class-protector-umbrella",
+      "toy-dinosaurs",
+      "mr-pointy",
+      "fruity-oaty-bar",
+      "freeze-ray"
+    ]
+  },
+  {
+    "id": "pirates",
+    "label": "Pirates",
+    "achievement_id": "set-pirates-swashbuckler",
+    "achievement_name": "swashbuckler",
+    "description": "completed the Pirates MacGuffin set.",
+    "hint": "complete the Pirates MacGuffin set.",
+    "emoji": "\u2620\ufe0f",
+    "macguffin_ids": [
+      "black-pearl-bottle",
+      "jar-of-dirt",
+      "compass-that-doesnt-point-north"
+    ]
+  },
+  {
+    "id": "coen",
+    "label": "Coen",
+    "achievement_id": "set-coen-mensch",
+    "achievement_name": "mensch",
+    "description": "completed the Coen MacGuffin set.",
+    "hint": "complete the Coen MacGuffin set.",
+    "emoji": "\ud83e\ude99",
+    "macguffin_ids": [
+      "airway-briefcase",
+      "cattle-bolt",
+      "hula-hoop",
+      "woodchipper-hat",
+      "barton-fink-wallpaper"
+    ]
+  },
+  {
+    "id": "carpenter",
+    "label": "Carpenter",
+    "achievement_id": "set-carpenter-plissken",
+    "achievement_name": "plissken",
+    "description": "completed the Carpenter MacGuffin set.",
+    "hint": "complete the Carpenter MacGuffin set.",
+    "emoji": "\ud83e\udd7d",
+    "macguffin_ids": [
+      "fogbound-gold",
+      "chess-wizard",
+      "snakes-eyepatch",
+      "nadas-shotgun",
+      "christines-key"
+    ]
+  },
+  {
+    "id": "lynch",
+    "label": "Lynch",
+    "achievement_id": "set-lynch-blue-rose",
+    "achievement_name": "blue rose",
+    "description": "completed the Lynch MacGuffin set.",
+    "hint": "complete the Lynch MacGuffin set.",
+    "emoji": "\ud83c\udf39",
+    "macguffin_ids": [
+      "blue-key",
+      "log-ladys-log",
+      "eraserhead-baby-blanket",
+      "club-silencio-microphone",
+      "red-room-curtain"
+    ]
+  },
+  {
+    "id": "cronenberg",
+    "label": "Cronenberg",
+    "achievement_id": "set-cronenberg-new-flesh",
+    "achievement_name": "new flesh",
+    "description": "completed the Cronenberg MacGuffin set.",
+    "hint": "complete the Cronenberg MacGuffin set.",
+    "emoji": "\ud83d\udcfa",
+    "macguffin_ids": [
+      "stomach-vcr",
+      "brundlefly-telepod-part",
+      "mugwump-typewriter",
+      "scanners-headband",
+      "gamepod"
+    ]
+  },
+  {
+    "id": "tarantino",
+    "label": "Tarantino",
+    "achievement_id": "set-tarantino-vega",
+    "achievement_name": "vega",
+    "description": "completed the Tarantino MacGuffin set.",
+    "hint": "complete the Tarantino MacGuffin set.",
+    "emoji": "\ud83d\udde1\ufe0f",
+    "macguffin_ids": [
+      "hattori-hanzo-sword",
+      "big-kahuna-burger",
+      "red-apple-cigarettes",
+      "brides-yellow-suit",
+      "inglourious-pipe"
+    ]
+  }
+]

@@ -13,8 +13,11 @@ RARITY_FALLBACK = {
 }
 
 CARDS: dict[str, dict] = {}
+SETS: dict[str, dict] = {}
+GENERAL_SET_LABEL = "General"
 
 _ASSET_PATH = Path(__file__).resolve().parent / "assets" / "macguffins.json"
+_SET_ASSET_PATH = Path(__file__).resolve().parent / "assets" / "macguffin_sets.json"
 
 
 class MacGuffinError(Exception):
@@ -75,9 +78,126 @@ def load_cards() -> dict[str, dict]:
     return CARDS
 
 
+def load_sets() -> dict[str, dict]:
+    """Load and validate the MacGuffin set asset file."""
+    global SETS
+
+    if not CARDS:
+        load_cards()
+
+    try:
+        with _SET_ASSET_PATH.open("r", encoding="utf-8") as f:
+            raw_sets = json.load(f)
+    except FileNotFoundError as e:
+        raise MacGuffinAssetError(f"macguffin set asset file missing: {_SET_ASSET_PATH}") from e
+    except json.JSONDecodeError as e:
+        raise MacGuffinAssetError(f"macguffin set asset file is invalid json: {e}") from e
+
+    if not isinstance(raw_sets, list):
+        raise MacGuffinAssetError("macguffin set asset file must contain a list")
+
+    loaded: dict[str, dict] = {}
+    achievement_ids: set[str] = set()
+    required = {
+        "id",
+        "label",
+        "achievement_id",
+        "achievement_name",
+        "description",
+        "hint",
+        "emoji",
+        "macguffin_ids",
+    }
+    for index, item_set in enumerate(raw_sets, start=1):
+        if not isinstance(item_set, dict):
+            raise MacGuffinAssetError(f"macguffin set entry {index} must be an object")
+
+        missing = required - set(item_set)
+        if missing:
+            missing_text = ", ".join(sorted(missing))
+            raise MacGuffinAssetError(
+                f"macguffin set entry {index} is missing: {missing_text}"
+            )
+
+        set_id = str(item_set["id"])
+        if set_id in loaded:
+            raise MacGuffinAssetError(f"duplicate macguffin set id: {set_id}")
+
+        achievement_id = str(item_set["achievement_id"])
+        if achievement_id in achievement_ids:
+            raise MacGuffinAssetError(
+                f"duplicate macguffin set achievement id: {achievement_id}"
+            )
+        achievement_ids.add(achievement_id)
+
+        macguffin_ids = item_set["macguffin_ids"]
+        if not isinstance(macguffin_ids, list) or not macguffin_ids:
+            raise MacGuffinAssetError(
+                f"macguffin set {set_id} must include at least one macguffin"
+            )
+
+        normalized_ids = [str(macguffin_id) for macguffin_id in macguffin_ids]
+        duplicate_ids = sorted(
+            macguffin_id
+            for macguffin_id in set(normalized_ids)
+            if normalized_ids.count(macguffin_id) > 1
+        )
+        if duplicate_ids:
+            duplicate_text = ", ".join(duplicate_ids)
+            raise MacGuffinAssetError(
+                f"macguffin set {set_id} has duplicate macguffins: {duplicate_text}"
+            )
+
+        unknown_ids = sorted(macguffin_id for macguffin_id in normalized_ids if macguffin_id not in CARDS)
+        if unknown_ids:
+            unknown_text = ", ".join(unknown_ids)
+            raise MacGuffinAssetError(
+                f"macguffin set {set_id} references unknown macguffins: {unknown_text}"
+            )
+
+        normalized = dict(item_set)
+        normalized["id"] = set_id
+        normalized["achievement_id"] = achievement_id
+        normalized["macguffin_ids"] = normalized_ids
+        loaded[set_id] = normalized
+
+    SETS = loaded
+    return SETS
+
+
 def _ensure_loaded() -> None:
     if not CARDS:
         load_cards()
+
+
+def _ensure_sets_loaded() -> None:
+    if not SETS:
+        load_sets()
+
+
+def all_sets() -> list[dict]:
+    """Return validated MacGuffin set definitions in catalog order."""
+    _ensure_sets_loaded()
+    return list(SETS.values())
+
+
+def sets_for_card(macguffin_id: str) -> list[dict]:
+    """Return every set containing a MacGuffin ID."""
+    _ensure_sets_loaded()
+    return [
+        item_set
+        for item_set in SETS.values()
+        if macguffin_id in item_set.get("macguffin_ids", [])
+    ]
+
+
+def set_labels_for_card(macguffin_id: str) -> list[str]:
+    """Return short set labels for a MacGuffin, or General when unset."""
+    labels = [
+        str(item_set.get("label") or item_set["id"])
+        for item_set in sets_for_card(macguffin_id)
+    ]
+    return labels or [GENERAL_SET_LABEL]
 
 
 def _available_cards(claimed_ids: set[str]) -> dict[str, list[dict]]:

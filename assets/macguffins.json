@@ -1294,5 +1294,341 @@
     "rarity": "common",
     "source": "The Blair Witch Project (1999)",
     "flavor": "found in the woods. low battery, full tape, absolutely no comforting answers."
+  },
+  {
+    "id": "awesome-mix-vol-2",
+    "name": "Awesome Mix Vol. 2",
+    "emoji": "\ud83d\udcfc",
+    "rarity": "rare",
+    "source": "Guardians of the Galaxy Vol. 2 (2017)",
+    "flavor": "the tape still works. the feelings also still work. no skipping, especially not side b."
+  },
+  {
+    "id": "blind-mans-cane",
+    "name": "Blind Man's Cane",
+    "emoji": "\ud83e\udfaf",
+    "rarity": "common",
+    "source": "Daredevil (TV)",
+    "flavor": "collapsible, discreet, and mostly there so everyone keeps underestimating the wrong guy."
+  },
+  {
+    "id": "kimoyo-beads",
+    "name": "Kimoyo Beads",
+    "emoji": "\ud83d\udcff",
+    "rarity": "rare",
+    "source": "Black Panther (2018)",
+    "flavor": "tiny wakandan tech doing the work of a phone, a doctor, and a miracle."
+  },
+  {
+    "id": "sling-ring",
+    "name": "Sling Ring",
+    "emoji": "\ud83d\udc8d",
+    "rarity": "iconic",
+    "source": "Doctor Strange (2016)",
+    "flavor": "opens doors to anywhere, assuming you can stop making nervous circles with your hand."
+  },
+  {
+    "id": "orange-slices",
+    "name": "Orange Slices",
+    "emoji": "\ud83c\udf4a",
+    "rarity": "common",
+    "source": "Captain America: Civil War (2016)",
+    "flavor": "post-fight refreshments for tiny heroes and exhausted adults."
+  },
+  {
+    "id": "class-protector-umbrella",
+    "name": "Class Protector Umbrella",
+    "emoji": "\u2602\ufe0f",
+    "rarity": "rare",
+    "source": "Buffy the Vampire Slayer (TV)",
+    "flavor": "proof that sometimes the whole school knows exactly who saved them."
+  },
+  {
+    "id": "toy-dinosaurs",
+    "name": "Toy Dinosaurs",
+    "emoji": "\ud83e\udd96",
+    "rarity": "common",
+    "source": "Firefly (TV)",
+    "flavor": "curse your sudden but inevitable betrayal. kept on the console for tactical morale."
+  },
+  {
+    "id": "mr-pointy",
+    "name": "Mr. Pointy",
+    "emoji": "\ud83e\ude75",
+    "rarity": "rare",
+    "source": "Buffy the Vampire Slayer (TV)",
+    "flavor": "hand-carved, sentimental, and extremely effective against bad dates with fangs."
+  },
+  {
+    "id": "fruity-oaty-bar",
+    "name": "Fruity Oaty Bar",
+    "emoji": "\ud83c\udf6b",
+    "rarity": "common",
+    "source": "Serenity (2005)",
+    "flavor": "a cheerful little snack ad with a deeply inconvenient trigger phrase baked in."
+  },
+  {
+    "id": "freeze-ray",
+    "name": "Freeze Ray",
+    "emoji": "\ud83e\udd76",
+    "rarity": "iconic",
+    "source": "Dr. Horrible's Sing-Along Blog (2008)",
+    "flavor": "stops time, sort of. mostly useful for awkward feelings and questionable plans."
+  },
+  {
+    "id": "jar-of-dirt",
+    "name": "Jar of Dirt",
+    "emoji": "\ud83e\uded9",
+    "rarity": "common",
+    "source": "Pirates of the Caribbean: Dead Man's Chest (2006)",
+    "flavor": "he's got a jar of dirt. guess what's inside it. do not drop it while celebrating."
+  },
+  {
+    "id": "compass-that-doesnt-point-north",
+    "name": "Compass That Doesn't Point North",
+    "emoji": "\ud83e\udded",
+    "rarity": "rare",
+    "source": "Pirates of the Caribbean: The Curse of the Black Pearl (2003)",
+    "flavor": "points to what you want most, which is usually trouble."
+  },
+  {
+    "id": "tannis-root-charm",
+    "name": "Tannis Root Charm",
+    "emoji": "\ud83c\udf3f",
+    "rarity": "rare",
+    "source": "Rosemary's Baby (1968)",
+    "flavor": "smells awful, looks worse, and came from neighbors who are much too friendly."
+  },
+  {
+    "id": "protomolecule-sample",
+    "name": "Protomolecule Sample",
+    "emoji": "\ud83e\uddea",
+    "rarity": "rare",
+    "source": "The Expanse (TV)",
+    "flavor": "glowing blue alien weirdness in a sealed tube. the seal is doing a lot of work here."
+  },
+  {
+    "id": "truffle-pig",
+    "name": "Truffle Pig",
+    "emoji": "\ud83d\udc16",
+    "rarity": "rare",
+    "source": "Pig (2021)",
+    "flavor": "beloved, irreplaceable, and worth burning the entire underworld down to find."
+  },
+  {
+    "id": "wonder-bread-firesuit",
+    "name": "Wonder Bread Firesuit",
+    "emoji": "\ud83c\udf5e",
+    "rarity": "common",
+    "source": "Talladega Nights: The Ballad of Ricky Bobby (2006)",
+    "flavor": "if you're not first, you're last. flame-resistant, sponsor-heavy, and deeply american."
+  },
+  {
+    "id": "single-perfect-tear",
+    "name": "Single Perfect Tear",
+    "emoji": "\ud83d\udca7",
+    "rarity": "common",
+    "source": "Cry-Baby (1990)",
+    "flavor": "one dramatic tear from the baddest boy in baltimore. handle with sincerity."
+  },
+  {
+    "id": "airway-briefcase",
+    "name": "Airway Briefcase",
+    "emoji": "\ud83d\udcbc",
+    "rarity": "rare",
+    "source": "No Country for Old Men (2007)",
+    "flavor": "money in the case. transponder in the money. mistake already made."
+  },
+  {
+    "id": "cattle-bolt",
+    "name": "Cattle Bolt",
+    "emoji": "\ud83e\ude9b",
+    "rarity": "iconic",
+    "source": "No Country for Old Men (2007)",
+    "flavor": "call it. just call it."
+  },
+  {
+    "id": "hula-hoop",
+    "name": "Hula Hoop",
+    "emoji": "\u2b55",
+    "rarity": "common",
+    "source": "The Hudsucker Proxy (1994)",
+    "flavor": "you know, for kids."
+  },
+  {
+    "id": "woodchipper-hat",
+    "name": "Woodchipper Hat",
+    "emoji": "\ud83e\udde2",
+    "rarity": "rare",
+    "source": "Fargo (1996)",
+    "flavor": "good hat. cold morning. bad errand."
+  },
+  {
+    "id": "barton-fink-wallpaper",
+    "name": "Barton Fink Wallpaper",
+    "emoji": "\ud83e\uddf1",
+    "rarity": "common",
+    "source": "Barton Fink (1991)",
+    "flavor": "peeling quietly in a room where the heat will not break."
+  },
+  {
+    "id": "fogbound-gold",
+    "name": "Fogbound Gold",
+    "emoji": "\ud83e\ude99",
+    "rarity": "rare",
+    "source": "The Fog (1980)",
+    "flavor": "stolen gold. old blood. the fog comes back for both."
+  },
+  {
+    "id": "chess-wizard",
+    "name": "Chess Wizard",
+    "emoji": "\u265f\ufe0f",
+    "rarity": "common",
+    "source": "The Thing (1982)",
+    "flavor": "the computer cheats. macready cheats back."
+  },
+  {
+    "id": "snakes-eyepatch",
+    "name": "Snake's Eyepatch",
+    "emoji": "\ud83e\udd7d",
+    "rarity": "iconic",
+    "source": "Escape from New York (1981)",
+    "flavor": "name's plissken. heard he was dead."
+  },
+  {
+    "id": "nadas-shotgun",
+    "name": "Nada's Shotgun",
+    "emoji": "\ud83d\udd2b",
+    "rarity": "rare",
+    "source": "They Live (1988)",
+    "flavor": "put on the glasses. pick up the gun. keep moving."
+  },
+  {
+    "id": "christines-key",
+    "name": "Christine's Key",
+    "emoji": "\ud83d\udde1\ufe0f",
+    "rarity": "rare",
+    "source": "Christine (1983)",
+    "flavor": "turn the key. let her idle. she remembers everything."
+  },
+  {
+    "id": "blue-key",
+    "name": "Blue Key",
+    "emoji": "\ud83d\udd11",
+    "rarity": "rare",
+    "source": "Mulholland Drive (2001)",
+    "flavor": "the key is blue. the box is blue. after that, things become difficult."
+  },
+  {
+    "id": "log-ladys-log",
+    "name": "Log Lady's Log",
+    "emoji": "\ud83e\udeb5",
+    "rarity": "iconic",
+    "source": "Twin Peaks (TV)",
+    "flavor": "the log has seen things. margaret listens. maybe you should too."
+  },
+  {
+    "id": "eraserhead-baby-blanket",
+    "name": "Eraserhead Baby Blanket",
+    "emoji": "\ud83e\ude86",
+    "rarity": "rare",
+    "source": "Eraserhead (1977)",
+    "flavor": "swaddled tight. the room hums. no one is sleeping."
+  },
+  {
+    "id": "club-silencio-microphone",
+    "name": "Club Silencio Microphone",
+    "emoji": "\ud83c\udfa4",
+    "rarity": "common",
+    "source": "Mulholland Drive (2001)",
+    "flavor": "no hay banda. there is no band. and still, you hear it."
+  },
+  {
+    "id": "red-room-curtain",
+    "name": "Red Room Curtain",
+    "emoji": "\ud83c\udfad",
+    "rarity": "iconic",
+    "source": "Twin Peaks: Fire Walk with Me (1992)",
+    "flavor": "red velvet. no wind. something moves behind it anyway."
+  },
+  {
+    "id": "stomach-vcr",
+    "name": "Stomach VCR",
+    "emoji": "\ud83d\udcfc",
+    "rarity": "iconic",
+    "source": "Videodrome (1983)",
+    "flavor": "a soft opening in the abdomen. insert the cassette and observe the signal."
+  },
+  {
+    "id": "brundlefly-telepod-part",
+    "name": "Brundlefly Telepod Part",
+    "emoji": "\ud83e\uddec",
+    "rarity": "rare",
+    "source": "The Fly (1986)",
+    "flavor": "component recovered from telepod two. sterilization incomplete."
+  },
+  {
+    "id": "mugwump-typewriter",
+    "name": "Mugwump Typewriter",
+    "emoji": "\u2328\ufe0f",
+    "rarity": "iconic",
+    "source": "Naked Lunch (1991)",
+    "flavor": "chitin keys. wet advice. the report is due."
+  },
+  {
+    "id": "scanners-headband",
+    "name": "Scanners Headband",
+    "emoji": "\ud83e\udde0",
+    "rarity": "common",
+    "source": "Scanners (1981)",
+    "flavor": "pressure builds quickly. meetings should be kept short."
+  },
+  {
+    "id": "gamepod",
+    "name": "GamePod",
+    "emoji": "\ud83c\udfae",
+    "rarity": "rare",
+    "source": "eXistenZ (1999)",
+    "flavor": "warm to the touch. accepts a bio-port connection. do not share hardware."
+  },
+  {
+    "id": "hattori-hanzo-sword",
+    "name": "Hattori Hanzo Sword",
+    "emoji": "\ud83d\udde1\ufe0f",
+    "rarity": "iconic",
+    "source": "Kill Bill: Vol. 1 (2003)",
+    "flavor": "if you're looking for revenge, accept no substitutes."
+  },
+  {
+    "id": "big-kahuna-burger",
+    "name": "Big Kahuna Burger",
+    "emoji": "\ud83c\udf54",
+    "rarity": "common",
+    "source": "Pulp Fiction (1994)",
+    "flavor": "that is a tasty burger. mind if anyone has a bite?"
+  },
+  {
+    "id": "red-apple-cigarettes",
+    "name": "Red Apple Cigarettes",
+    "emoji": "\ud83d\udeac",
+    "rarity": "common",
+    "source": "Pulp Fiction (1994)",
+    "flavor": "goes down smooth. everybody in town seems to know the brand."
+  },
+  {
+    "id": "brides-yellow-suit",
+    "name": "Bride's Yellow Suit",
+    "emoji": "\ud83e\udd4b",
+    "rarity": "rare",
+    "source": "Kill Bill: Vol. 1 (2003)",
+    "flavor": "bright yellow. blood shows up real nice on it."
+  },
+  {
+    "id": "inglourious-pipe",
+    "name": "Inglourious Pipe",
+    "emoji": "\ud83d\udca8",
+    "rarity": "rare",
+    "source": "Inglourious Basterds (2009)",
+    "flavor": "enormous, theatrical, and best used while making someone nervous."
   }
 ]
