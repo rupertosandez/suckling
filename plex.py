@@ -246,8 +246,9 @@ def _hydrate_cached_movie(movie: dict) -> dict:
 
 
 def _normalize_title(s: str) -> str:
-    """Normalize a title for fuzzy matching: lowercase, strip articles & punctuation."""
+    """Normalize a title for fuzzy matching: lowercase, strip articles and punctuation."""
     s = (s or "").lower().strip()
+    s = s.replace("&", " and ")
     for article in ("the ", "a ", "an "):
         if s.startswith(article):
             s = s[len(article):]

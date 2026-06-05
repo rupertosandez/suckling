@@ -467,6 +467,9 @@ manually trigger today's daily recommendation post.
 ### `/lbactivitynow [post]`
 manually check linked letterboxd activity. by default this is a dry run and reports how many unseen entries were found, plus how many are recent enough to post. set `post:True` to post entries from the last 60 minutes only.
 
+### `/plexrefresh`
+refresh the rb9 plex library cache. use this when plex has a new or changed title and suckling does not see it yet.
+
 ### `/cachestats [clear]`
 show the size of the in-memory cache. pass `clear:True` to wipe both the tmdb cache and the random-pick pool (useful if data feels stale).
 

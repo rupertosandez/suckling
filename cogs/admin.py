@@ -9,6 +9,7 @@ from discord.ext import commands
 import db
 import embeds
 import picker
+import plex
 import tracker
 import version
 
@@ -614,6 +615,33 @@ class AdminCog(commands.Cog):
             )
             return
         await interaction.followup.send(result.to_discord_summary(), ephemeral=True)
+
+    @app_commands.command(
+        name="plexrefresh",
+        description="Refresh the RB9 Plex library cache (admin only)",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def plexrefresh(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            movies = await plex.refresh_full_cache()
+        except plex.PlexError as e:
+            await interaction.followup.send(
+                f"Plex cache refresh failed: {e}",
+                ephemeral=True,
+            )
+            return
+        except Exception as e:
+            await interaction.followup.send(
+                f"Plex cache refresh failed unexpectedly: {e}",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.followup.send(
+            f"Refreshed the RB9 Plex cache: **{len(movies)}** movies cached.",
+            ephemeral=True,
+        )
 
     @app_commands.command(
         name="plexunpopular",

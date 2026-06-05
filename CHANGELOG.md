@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.6.0] - 2026-06-05
+
+### Added
+
+- Added `/plexrefresh` so admins can manually refresh the RB9 Plex library cache when Plex has new or changed titles.
+
+### Fixed
+
+- Plex title matching now treats `&` and `and` as equivalent, so titles like **Peter & The Wolf** can be found when Plex stores them with `and`.
+
 ## [2.5.9] - 2026-06-01
 
 ### Changed
