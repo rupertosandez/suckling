@@ -27,6 +27,7 @@ import letterboxd as lb_module
 import macguffin as macguffin_module
 import cleanup as cleanup_module
 import achievements as achievement_module
+import update_announcements
 import views
 
 LB_ACTIVITY_POST_LIMIT = 20
@@ -87,9 +88,6 @@ _instance_lock_handle = None
 _PID_FILE_NAME = "bot.pid"
 _LAUNCHER_ENV_KEY = "SUCKLINGBOT_LAUNCHER_MANAGED"
 _LAUNCHER_RESTART_EXIT_CODE = 75
-
-
-UPDATE_ANNOUNCEMENT_CHANNEL_ID = 1446966452669255761
 
 
 def _configure_console_encoding() -> None:
@@ -226,28 +224,11 @@ async def _post_update_announcement_once() -> None:
     if db.get_last_update_announced_version() == current_version:
         return
 
-    channel = bot.get_channel(UPDATE_ANNOUNCEMENT_CHANNEL_ID)
-    if channel is None:
-        try:
-            channel = await bot.fetch_channel(UPDATE_ANNOUNCEMENT_CHANNEL_ID)
-        except (discord.NotFound, discord.Forbidden) as e:
-            print(f"[startup-update] Couldn't access channel: {e}")
-            return
-
-    embed = discord.Embed(
-        description=(
-            f"yo check me out! i've been updated!!! v{current_version} 💪\n\n"
-            "[ view changelog ](https://rupertosandez.github.io/sucklingsite/changelog/)"
-        ),
-        color=0x8B0000,
-    )
-
-    try:
-        await channel.send(embed=embed)
-        db.set_last_update_announced_version(current_version)
+    ok, message = await update_announcements.post_update_announcement(bot)
+    if ok:
         print(f"[startup-update] Posted update announcement for v{current_version}")
-    except discord.HTTPException as e:
-        print(f"[startup-update] Failed to post update announcement: {e}")
+    else:
+        print(f"[startup-update] {message}")
 
 
 async def _scheduled_check():

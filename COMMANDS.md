@@ -464,6 +464,9 @@ manually trigger the streaming check **and post** announcements live. use sparin
 ### `/dailynow`
 manually trigger today's daily recommendation post.
 
+### `/postupdate`
+post the current bot update announcement, including the changelog entry for the current version.
+
 ### `/lbactivitynow [post]`
 manually check linked letterboxd activity. by default this is a dry run and reports how many unseen entries were found, plus how many are recent enough to post. set `post:True` to post entries from the last 60 minutes only.
 

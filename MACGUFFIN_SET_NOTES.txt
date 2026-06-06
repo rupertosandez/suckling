@@ -1,44 +1,49 @@
-MacGuffin additions agreed so far
-=================================
+MacGuffin additions
+===================
 
-Set rule
---------
+Set rules
+---------
 - Only create a named set when it has at least 3 macguffins.
 - Otherwise, keep the macguffin in General.
 - Set labels should stay short for embeds.
 - Achievement titles should be one word when possible, two words max.
+- Flavor text should match the tone of the source movie/show.
 
+
+Implemented sets and macguffins
+===============================
 
 Marvel set
 ----------
+Status: implemented
 Set label: Marvel
 Achievement title: Excelsior
 
-- Awesome Mix Vol. 2
+- [implemented] Awesome Mix Vol. 2
   id: awesome-mix-vol-2
   rarity: rare
   source: Guardians of the Galaxy Vol. 2 (2017)
   flavor: the tape still works. the feelings also still work. no skipping, especially not side b.
 
-- Blind Man's Cane
+- [implemented] Blind Man's Cane
   id: blind-mans-cane
   rarity: common
   source: Daredevil (TV)
   flavor: collapsible, discreet, and mostly there so everyone keeps underestimating the wrong guy.
 
-- Kimoyo Beads
+- [implemented] Kimoyo Beads
   id: kimoyo-beads
   rarity: rare
   source: Black Panther (2018)
   flavor: tiny wakandan tech doing the work of a phone, a doctor, and a miracle.
 
-- Sling Ring
+- [implemented] Sling Ring
   id: sling-ring
   rarity: iconic
   source: Doctor Strange (2016)
   flavor: opens doors to anywhere, assuming you can stop making nervous circles with your hand.
 
-- Orange Slices
+- [implemented] Orange Slices
   id: orange-slices
   rarity: common
   source: Captain America: Civil War (2016)
@@ -47,34 +52,35 @@ Achievement title: Excelsior
 
 Whedon set
 ----------
+Status: implemented
 Set label: Whedon
-Achievement title candidates: Scoobied, Browncoat
+Achievement title: Browncoat
 
-- Class Protector Umbrella
+- [implemented] Class Protector Umbrella
   id: class-protector-umbrella
   rarity: rare
   source: Buffy the Vampire Slayer (TV)
   flavor: proof that sometimes the whole school knows exactly who saved them.
 
-- Toy Dinosaurs
+- [implemented] Toy Dinosaurs
   id: toy-dinosaurs
   rarity: common
   source: Firefly (TV)
   flavor: curse your sudden but inevitable betrayal. kept on the console for tactical morale.
 
-- Mr. Pointy
+- [implemented] Mr. Pointy
   id: mr-pointy
   rarity: rare
   source: Buffy the Vampire Slayer (TV)
   flavor: hand-carved, sentimental, and extremely effective against bad dates with fangs.
 
-- Fruity Oaty Bar
+- [implemented] Fruity Oaty Bar
   id: fruity-oaty-bar
   rarity: common
   source: Serenity (2005)
   flavor: a cheerful little snack ad with a deeply inconvenient trigger phrase baked in.
 
-- Freeze Ray
+- [implemented] Freeze Ray
   id: freeze-ray
   rarity: iconic
   source: Dr. Horrible's Sing-Along Blog (2008)
@@ -83,39 +89,40 @@ Achievement title candidates: Scoobied, Browncoat
 
 Pirates set
 -----------
+Status: implemented
 Set label: Pirates
-Achievement title: TBD
+Achievement title: Swashbuckler
 
-Existing item:
-- The Black Pearl in a Bottle
+- [implemented] The Black Pearl in a Bottle
   id: black-pearl-bottle
   rarity: rare
   source: Pirates of the Caribbean: The Curse of the Black Pearl (2003)
 
-New items:
-- Jar of Dirt
+- [implemented] Jar of Dirt
   id: jar-of-dirt
   rarity: common
   source: Pirates of the Caribbean: Dead Man's Chest (2006)
   flavor: he's got a jar of dirt. guess what's inside it. do not drop it while celebrating.
 
-- Compass That Doesn't Point North
+- [implemented] Compass That Doesn't Point North
   id: compass-that-doesnt-point-north
   rarity: rare
   source: Pirates of the Caribbean: The Curse of the Black Pearl (2003)
   flavor: points to what you want most, which is usually trouble.
 
 
-New additions that join existing sets
--------------------------------------
-- Tannis Root Charm
+Existing-set additions
+----------------------
+Status: implemented
+
+- [implemented] Tannis Root Charm
   id: tannis-root-charm
   rarity: rare
   source: Rosemary's Baby (1968)
   set: Cursed
   flavor: smells awful, looks worse, and came from neighbors who are much too friendly.
 
-- Protomolecule Sample
+- [implemented] Protomolecule Sample
   id: protomolecule-sample
   rarity: rare
   source: The Expanse (TV)
@@ -123,23 +130,25 @@ New additions that join existing sets
   flavor: glowing blue alien weirdness in a sealed tube. the seal is doing a lot of work here.
 
 
-General additions for now
--------------------------
-- Truffle Pig
+General additions
+-----------------
+Status: implemented
+
+- [implemented] Truffle Pig
   id: truffle-pig
   rarity: rare
   source: Pig (2021)
   set: General
   flavor: beloved, irreplaceable, and worth burning the entire underworld down to find.
 
-- Wonder Bread Firesuit
+- [implemented] Wonder Bread Firesuit
   id: wonder-bread-firesuit
   rarity: common
   source: Talladega Nights: The Ballad of Ricky Bobby (2006)
   set: General
   flavor: if you're not first, you're last. flame-resistant, sponsor-heavy, and deeply american.
 
-- Single Perfect Tear
+- [implemented] Single Perfect Tear
   id: single-perfect-tear
   rarity: common
   source: Cry-Baby (1990)
@@ -147,49 +156,37 @@ General additions for now
   flavor: one dramatic tear from the baddest boy in baltimore. handle with sincerity.
 
 
-New set candidates
-==================
-
-Flavor note
------------
-- Flavor text should match the tone of the source movie/show.
-- Lynch should feel spare, dreamlike, and uneasy.
-- Cronenberg should feel clinical, bodily, and calm in a wrong way.
-- Tarantino should feel casual, quotable, and swaggering.
-- Coen should feel dry, fatalistic, and plainspoken.
-- Carpenter should feel blunt, pulpy, and midnight-movie tough.
-
-
 Coen set
 --------
+Status: implemented
 Set label: Coen
-Achievement title candidates: Abider, Mensch
+Achievement title: Mensch
 
-- Airway Briefcase
+- [implemented] Airway Briefcase
   id: airway-briefcase
   rarity: rare
   source: No Country for Old Men (2007)
   flavor: money in the case. transponder in the money. mistake already made.
 
-- Cattle Bolt
+- [implemented] Cattle Bolt
   id: cattle-bolt
   rarity: iconic
   source: No Country for Old Men (2007)
   flavor: call it. just call it.
 
-- Hula Hoop
+- [implemented] Hula Hoop
   id: hula-hoop
   rarity: common
   source: The Hudsucker Proxy (1994)
   flavor: you know, for kids.
 
-- Woodchipper Hat
+- [implemented] Woodchipper Hat
   id: woodchipper-hat
   rarity: rare
   source: Fargo (1996)
   flavor: good hat. cold morning. bad errand.
 
-- Barton Fink Wallpaper
+- [implemented] Barton Fink Wallpaper
   id: barton-fink-wallpaper
   rarity: common
   source: Barton Fink (1991)
@@ -198,34 +195,35 @@ Achievement title candidates: Abider, Mensch
 
 Carpenter set
 -------------
+Status: implemented
 Set label: Carpenter
-Achievement title candidates: Nada, Plissken
+Achievement title: Plissken
 
-- Fogbound Gold
+- [implemented] Fogbound Gold
   id: fogbound-gold
   rarity: rare
   source: The Fog (1980)
   flavor: stolen gold. old blood. the fog comes back for both.
 
-- Chess Wizard
+- [implemented] Chess Wizard
   id: chess-wizard
   rarity: common
   source: The Thing (1982)
   flavor: the computer cheats. macready cheats back.
 
-- Snake's Eyepatch
+- [implemented] Snake's Eyepatch
   id: snakes-eyepatch
   rarity: iconic
   source: Escape from New York (1981)
   flavor: name's plissken. heard he was dead.
 
-- Nada's Shotgun
+- [implemented] Nada's Shotgun
   id: nadas-shotgun
   rarity: rare
   source: They Live (1988)
   flavor: put on the glasses. pick up the gun. keep moving.
 
-- Christine's Key
+- [implemented] Christine's Key
   id: christines-key
   rarity: rare
   source: Christine (1983)
@@ -234,34 +232,35 @@ Achievement title candidates: Nada, Plissken
 
 Lynch set
 ---------
+Status: implemented
 Set label: Lynch
-Achievement title candidate: Blue Rose
+Achievement title: Blue Rose
 
-- Blue Key
+- [implemented] Blue Key
   id: blue-key
   rarity: rare
   source: Mulholland Drive (2001)
   flavor: the key is blue. the box is blue. after that, things become difficult.
 
-- Log Lady's Log
+- [implemented] Log Lady's Log
   id: log-ladys-log
   rarity: iconic
   source: Twin Peaks (TV)
   flavor: the log has seen things. margaret listens. maybe you should too.
 
-- Eraserhead Baby Blanket
+- [implemented] Eraserhead Baby Blanket
   id: eraserhead-baby-blanket
   rarity: rare
   source: Eraserhead (1977)
   flavor: swaddled tight. the room hums. no one is sleeping.
 
-- Club Silencio Microphone
+- [implemented] Club Silencio Microphone
   id: club-silencio-microphone
   rarity: common
   source: Mulholland Drive (2001)
   flavor: no hay banda. there is no band. and still, you hear it.
 
-- Red Room Curtain
+- [implemented] Red Room Curtain
   id: red-room-curtain
   rarity: iconic
   source: Twin Peaks: Fire Walk with Me (1992)
@@ -270,34 +269,35 @@ Achievement title candidate: Blue Rose
 
 Cronenberg set
 --------------
+Status: implemented
 Set label: Cronenberg
-Achievement title candidate: Videodrome
+Achievement title: New Flesh
 
-- Stomach VCR
+- [implemented] Stomach VCR
   id: stomach-vcr
   rarity: iconic
   source: Videodrome (1983)
   flavor: a soft opening in the abdomen. insert the cassette and observe the signal.
 
-- Brundlefly Telepod Part
+- [implemented] Brundlefly Telepod Part
   id: brundlefly-telepod-part
   rarity: rare
   source: The Fly (1986)
   flavor: component recovered from telepod two. sterilization incomplete.
 
-- Mugwump Typewriter
+- [implemented] Mugwump Typewriter
   id: mugwump-typewriter
   rarity: iconic
   source: Naked Lunch (1991)
   flavor: chitin keys. wet advice. the report is due.
 
-- Scanners Headband
+- [implemented] Scanners Headband
   id: scanners-headband
   rarity: common
   source: Scanners (1981)
   flavor: pressure builds quickly. meetings should be kept short.
 
-- GamePod
+- [implemented] GamePod
   id: gamepod
   rarity: rare
   source: eXistenZ (1999)
@@ -306,35 +306,76 @@ Achievement title candidate: Videodrome
 
 Tarantino set
 -------------
+Status: implemented
 Set label: Tarantino
-Achievement title candidates: Reservoir, Vega
+Achievement title: Vega
 
-- Hattori Hanzo Sword
+- [implemented] Hattori Hanzo Sword
   id: hattori-hanzo-sword
   rarity: iconic
   source: Kill Bill: Vol. 1 (2003)
   flavor: if you're looking for revenge, accept no substitutes.
 
-- Big Kahuna Burger
+- [implemented] Big Kahuna Burger
   id: big-kahuna-burger
   rarity: common
   source: Pulp Fiction (1994)
   flavor: that is a tasty burger. mind if anyone has a bite?
 
-- Red Apple Cigarettes
+- [implemented] Red Apple Cigarettes
   id: red-apple-cigarettes
   rarity: common
   source: Pulp Fiction (1994)
   flavor: goes down smooth. everybody in town seems to know the brand.
 
-- Bride's Yellow Suit
+- [implemented] Bride's Yellow Suit
   id: brides-yellow-suit
   rarity: rare
   source: Kill Bill: Vol. 1 (2003)
   flavor: bright yellow. blood shows up real nice on it.
 
-- Inglourious Pipe
+- [implemented] Inglourious Pipe
   id: inglourious-pipe
   rarity: rare
   source: Inglourious Basterds (2009)
   flavor: enormous, theatrical, and best used while making someone nervous.
+
+
+Candidate sets and macguffins
+=============================
+
+A Knight's Tale set
+-------------------
+Status: not implemented
+Set label: Knight
+Achievement title candidate: Ulrich
+
+- [not implemented] Forged Patents
+  id: forged-patents
+  rarity: rare
+  source: A Knight's Tale (2001)
+  flavor: the papers say sir ulrich. the crowd believes what it wants.
+
+- [not implemented] Tournament Lance
+  id: tournament-lance
+  rarity: common
+  source: A Knight's Tale (2001)
+  flavor: ash wood, bright paint, one good charge. it is supposed to break.
+
+- [not implemented] Jocelyn's Token
+  id: jocelyns-token
+  rarity: rare
+  source: A Knight's Tale (2001)
+  flavor: tied to the armor before the lists. lighter than luck, harder to earn.
+
+- [not implemented] Chaucer's Herald Scroll
+  id: chaucers-herald-scroll
+  rarity: common
+  source: A Knight's Tale (2001)
+  flavor: read it loud enough and the son of a thatcher becomes thunder.
+
+- [not implemented] Swoosh Armor
+  id: swoosh-armor
+  rarity: iconic
+  source: A Knight's Tale (2001)
+  flavor: polished steel, impossible logo, and the future arriving several centuries early.

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.7.0] - 2026-06-06
+
+### Added
+
+- Added **42 new MacGuffins** to hunt down, trade, and show off.
+- Added the new **MacGuffin sets** system, with rare achievement titles for members who complete a set.
+- MacGuffin cards now show which set an item belongs to.
+- Update announcements now include the latest changelog entry, and admins can post one manually with `/postupdate`.
+
+### Changed
+
+- Cleaned up the single MacGuffin card layout so fields line up more consistently.
+
 ## [2.6.1] - 2026-06-05
 
 ### Fixed

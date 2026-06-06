@@ -11,6 +11,7 @@ import embeds
 import picker
 import plex
 import tracker
+import update_announcements
 import version
 
 
@@ -379,6 +380,16 @@ class AdminCog(commands.Cog):
             f"🎬 **sucklingbot** v{version.VERSION}",
             ephemeral=True,
         )
+
+    @app_commands.command(
+        name="postupdate",
+        description="Post the current bot update announcement (admin only)",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def post_update_command(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        ok, message = await update_announcements.post_update_announcement(self.bot)
+        await interaction.followup.send(message, ephemeral=True)
 
     @app_commands.command(
         name="restart",
