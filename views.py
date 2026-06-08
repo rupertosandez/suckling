@@ -51,15 +51,15 @@ async def _watchlist_add_from_tmdb_id(
 
     year_str = f" ({year})" if year else ""
     if added:
+        await interaction.followup.send(
+            f"📋 added **{title}{year_str}** to your watchlist.",
+            ephemeral=True,
+        )
         await achievement_module.award_for_user(
             interaction.client,
             interaction.user,
             source_type="watchlist_add",
             source_id=str(tmdb_id),
-        )
-        await interaction.followup.send(
-            f"📋 added **{title}{year_str}** to your watchlist.",
-            ephemeral=True,
         )
     else:
         await interaction.followup.send(

@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Callable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+import asyncio
+
 import discord
 
 import db
@@ -628,7 +630,8 @@ async def award_for_user(
     source_id: str | None = None,
     rental: dict | None = None,
 ) -> list[Achievement]:
-    unlocked = evaluate_user(
+    unlocked = await asyncio.to_thread(
+        evaluate_user,
         str(user.id),
         str(user),
         source_type=source_type,
