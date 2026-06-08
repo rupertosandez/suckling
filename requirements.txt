@@ -4,5 +4,6 @@ aiohttp>=3.9.0
 apscheduler>=3.10.0
 pillow>=10.0.0
 plexapi>=4.15.0
+psycopg[binary]>=3.2.0
 pystray>=0.19.5
 plyer>=2.1.0

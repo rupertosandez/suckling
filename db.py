@@ -4,6 +4,7 @@ import json
 from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import config
 
@@ -22,6 +23,196 @@ RECOMMENDATION_TAG_KEY = "recommendation_tag_id"
 REVIEW_TAG_KEY = "review_tag_id"
 LAST_UPDATE_ANNOUNCED_VERSION_KEY = "last_update_announced_version"
 FEED_CHANNEL_KEY = "feed_channel_id"
+POSTGRES_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS tracked_movies (
+    tmdb_id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    added_by TEXT NOT NULL,
+    added_by_id TEXT,
+    added_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS provider_snapshots (
+    tmdb_id INTEGER NOT NULL,
+    provider_name TEXT NOT NULL,
+    first_seen_at TEXT NOT NULL,
+    PRIMARY KEY (tmdb_id, provider_name)
+);
+
+CREATE TABLE IF NOT EXISTS daily_recs (
+    tmdb_id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    posted_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS guess_scores (
+    user_id TEXT PRIMARY KEY,
+    user_tag TEXT NOT NULL,
+    points INTEGER NOT NULL DEFAULT 0,
+    wins INTEGER NOT NULL DEFAULT 0,
+    last_win TEXT
+);
+
+CREATE TABLE IF NOT EXISTS announced_movies (
+    tmdb_id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    first_seen_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS six_scores (
+    user_id TEXT PRIMARY KEY,
+    user_tag TEXT NOT NULL,
+    points INTEGER NOT NULL DEFAULT 0,
+    wins INTEGER NOT NULL DEFAULT 0,
+    last_win TEXT
+);
+
+CREATE TABLE IF NOT EXISTS lb_accounts (
+    user_id TEXT PRIMARY KEY,
+    lb_username TEXT NOT NULL,
+    linked_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS lb_activity_seen (
+    entry_key TEXT PRIMARY KEY,
+    lb_username TEXT NOT NULL,
+    film_title TEXT NOT NULL,
+    first_seen_at TEXT NOT NULL,
+    posted_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS watchlist (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    tmdb_id INTEGER,
+    title TEXT NOT NULL,
+    year INTEGER,
+    poster_url TEXT,
+    added_at TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'manual',
+    UNIQUE(user_id, title, year)
+);
+
+CREATE TABLE IF NOT EXISTS macguffins (
+    macguffin_id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    owner_tag TEXT NOT NULL,
+    acquired_at TEXT NOT NULL,
+    acquired_via TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS macguffin_free_claims (
+    user_id TEXT PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS user_timezones (
+    user_id TEXT PRIMARY KEY,
+    timezone TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS rentals (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    plex_key TEXT NOT NULL,
+    title TEXT NOT NULL,
+    year INTEGER,
+    poster_url TEXT,
+    rented_at TEXT NOT NULL,
+    due_at TEXT NOT NULL,
+    returned_at TEXT,
+    thread_id TEXT,
+    message_id TEXT,
+    rerolls_used INTEGER NOT NULL DEFAULT 0,
+    initiated_by TEXT NOT NULL DEFAULT 'command',
+    status TEXT NOT NULL DEFAULT 'active',
+    rating INTEGER,
+    thoughts TEXT,
+    recommended INTEGER,
+    late_fee_dollars DOUBLE PRECISION NOT NULL DEFAULT 0,
+    reminder_sent INTEGER NOT NULL DEFAULT 0,
+    overdue_notified INTEGER NOT NULL DEFAULT 0,
+    extensions_used INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS plex_library_cache (
+    rating_key TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    year INTEGER,
+    summary TEXT NOT NULL DEFAULT '',
+    thumb_path TEXT,
+    art_path TEXT,
+    duration_minutes INTEGER,
+    rating TEXT,
+    audience_rating DOUBLE PRECISION,
+    added_at TEXT,
+    updated_at TEXT,
+    genres_json TEXT NOT NULL DEFAULT '[]',
+    directors_json TEXT NOT NULL DEFAULT '[]',
+    writers_json TEXT NOT NULL DEFAULT '[]',
+    actors_json TEXT NOT NULL DEFAULT '[]',
+    countries_json TEXT NOT NULL DEFAULT '[]',
+    collections_json TEXT NOT NULL DEFAULT '[]',
+    cached_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS achievement_earned (
+    user_id TEXT NOT NULL,
+    achievement_id TEXT NOT NULL,
+    user_tag TEXT NOT NULL,
+    earned_at TEXT NOT NULL,
+    source_type TEXT,
+    source_id TEXT,
+    PRIMARY KEY (user_id, achievement_id)
+);
+
+CREATE TABLE IF NOT EXISTS achievement_display (
+    user_id TEXT NOT NULL,
+    achievement_id TEXT NOT NULL,
+    slot INTEGER NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, achievement_id),
+    UNIQUE (user_id, slot)
+);
+
+CREATE TABLE IF NOT EXISTS achievement_roles (
+    achievement_id TEXT PRIMARY KEY,
+    role_id TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS achievement_events (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    user_tag TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    source_id TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_rentals_user_status
+    ON rentals (user_id, status);
+CREATE INDEX IF NOT EXISTS idx_rentals_status_due
+    ON rentals (status, due_at);
+CREATE INDEX IF NOT EXISTS idx_watchlist_user_added
+    ON watchlist (user_id, added_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lb_activity_username
+    ON lb_activity_seen (lb_username, first_seen_at);
+CREATE INDEX IF NOT EXISTS idx_plex_library_added
+    ON plex_library_cache (added_at);
+CREATE INDEX IF NOT EXISTS idx_plex_library_updated
+    ON plex_library_cache (updated_at);
+CREATE INDEX IF NOT EXISTS idx_achievement_events_user_type
+    ON achievement_events (user_id, event_type);
+CREATE INDEX IF NOT EXISTS idx_achievement_earned_earned_at
+    ON achievement_earned (earned_at DESC);
+"""
 
 
 def _utc_now_iso() -> str:
@@ -39,7 +230,106 @@ def _normalize_rental_search_title(title: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", "", (title or "").lower())
 
 
-def _connect() -> sqlite3.Connection:
+def _using_postgres() -> bool:
+    return bool(config.DATABASE_URL)
+
+
+def _postgres_query(sql: str) -> str:
+    sql = sql.replace("INSERT OR IGNORE INTO", "INSERT INTO")
+    sql = sql.replace("COLLATE NOCASE", "")
+    sql = sql.replace(" title LIKE ", " title ILIKE ")
+    sql = sql.replace("?", "%s")
+    if "INSERT INTO provider_snapshots" in sql and "ON CONFLICT" not in sql:
+        sql = f"{sql} ON CONFLICT DO NOTHING"
+    if "INSERT INTO announced_movies" in sql and "ON CONFLICT" not in sql:
+        sql = f"{sql} ON CONFLICT DO NOTHING"
+    if "INSERT INTO macguffin_free_claims" in sql and "ON CONFLICT" not in sql:
+        sql = f"{sql} ON CONFLICT DO NOTHING"
+    if sql.lstrip().upper().startswith("INSERT INTO RENTALS") and "RETURNING" not in sql.upper():
+        sql = f"{sql} RETURNING id"
+    return sql
+
+
+class _PostgresCursor:
+    def __init__(self, cursor):
+        self._cursor = cursor
+        self.rowcount = cursor.rowcount
+        self.lastrowid = None
+        if cursor.description:
+            rows = cursor.fetchall()
+            self._rows = [dict(row) for row in rows]
+            if (
+                cursor.description
+                and len(cursor.description) == 1
+                and cursor.description[0].name == "id"
+                and self._rows
+            ):
+                self.lastrowid = self._rows[0]["id"]
+        else:
+            self._rows = []
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self):
+        return self._rows
+
+
+class _PostgresConnection:
+    def __init__(self):
+        from psycopg import connect
+        from psycopg.rows import dict_row
+
+        self._conn = connect(config.DATABASE_URL, row_factory=dict_row)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None:
+            self._conn.commit()
+        else:
+            self._conn.rollback()
+        self._conn.close()
+
+    def execute(self, sql: str, params: Iterable[Any] = ()):
+        try:
+            cursor = self._conn.execute(_postgres_query(sql), tuple(params))
+            return _PostgresCursor(cursor)
+        except Exception as exc:
+            from psycopg import IntegrityError
+
+            if isinstance(exc, IntegrityError):
+                self._conn.rollback()
+                raise sqlite3.IntegrityError(str(exc)) from exc
+            raise
+
+    def executemany(self, sql: str, rows: Iterable[Iterable[Any]]):
+        rows = list(rows)
+        if not rows:
+            return _PostgresCursor(self._conn.cursor())
+        try:
+            cursor = self._conn.cursor()
+            cursor.executemany(_postgres_query(sql), rows)
+            return _PostgresCursor(cursor)
+        except Exception as exc:
+            from psycopg import IntegrityError
+
+            if isinstance(exc, IntegrityError):
+                self._conn.rollback()
+                raise sqlite3.IntegrityError(str(exc)) from exc
+            raise
+
+    def executescript(self, sql: str):
+        for statement in sql.split(";"):
+            statement = statement.strip()
+            if statement:
+                self.execute(statement)
+
+
+def _connect() -> sqlite3.Connection | _PostgresConnection:
+    if _using_postgres():
+        return _PostgresConnection()
     conn = sqlite3.connect(config.DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -52,6 +342,11 @@ def _chunks(items: list, size: int = 900):
 
 
 def init_db() -> None:
+    if _using_postgres():
+        with _connect() as conn:
+            conn.executescript(POSTGRES_SCHEMA_SQL)
+        return
+
     Path(config.DB_PATH).parent.mkdir(parents=True, exist_ok=True)
 
     with _connect() as conn:
@@ -279,6 +574,20 @@ def _ensure_column(
     column: str,
     definition: str,
 ) -> None:
+    if _using_postgres():
+        existing = {
+            row["column_name"]
+            for row in conn.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = ?",
+                (table,),
+            ).fetchall()
+        }
+        if column not in existing:
+            pg_definition = definition.replace("REAL", "DOUBLE PRECISION")
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {pg_definition}")
+        return
+
     existing = {
         row["name"]
         for row in conn.execute(f"PRAGMA table_info({table})").fetchall()

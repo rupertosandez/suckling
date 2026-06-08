@@ -19,6 +19,7 @@ def _configured_path(env_name: str, default: Path) -> Path:
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 GUILD_ID = os.getenv("GUILD_ID")
+DATABASE_URL = os.getenv("DATABASE_URL")
 PLEX_TOKEN = os.getenv("PLEX_TOKEN")
 PLEX_LIBRARY = os.getenv("PLEX_LIBRARY", "Movies")  # default to "Movies"
 TAUTULLI_URL = (os.getenv("TAUTULLI_URL") or "").rstrip("/")

@@ -2,7 +2,7 @@
 
 a discord bot built specifically for the **return by 9** movie community. looks up films, tracks streaming availability, posts daily recommendations, runs poster/still guessing games and six degrees of separation rounds, pulls random picks and stats from the return by 9 plex library, runs a video-store-themed rental system where members can check out films until 9 pm on the fifth day and post reviews, and awards achievement badges for movie-club activity.
 
-built on python + discord.py + tmdb + plexapi, with sqlite for persistence.
+built on python + discord.py + tmdb + plexapi, with postgres or sqlite for persistence.
 
 ---
 
@@ -75,6 +75,7 @@ PLEX_TOKEN=your_plex_token
 PLEX_LIBRARY=Movies
 BOT_TIMEZONE=America/Los_Angeles
 SUCKLINGBOT_DATA_DIR=C:\path\to\sucklingbot\data
+DATABASE_URL=postgres://...
 ACHIEVEMENT_CATALOG_URL=https://rupertosandez.github.io/sucklingsite/achievements/
 ```
 
@@ -88,6 +89,7 @@ ACHIEVEMENT_CATALOG_URL=https://rupertosandez.github.io/sucklingsite/achievement
 | `BOT_TIMEZONE`           | no       | local timezone for rental due dates (default: `America/Los_Angeles`) |
 | `SUCKLINGBOT_DATA_DIR`   | no       | custom data folder; useful for worktree testing |
 | `SUCKLINGBOT_ASSETS_DIR` | no       | custom assets folder; defaults to project assets |
+| `DATABASE_URL`           | no       | postgres connection string; when set, bot reads/writes postgres instead of local sqlite |
 | `ACHIEVEMENT_CATALOG_URL` | no      | website page linked by `/achievementcatalog` |
 
 the `.env` file is gitignored — never commit it.
@@ -235,7 +237,7 @@ sucklingbot/
 - `picker.py` maintains a separate 24-hour-cached candidate pool of ~1000 films (used by `/roll` and the daily recommendation).
 - `plex.py` uses `asyncio.to_thread` to wrap `plexapi`'s synchronous calls so they don't block the event loop. the library snapshot is persisted in sqlite, refreshed incrementally hourly, and fully reconciled weekly.
 - `sixdegrees.py` maintains a separate 24-hour-cached pool of popular actors and uses tmdb cast data to validate chain submissions.
-- all persistent state lives in `data/moviebot.db`. loseable: in-memory caches, active rounds, active rental view state (in-progress `/rent` flows restart cleanly).
+- persistent state lives in postgres when `DATABASE_URL` is set; otherwise it falls back to `data/moviebot.db`. loseable: in-memory caches, active rounds, active rental view state (in-progress `/rent` flows restart cleanly).
 - the error log captures exceptions from scheduled jobs and `on_message` handlers.
 
 ### database tables
