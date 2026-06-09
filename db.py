@@ -1037,11 +1037,11 @@ def increment_guess_score(user_id: str, user_tag: str, points: int = 1) -> int:
             "INSERT INTO guess_scores (user_id, user_tag, points, wins, last_win) "
             "VALUES (?, ?, ?, 1, ?) "
             "ON CONFLICT(user_id) DO UPDATE SET "
-            "  points = points + ?, "
-            "  wins = wins + 1, "
+            "  points = guess_scores.points + excluded.points, "
+            "  wins = guess_scores.wins + 1, "
             "  user_tag = excluded.user_tag, "
             "  last_win = excluded.last_win",
-            (user_id, user_tag, points, _utc_now_iso(), points),
+            (user_id, user_tag, points, _utc_now_iso()),
         )
         row = conn.execute(
             "SELECT points FROM guess_scores WHERE user_id = ?", (user_id,)
@@ -1131,11 +1131,11 @@ def increment_six_score(user_id: str, user_tag: str, points: int = 1) -> int:
             "INSERT INTO six_scores (user_id, user_tag, points, wins, last_win) "
             "VALUES (?, ?, ?, 1, ?) "
             "ON CONFLICT(user_id) DO UPDATE SET "
-            "  points = points + ?, "
-            "  wins = wins + 1, "
+            "  points = six_scores.points + excluded.points, "
+            "  wins = six_scores.wins + 1, "
             "  user_tag = excluded.user_tag, "
             "  last_win = excluded.last_win",
-            (user_id, user_tag, points, _utc_now_iso(), points),
+            (user_id, user_tag, points, _utc_now_iso()),
         )
         row = conn.execute(
             "SELECT points FROM six_scores WHERE user_id = ?", (user_id,)
