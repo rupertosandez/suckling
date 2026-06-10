@@ -11,6 +11,7 @@ import db
 import embeds
 import game
 import imageops
+import logger
 import picker
 import sixdegrees
 import tmdb
@@ -161,20 +162,31 @@ class GamesCog(commands.Cog):
         reveal_embed.set_image(url=image_url)
 
         if round_obj.winner_id:
-            new_total = db.increment_guess_score(
-                round_obj.winner_id, round_obj.winner_tag, points=points
-            )
+            new_total = None
+            try:
+                new_total = await asyncio.to_thread(
+                    db.increment_guess_score,
+                    round_obj.winner_id,
+                    round_obj.winner_tag,
+                    points=points,
+                )
+            except Exception as e:
+                logger.log_exception("guess_score_save", e)
             member = await _fetch_award_user(self.bot, interaction.guild, round_obj.winner_id)
             if member:
-                await achievement_module.award_for_user(
-                    self.bot,
-                    member,
-                    source_type="guess_win",
-                    source_id=str(movie["id"]),
-                )
+                try:
+                    await achievement_module.award_for_user(
+                        self.bot,
+                        member,
+                        source_type="guess_win",
+                        source_id=str(movie["id"]),
+                    )
+                except Exception as e:
+                    logger.log_exception("guess_achievement_award", e)
+            total_text = f" — total: **{new_total}**" if new_total is not None else ""
             reveal_embed.description = (
                 f"🏆 <@{round_obj.winner_id}> got it! "
-                f"(+{points} point{'s' if points > 1 else ''} — total: **{new_total}**)"
+                f"(+{points} point{'s' if points > 1 else ''}{total_text})"
             )
         else:
             reveal_embed.description = "⏰ Time's up — nobody guessed it."
@@ -253,23 +265,37 @@ class GamesCog(commands.Cog):
         trivia_roulette.end_round(channel_id)
 
         if round_obj.winner_id:
-            new_total = db.increment_guess_score(
-                round_obj.winner_id, round_obj.winner_tag, points=1
-            )
-            achievement_module.record_event(
-                round_obj.winner_id,
-                round_obj.winner_tag,
-                "trivia_win",
-                category,
-            )
+            new_total = None
+            try:
+                new_total = await asyncio.to_thread(
+                    db.increment_guess_score,
+                    round_obj.winner_id,
+                    round_obj.winner_tag,
+                    points=1,
+                )
+            except Exception as e:
+                logger.log_exception("trivia_score_save", e)
+            try:
+                await asyncio.to_thread(
+                    achievement_module.record_event,
+                    round_obj.winner_id,
+                    round_obj.winner_tag,
+                    "trivia_win",
+                    category,
+                )
+            except Exception as e:
+                logger.log_exception("trivia_win_event", e)
             member = await _fetch_award_user(self.bot, interaction.guild, round_obj.winner_id)
             if member:
-                await achievement_module.award_for_user(
-                    self.bot,
-                    member,
-                    source_type="trivia_win",
-                    source_id=category,
-                )
+                try:
+                    await achievement_module.award_for_user(
+                        self.bot,
+                        member,
+                        source_type="trivia_win",
+                        source_id=category,
+                    )
+                except Exception as e:
+                    logger.log_exception("trivia_achievement_award", e)
             reveal_embed = embeds.trivia_reveal_embed(
                 category=category,
                 answer=round_obj.answer,
@@ -406,18 +432,29 @@ class GamesCog(commands.Cog):
 
         if round_obj.winner_id and round_obj.winning_chain:
             points = sixdegrees.points_for(round_obj.winning_film_count)
-            new_total = db.increment_six_score(
-                round_obj.winner_id, round_obj.winner_tag, points=points
-            )
+            new_total = None
+            try:
+                new_total = await asyncio.to_thread(
+                    db.increment_six_score,
+                    round_obj.winner_id,
+                    round_obj.winner_tag,
+                    points=points,
+                )
+            except Exception as e:
+                logger.log_exception("six_score_save", e)
+                new_total = "not saved"
             chain_str = " → ".join(round_obj.winning_chain)
             member = await _fetch_award_user(self.bot, interaction.guild, round_obj.winner_id)
             if member:
-                await achievement_module.award_for_user(
-                    self.bot,
-                    member,
-                    source_type="six_win",
-                    source_id=str(round_obj.actor_a_id),
-                )
+                try:
+                    await achievement_module.award_for_user(
+                        self.bot,
+                        member,
+                        source_type="six_win",
+                        source_id=str(round_obj.actor_a_id),
+                    )
+                except Exception as e:
+                    logger.log_exception("six_achievement_award", e)
             win_embed = discord.Embed(
                 title=f"🏆 {round_obj.winner_tag} wins!",
                 description=(

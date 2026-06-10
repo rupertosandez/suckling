@@ -665,12 +665,16 @@ async def on_message(message: discord.Message):
                 round_obj.winner_id = str(message.author.id)
                 round_obj.winner_tag = str(message.author)
                 if _is_speedrun_win(round_obj.started_at):
-                    achievement_module.record_event(
-                        str(message.author.id),
-                        str(message.author),
-                        "speedrun_win",
-                        str(round_obj.movie_id),
-                    )
+                    try:
+                        await asyncio.to_thread(
+                            achievement_module.record_event,
+                            str(message.author.id),
+                            str(message.author),
+                            "speedrun_win",
+                            str(round_obj.movie_id),
+                        )
+                    except Exception as e:
+                        logger.log_exception("guess_speedrun_event", e)
                 round_obj.end_event.set()
                 return
 
@@ -681,12 +685,16 @@ async def on_message(message: discord.Message):
                 trivia_round.winner_id = str(message.author.id)
                 trivia_round.winner_tag = str(message.author)
                 if _is_speedrun_win(trivia_round.started_at):
-                    achievement_module.record_event(
-                        str(message.author.id),
-                        str(message.author),
-                        "speedrun_win",
-                        trivia_round.category,
-                    )
+                    try:
+                        await asyncio.to_thread(
+                            achievement_module.record_event,
+                            str(message.author.id),
+                            str(message.author),
+                            "speedrun_win",
+                            trivia_round.category,
+                        )
+                    except Exception as e:
+                        logger.log_exception("trivia_speedrun_event", e)
                 trivia_round.end_event.set()
                 return
             

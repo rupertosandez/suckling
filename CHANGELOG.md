@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.7.3] - 2026-06-10
+
+### Fixed
+
+- Prevented game rounds from crashing when a correct answer triggers score or achievement updates.
+
 ## [2.7.2] - 2026-06-09
 
 ### Fixed
