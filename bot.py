@@ -664,18 +664,16 @@ async def on_message(message: discord.Message):
             if game.title_matches(message.content, round_obj.title):
                 round_obj.winner_id = str(message.author.id)
                 round_obj.winner_tag = str(message.author)
+                round_obj.end_event.set()
                 if _is_speedrun_win(round_obj.started_at):
-                    try:
-                        await asyncio.to_thread(
-                            achievement_module.record_event,
+                    asyncio.create_task(
+                        _record_speedrun_event(
                             str(message.author.id),
                             str(message.author),
-                            "speedrun_win",
                             str(round_obj.movie_id),
+                            source="guess_speedrun_event",
                         )
-                    except Exception as e:
-                        logger.log_exception("guess_speedrun_event", e)
-                round_obj.end_event.set()
+                    )
                 return
 
         # Trivia roulette
@@ -684,18 +682,16 @@ async def on_message(message: discord.Message):
             if trivia_roulette.answer_matches(message.content, trivia_round):
                 trivia_round.winner_id = str(message.author.id)
                 trivia_round.winner_tag = str(message.author)
+                trivia_round.end_event.set()
                 if _is_speedrun_win(trivia_round.started_at):
-                    try:
-                        await asyncio.to_thread(
-                            achievement_module.record_event,
+                    asyncio.create_task(
+                        _record_speedrun_event(
                             str(message.author.id),
                             str(message.author),
-                            "speedrun_win",
                             trivia_round.category,
+                            source="trivia_speedrun_event",
                         )
-                    except Exception as e:
-                        logger.log_exception("trivia_speedrun_event", e)
-                trivia_round.end_event.set()
+                    )
                 return
             
         # Six degrees game
@@ -715,6 +711,25 @@ def _is_speedrun_win(started_at: datetime) -> bool:
         started_at = started_at.replace(tzinfo=timezone.utc)
     elapsed = datetime.now(timezone.utc) - started_at.astimezone(timezone.utc)
     return elapsed.total_seconds() <= ACHIEVEMENT_SPEEDRUN_SECONDS
+
+
+async def _record_speedrun_event(
+    user_id: str,
+    user_tag: str,
+    source_id: str,
+    *,
+    source: str,
+) -> None:
+    try:
+        await asyncio.to_thread(
+            achievement_module.record_event,
+            user_id,
+            user_tag,
+            "speedrun_win",
+            source_id,
+        )
+    except Exception as e:
+        logger.log_exception(source, e)
 
 
 async def _process_six_submission(message: discord.Message, round_obj: "sixdegrees.SixRound"):

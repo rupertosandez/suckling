@@ -38,6 +38,38 @@ class GamesCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    async def _finalize_guess_win(
+        self,
+        guild: discord.Guild | None,
+        user_id: str,
+        user_tag: str,
+        points: int,
+        movie_id: int,
+    ) -> None:
+        try:
+            await asyncio.to_thread(
+                db.increment_guess_score,
+                user_id,
+                user_tag,
+                points=points,
+            )
+        except Exception as e:
+            logger.log_exception("guess_score_save", e)
+
+        member = await _fetch_award_user(self.bot, guild, user_id)
+        if not member:
+            return
+
+        try:
+            await achievement_module.award_for_user(
+                self.bot,
+                member,
+                source_type="guess_win",
+                source_id=str(movie_id),
+            )
+        except Exception as e:
+            logger.log_exception("guess_achievement_award", e)
+
     @app_commands.command(name="guess", description="Start a horror movie guessing round")
     @app_commands.describe(
         difficulty="Easy = full still (1 pt). Hard = cropped poster (2 pts). Default: random.",
@@ -163,26 +195,15 @@ class GamesCog(commands.Cog):
 
         if round_obj.winner_id:
             new_total = None
-            try:
-                new_total = await asyncio.to_thread(
-                    db.increment_guess_score,
+            asyncio.create_task(
+                self._finalize_guess_win(
+                    interaction.guild,
                     round_obj.winner_id,
                     round_obj.winner_tag,
-                    points=points,
+                    points,
+                    movie["id"],
                 )
-            except Exception as e:
-                logger.log_exception("guess_score_save", e)
-            member = await _fetch_award_user(self.bot, interaction.guild, round_obj.winner_id)
-            if member:
-                try:
-                    await achievement_module.award_for_user(
-                        self.bot,
-                        member,
-                        source_type="guess_win",
-                        source_id=str(movie["id"]),
-                    )
-                except Exception as e:
-                    logger.log_exception("guess_achievement_award", e)
+            )
             total_text = f" — total: **{new_total}**" if new_total is not None else ""
             reveal_embed.description = (
                 f"🏆 <@{round_obj.winner_id}> got it! "
