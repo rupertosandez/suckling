@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 
 import discord
@@ -409,7 +410,10 @@ class AchievementsCog(commands.Cog):
             users = [(str(user.id), str(user), user)]
         else:
             users = []
-            for user_id in db.get_all_achievement_candidate_user_ids():
+            candidate_user_ids = await asyncio.to_thread(
+                db.get_all_achievement_candidate_user_ids
+            )
+            for user_id in candidate_user_ids:
                 member = interaction.guild.get_member(int(user_id))
                 if member is None:
                     try:
@@ -421,7 +425,8 @@ class AchievementsCog(commands.Cog):
         awarded = 0
         announced = 0
         for user_id, user_tag, member in users:
-            unlocked = achievement_module.evaluate_user(
+            unlocked = await asyncio.to_thread(
+                achievement_module.evaluate_user,
                 user_id,
                 user_tag,
                 source_type="rescan",
