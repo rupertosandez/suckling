@@ -88,7 +88,7 @@ async def _resolve_active_rental_for_command(
     rental_query: str | None,
 ) -> dict | None:
     user_id = str(interaction.user.id)
-    active = db.get_active_rentals(user_id)
+    active = await db.run(db.get_active_rentals, user_id)
 
     if not active:
         await interaction.followup.send(
@@ -98,7 +98,7 @@ async def _resolve_active_rental_for_command(
         return None
 
     if rental_query:
-        matches = db.find_active_rental(user_id, rental_query)
+        matches = await db.run(db.find_active_rental, user_id, rental_query)
         if len(matches) == 1:
             return matches[0]
         if matches:
@@ -175,7 +175,8 @@ class ReturnRentalSelect(discord.ui.Select):
             await _send_component_denied(interaction, "this return menu isn't for you.")
             return
 
-        rental_record = db.get_active_rental_by_id(
+        rental_record = await db.run(
+            db.get_active_rental_by_id,
             self.parent_view.user_id,
             int(self.values[0]),
         )
@@ -337,7 +338,7 @@ class RentalsCog(commands.Cog):
         thoughts: str | None,
     ) -> None:
         user_id = str(interaction.user.id)
-        rental_record = db.get_active_rental_by_id(user_id, rental_id)
+        rental_record = await db.run(db.get_active_rental_by_id, user_id, rental_id)
         if not rental_record:
             await interaction.followup.send(
                 "that rental is no longer active.",
@@ -349,7 +350,8 @@ class RentalsCog(commands.Cog):
         now_iso = now.isoformat()
         late_fee = rental_module.compute_late_fee(rental_record["due_at"], now_iso)
 
-        db.mark_rental_returned(
+        await db.run(
+            db.mark_rental_returned,
             rental_id=rental_record["id"],
             returned_at=now_iso,
             rating=rating,
@@ -358,7 +360,7 @@ class RentalsCog(commands.Cog):
             late_fee_dollars=late_fee,
         )
 
-        updated_rental = db.get_rental_by_id(rental_record["id"])
+        updated_rental = await db.run(db.get_rental_by_id, rental_record["id"])
         await rental_module.edit_thread_returned(self.bot, updated_rental)
 
         title = rental_record.get("title", "your film")
@@ -408,7 +410,7 @@ class RentalsCog(commands.Cog):
         rental_id: int,
         reason: str | None,
     ) -> None:
-        rental_record = db.get_active_rental_by_id(str(interaction.user.id), rental_id)
+        rental_record = await db.run(db.get_active_rental_by_id, str(interaction.user.id), rental_id)
         if not rental_record:
             await interaction.followup.send(
                 "that rental is no longer active.",
@@ -420,14 +422,15 @@ class RentalsCog(commands.Cog):
         now_iso = now.isoformat()
         late_fee = rental_module.compute_late_fee(rental_record["due_at"], now_iso)
 
-        db.mark_rental_returned_unwatched(
+        await db.run(
+            db.mark_rental_returned_unwatched,
             rental_id=rental_record["id"],
             returned_at=now_iso,
             reason=reason,
             late_fee_dollars=late_fee,
         )
 
-        updated_rental = db.get_rental_by_id(rental_record["id"])
+        updated_rental = await db.run(db.get_rental_by_id, rental_record["id"])
         await rental_module.edit_thread_returned_unwatched(self.bot, updated_rental)
 
         late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
@@ -441,7 +444,7 @@ class RentalsCog(commands.Cog):
     async def rent(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
 
-        active_rentals = db.get_active_rentals(user_id)
+        active_rentals = await db.run(db.get_active_rentals, user_id)
         active_count = len(active_rentals)
         if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.response.send_message(
@@ -484,7 +487,7 @@ class RentalsCog(commands.Cog):
     ):
         user_id = str(interaction.user.id)
         if clear:
-            db.clear_user_timezone(user_id)
+            await db.run(db.clear_user_timezone, user_id)
             await interaction.response.send_message(
                 "cleared your rental timezone. i'll use the server default for future rentals.",
                 ephemeral=True,
@@ -492,7 +495,7 @@ class RentalsCog(commands.Cog):
             return
 
         if timezone_name is None:
-            saved = db.get_user_timezone(user_id)
+            saved = await db.run(db.get_user_timezone, user_id)
             if saved:
                 await interaction.response.send_message(
                     f"your rental timezone is **{saved}**.",
@@ -515,7 +518,7 @@ class RentalsCog(commands.Cog):
             )
             return
 
-        db.set_user_timezone(user_id, normalized)
+        await db.run(db.set_user_timezone, user_id, normalized)
         await interaction.response.send_message(
             f"set your rental timezone to **{normalized}**. "
             "future rentals will be due at 9 pm in that timezone on the fifth day.",
@@ -529,7 +532,7 @@ class RentalsCog(commands.Cog):
     ):
         user_id = str(interaction.user.id)
 
-        active = db.get_active_rentals(user_id)
+        active = await db.run(db.get_active_rentals, user_id)
         if not active:
             await interaction.response.send_message(
                 "you don't have an active rental. use `/rent` to grab something.",
@@ -557,7 +560,7 @@ class RentalsCog(commands.Cog):
     @app_commands.command(name="myrental", description="check your current rental and time remaining")
     async def myrental(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
-        rentals = db.get_active_rentals(user_id)
+        rentals = await db.run(db.get_active_rentals, user_id)
 
         if not rentals:
             await interaction.response.send_message(
@@ -597,7 +600,7 @@ class RentalsCog(commands.Cog):
     @app_commands.command(name="latefees", description="see who owes the store money")
     async def latefees(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        rows = db.get_late_fees_leaderboard(limit=10)
+        rows = await db.run(db.get_late_fees_leaderboard, limit=10)
         embed = embeds.late_fees_embed(rows)
         await interaction.followup.send(embed=embed)
 
@@ -640,7 +643,8 @@ class RentalsCog(commands.Cog):
             )
             return
 
-        db.set_reviews_channel_id(channel.id)
+        await interaction.response.defer(ephemeral=True)
+        await db.run(db.set_reviews_channel_id, channel.id)
 
         rental_tag = next(
             (t for t in channel.available_tags if t.name.lower() == "rental"), None
@@ -657,11 +661,11 @@ class RentalsCog(commands.Cog):
         )
 
         if rental_tag:
-            db.set_rental_tag_id(rental_tag.id)
+            await db.run(db.set_rental_tag_id, rental_tag.id)
         if rec_tag:
-            db.set_recommendation_tag_id(rec_tag.id)
+            await db.run(db.set_recommendation_tag_id, rec_tag.id)
         if review_tag:
-            db.set_review_tag_id(review_tag.id)
+            await db.run(db.set_review_tag_id, review_tag.id)
 
         tag_note = ""
         if not rental_tag:
@@ -681,7 +685,7 @@ class RentalsCog(commands.Cog):
             found.append("review")
         found_str = f" tags found: {', '.join(found)}." if found else ""
 
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"✅ rental reviews will post in {channel.mention}.{found_str}{tag_note}",
             ephemeral=True,
         )
@@ -705,8 +709,9 @@ class RentalsCog(commands.Cog):
             )
             return
 
-        db.set_rental_request_channel_id(channel.id)
-        await interaction.response.send_message(
+        await interaction.response.defer(ephemeral=True)
+        await db.run(db.set_rental_request_channel_id, channel.id)
+        await interaction.followup.send(
             f"✅ rental recommendation requests will post in {channel.mention}.",
             ephemeral=True,
         )
@@ -730,14 +735,14 @@ class RentalsCog(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
 
-        active = db.get_active_rentals(str(user.id))
+        active = await db.run(db.get_active_rentals, str(user.id))
         if not active:
             await interaction.followup.send(
                 f"**{user}** doesn't have an active rental.", ephemeral=True
             )
             return
         if rental:
-            matches = db.find_active_rental(str(user.id), rental)
+            matches = await db.run(db.find_active_rental, str(user.id), rental)
         else:
             matches = active
         if not matches:
@@ -756,7 +761,7 @@ class RentalsCog(commands.Cog):
             return
         rental_record = matches[0]
 
-        db.cancel_rental_by_id(rental_record["id"])
+        await db.run(db.cancel_rental_by_id, rental_record["id"])
         await rental_module.edit_thread_cancelled(self.bot, rental_record, reason)
 
         reason_str = f" reason: {reason}" if reason else ""
@@ -790,7 +795,7 @@ class RentalsCog(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
 
-        active_rentals = db.get_active_rentals(str(user.id))
+        active_rentals = await db.run(db.get_active_rentals, str(user.id))
         active_count = len(active_rentals)
         if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.followup.send(
@@ -800,7 +805,7 @@ class RentalsCog(commands.Cog):
             )
             return
 
-        if not db.get_reviews_channel_id():
+        if not await db.run(db.get_reviews_channel_id):
             await interaction.followup.send(
                 "the reviews forum hasn't been configured yet. run `/setreviews` first.",
                 ephemeral=True,
@@ -822,9 +827,10 @@ class RentalsCog(commands.Cog):
             return
 
         now = datetime.now(timezone.utc)
-        user_timezone = db.get_user_timezone(str(user.id))
+        user_timezone = await db.run(db.get_user_timezone, str(user.id))
         due_at = rental_module.compute_due_at(now, user_timezone)
-        rental_id = db.create_rental(
+        rental_id = await db.run(
+            db.create_rental,
             user_id=str(user.id),
             user_name=str(user),
             plex_key=movie["rating_key"],
@@ -848,7 +854,7 @@ class RentalsCog(commands.Cog):
         due_ts = int(due_at.timestamp())
         thread_note = ""
         if thread_ok:
-            rental = db.get_rental_by_id(rental_id)
+            rental = await db.run(db.get_rental_by_id, rental_id)
             if rental and rental.get("thread_id"):
                 thread_note = f" thread: <#{rental['thread_id']}>."
 

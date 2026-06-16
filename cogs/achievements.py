@@ -38,7 +38,7 @@ async def _earned_autocomplete(
     current: str,
 ) -> list[app_commands.Choice[str]]:
     earned = sorted(
-        db.get_earned_achievement_ids(str(interaction.user.id)),
+        await db.run(db.get_earned_achievement_ids, str(interaction.user.id)),
         key=lambda achievement_id: achievement_module.ACHIEVEMENT_BY_ID[achievement_id].name
         if achievement_id in achievement_module.ACHIEVEMENT_BY_ID
         else achievement_id,
@@ -50,7 +50,10 @@ async def _displayed_autocomplete(
     interaction: discord.Interaction,
     current: str,
 ) -> list[app_commands.Choice[str]]:
-    displayed = [row["achievement_id"] for row in db.get_displayed_achievements(str(interaction.user.id))]
+    displayed = [
+        row["achievement_id"]
+        for row in await db.run(db.get_displayed_achievements, str(interaction.user.id))
+    ]
     return _achievement_choices(displayed, current)
 
 
@@ -216,11 +219,11 @@ class AchievementsCog(commands.Cog):
         if not target:
             await interaction.followup.send("i don't know that achievement.", ephemeral=True)
             return
-        if achievement not in db.get_earned_achievement_ids(user_id):
+        if achievement not in await db.run(db.get_earned_achievement_ids, user_id):
             await interaction.followup.send("you haven't unlocked that badge yet.", ephemeral=True)
             return
 
-        displayed = [row["achievement_id"] for row in db.get_displayed_achievements(user_id)]
+        displayed = [row["achievement_id"] for row in await db.run(db.get_displayed_achievements, user_id)]
         if achievement in displayed:
             await interaction.followup.send(
                 f"**{achievement_module.display_name(target)}** is already displayed.", ephemeral=True
@@ -246,7 +249,7 @@ class AchievementsCog(commands.Cog):
         else:
             displayed.append(achievement)
 
-        db.set_displayed_achievements(user_id, displayed)
+        await db.run(db.set_displayed_achievements, user_id, displayed)
         ok, message = await achievement_module.sync_member_roles(interaction.user)
         if ok:
             await interaction.followup.send(
@@ -262,12 +265,12 @@ class AchievementsCog(commands.Cog):
     async def achievement_hide(self, interaction: discord.Interaction, achievement: str):
         await interaction.response.defer(ephemeral=True)
         user_id = str(interaction.user.id)
-        displayed = [row["achievement_id"] for row in db.get_displayed_achievements(user_id)]
+        displayed = [row["achievement_id"] for row in await db.run(db.get_displayed_achievements, user_id)]
         if achievement not in displayed:
             await interaction.followup.send("that badge isn't currently displayed.", ephemeral=True)
             return
         displayed.remove(achievement)
-        db.set_displayed_achievements(user_id, displayed)
+        await db.run(db.set_displayed_achievements, user_id, displayed)
         ok, message = await achievement_module.sync_member_roles(interaction.user)
         name = achievement_module.ACHIEVEMENT_BY_ID.get(achievement)
         if ok:
@@ -281,7 +284,7 @@ class AchievementsCog(commands.Cog):
     @app_commands.command(name="achievementclear", description="remove all visible achievement badge roles")
     async def achievement_clear(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        db.set_displayed_achievements(str(interaction.user.id), [])
+        await db.run(db.set_displayed_achievements, str(interaction.user.id), [])
         ok, message = await achievement_module.sync_member_roles(interaction.user)
         await interaction.followup.send("cleared your displayed badges." if ok else message, ephemeral=True)
 
@@ -344,8 +347,9 @@ class AchievementsCog(commands.Cog):
                 ephemeral=True,
             )
             return
-        db.set_feed_channel_id(channel.id)
-        await interaction.response.send_message(
+        await interaction.response.defer(ephemeral=True)
+        await db.run(db.set_feed_channel_id, channel.id)
+        await interaction.followup.send(
             f"suckling feed will post in {channel.mention}.",
             ephemeral=True,
         )
@@ -475,7 +479,7 @@ class AchievementsCog(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
 
-        channel_id = db.get_feed_channel_id()
+        channel_id = await db.run(db.get_feed_channel_id)
         if not channel_id:
             await interaction.followup.send(
                 "the feed channel is not configured yet. use `/setfeed` first.",

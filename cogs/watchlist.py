@@ -37,7 +37,7 @@ class WatchlistCog(commands.Cog):
     async def watchlist_show(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         user_id = str(interaction.user.id)
-        entries = db.get_watchlist(user_id)
+        entries = await db.run(db.get_watchlist, user_id)
         total = len(entries)
         total_pages = max(1, -(-total // MY_WATCHLIST_PAGE_SIZE))
         embed = embeds.mywatchlist_embed(
@@ -96,7 +96,8 @@ class WatchlistCog(commands.Cog):
         film_year = int(release_date[:4]) if release_date[:4].isdigit() else None
         poster_url = tmdb.poster_url(top.get("poster_path"))
 
-        added = db.watchlist_add(
+        added = await db.run(
+            db.watchlist_add,
             user_id=str(interaction.user.id),
             title=top.get("title", title),
             year=film_year,
@@ -129,7 +130,7 @@ class WatchlistCog(commands.Cog):
     async def watchlist_remove_cmd(self, interaction: discord.Interaction, title: str):
         await interaction.response.defer(ephemeral=True)
 
-        count = db.watchlist_remove_by_title(str(interaction.user.id), title)
+        count = await db.run(db.watchlist_remove_by_title, str(interaction.user.id), title)
         if count:
             for _ in range(count):
                 achievement_module.record_event(

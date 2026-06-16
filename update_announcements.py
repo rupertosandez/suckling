@@ -11,26 +11,33 @@ import version
 
 UPDATE_ANNOUNCEMENT_CHANNEL_ID = 1509685120372834395
 CHANGELOG_URL = "https://rupertosandez.github.io/sucklingsite/changelog/"
-_CHANGELOG_PATH = Path(__file__).resolve().parent / "CHANGELOG.md"
+_PROJECT_ROOT = Path(__file__).resolve().parent
+_CHANGELOG_PATH = _PROJECT_ROOT / "CHANGELOG.md"
+_ANNOUNCEMENTS_PATH = _PROJECT_ROOT / "ANNOUNCEMENTS.md"
 _MAX_DESCRIPTION_LENGTH = 4096
 
 
-def _iter_changelog_entries(changelog: str):
+def _iter_versioned_entries(text: str):
+    """Yield (version, body) for each `## [version]` section in a markdown file.
+
+    Shared by the developer changelog and the member-facing announcements file,
+    which use the same header format.
+    """
     header_pattern = re.compile(r"^## \[([^\]]+)\].*$", re.MULTILINE)
-    matches = list(header_pattern.finditer(changelog))
+    matches = list(header_pattern.finditer(text))
     for index, match in enumerate(matches):
         start = match.start()
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(changelog)
-        yield match.group(1), changelog[start:end].strip()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        yield match.group(1), text[start:end].strip()
 
 
-def changelog_entry_for_version(bot_version: str) -> str | None:
+def _entry_for_version(path: Path, bot_version: str) -> str | None:
     try:
-        changelog = _CHANGELOG_PATH.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8")
     except OSError:
         return None
 
-    for entry_version, body in _iter_changelog_entries(changelog):
+    for entry_version, body in _iter_versioned_entries(text):
         if entry_version != bot_version:
             continue
         lines = body.splitlines()
@@ -38,6 +45,15 @@ def changelog_entry_for_version(bot_version: str) -> str | None:
             lines = lines[1:]
         return "\n".join(lines).strip() or None
     return None
+
+
+def changelog_entry_for_version(bot_version: str) -> str | None:
+    return _entry_for_version(_CHANGELOG_PATH, bot_version)
+
+
+def announcement_entry_for_version(bot_version: str) -> str | None:
+    """Member-facing announcement copy for a version, if one was written."""
+    return _entry_for_version(_ANNOUNCEMENTS_PATH, bot_version)
 
 
 def _trim_description(text: str) -> str:
@@ -50,14 +66,18 @@ def _trim_description(text: str) -> str:
 
 def update_announcement_embed(bot_version: str | None = None) -> discord.Embed:
     bot_version = bot_version or version.VERSION
-    changelog_entry = changelog_entry_for_version(bot_version)
     lines = [
         f"yo check me out! i've been updated!!! v{bot_version} 💪",
     ]
-    if changelog_entry:
-        lines.extend(["", "**what changed**", changelog_entry])
+    announcement_entry = announcement_entry_for_version(bot_version)
+    if announcement_entry:
+        lines.extend(["", announcement_entry])
     else:
-        lines.extend(["", "no changelog details found for this version."])
+        changelog_entry = changelog_entry_for_version(bot_version)
+        if changelog_entry:
+            lines.extend(["", "**what changed**", changelog_entry])
+        else:
+            lines.extend(["", "no details found for this version."])
     lines.extend(["", f"[ view changelog ]({CHANGELOG_URL})"])
     return discord.Embed(
         description=_trim_description("\n".join(lines)),

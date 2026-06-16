@@ -349,7 +349,7 @@ class AdminCog(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         rows = sorted(
-            db.get_all_lb_accounts(),
+            await db.run(db.get_all_lb_accounts),
             key=lambda row: row.get("lb_username", "").lower(),
         )
         total = len(rows)
@@ -440,11 +440,11 @@ class AdminCog(commands.Cog):
         feature: app_commands.Choice[str],
         enabled: bool,
     ):
+        await interaction.response.defer(ephemeral=True)
         if feature.value == "lb_activity":
-            await interaction.response.defer(ephemeral=True)
-            channel_id = db.get_lb_activity_channel_id()
+            channel_id = await db.run(db.get_lb_activity_channel_id)
             if enabled and not channel_id:
-                db.set_lb_activity_enabled(False)
+                await db.run(db.set_lb_activity_enabled, False)
                 await interaction.followup.send(
                     "No Letterboxd activity channel is set yet. Use `/setlbactivity` first.",
                     ephemeral=True,
@@ -456,7 +456,7 @@ class AdminCog(commands.Cog):
                 seed_result = await self.run_lb_activity_check(post=False, seed_only=True)
                 seed_note = f" Seeded current feeds first: {self.lb_activity_summary(seed_result)}"
 
-            db.set_lb_activity_enabled(enabled)
+            await db.run(db.set_lb_activity_enabled, enabled)
             await interaction.followup.send(
                 f"{'Enabled' if enabled else 'Disabled'} **letterboxd activity**.{seed_note}",
                 ephemeral=True,
@@ -464,22 +464,22 @@ class AdminCog(commands.Cog):
             return
 
         if feature.value == "announcements":
-            db.set_announcements_enabled(enabled)
-            channel_id = db.get_announcement_channel_id()
+            await db.run(db.set_announcements_enabled, enabled)
+            channel_id = await db.run(db.get_announcement_channel_id)
             channel_note = ""
             if enabled and not channel_id:
                 channel_note = " ⚠️ No announcement channel set yet — use `/setannouncements`."
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"{'✅ Enabled' if enabled else '🔕 Disabled'} **streaming announcements**.{channel_note}",
                 ephemeral=True,
             )
         elif feature.value == "daily":
-            db.set_daily_rec_enabled(enabled)
-            channel_id = db.get_daily_rec_channel_id()
+            await db.run(db.set_daily_rec_enabled, enabled)
+            channel_id = await db.run(db.get_daily_rec_channel_id)
             channel_note = ""
             if enabled and not channel_id:
                 channel_note = " ⚠️ No daily-rec channel set yet — use `/setdaily`."
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"{'✅ Enabled' if enabled else '🔕 Disabled'} **daily horror recommendation**.{channel_note}",
                 ephemeral=True,
             )
@@ -500,7 +500,7 @@ class AdminCog(commands.Cog):
     )
     @app_commands.default_permissions(manage_guild=True)
     async def checknowlive(self, interaction: discord.Interaction):
-        channel_id = db.get_announcement_channel_id()
+        channel_id = await db.run(db.get_announcement_channel_id)
         if not channel_id:
             await interaction.response.send_message(
                 "⚠️ No announcement channel set. Use `/setannouncements` first.",
@@ -518,7 +518,7 @@ class AdminCog(commands.Cog):
     )
     @app_commands.default_permissions(manage_guild=True)
     async def dailynow(self, interaction: discord.Interaction):
-        channel_id = db.get_daily_rec_channel_id()
+        channel_id = await db.run(db.get_daily_rec_channel_id)
         if not channel_id:
             await interaction.response.send_message(
                 "⚠️ No daily-rec channel set. Use `/setdaily` first.",
@@ -604,7 +604,7 @@ class AdminCog(commands.Cog):
     @app_commands.describe(post="True to post new activity; false only reports the count")
     @app_commands.default_permissions(manage_guild=True)
     async def lbactivitynow(self, interaction: discord.Interaction, post: bool = False):
-        if post and not db.get_lb_activity_channel_id():
+        if post and not await db.run(db.get_lb_activity_channel_id):
             await interaction.response.send_message(
                 "No Letterboxd activity channel is set. Use `/setlbactivity` first.",
                 ephemeral=True,
@@ -626,7 +626,7 @@ class AdminCog(commands.Cog):
     @app_commands.describe(post="True to post candidates; false only shows a private summary")
     @app_commands.default_permissions(manage_guild=True)
     async def plexcleanupnow(self, interaction: discord.Interaction, post: bool = False):
-        if post and not db.get_announcement_channel_id():
+        if post and not await db.run(db.get_announcement_channel_id):
             await interaction.response.send_message(
                 "No announcement channel is set. Use `/setannouncements` first.",
                 ephemeral=True,

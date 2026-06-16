@@ -54,8 +54,9 @@ class TrackingCog(commands.Cog):
             )
             return
 
-        db.set_announcement_channel_id(channel.id)
-        await interaction.response.send_message(
+        await interaction.response.defer(ephemeral=True)
+        await db.run(db.set_announcement_channel_id, channel.id)
+        await interaction.followup.send(
             f"✅ Horror release alerts will now post in {channel.mention}.",
             ephemeral=True,
         )
@@ -76,8 +77,9 @@ class TrackingCog(commands.Cog):
             )
             return
 
-        db.set_daily_rec_channel_id(channel.id)
-        await interaction.response.send_message(
+        await interaction.response.defer(ephemeral=True)
+        await db.run(db.set_daily_rec_channel_id, channel.id)
+        await interaction.followup.send(
             f"✅ Daily horror recommendations will now post in {channel.mention} at noon.",
             ephemeral=True,
         )
@@ -103,9 +105,9 @@ class TrackingCog(commands.Cog):
             return
 
         await interaction.response.defer(ephemeral=True)
-        db.set_lb_activity_channel_id(channel.id)
+        await db.run(db.set_lb_activity_channel_id, channel.id)
         seed_result = await self.run_lb_activity_check(post=False, seed_only=True)
-        db.set_lb_activity_enabled(True)
+        await db.run(db.set_lb_activity_enabled, True)
         await interaction.followup.send(
             f"Letterboxd activity will now post in {channel.mention}.\n"
             "I seeded the current feeds first so old watches won't spam the channel: "
@@ -152,7 +154,7 @@ class TrackingCog(commands.Cog):
             release_date = top.get("release_date", "")
             movie_year = release_date[:4] if release_date else "—"
 
-            added = db.add_tracked_movie(top["id"], movie_title, user_tag, user_id)
+            added = await db.run(db.add_tracked_movie, top["id"], movie_title, user_tag, user_id)
             if not added:
                 await interaction.followup.send(
                     f"**{movie_title} ({movie_year})** is already on the tracked list."
@@ -179,7 +181,7 @@ class TrackingCog(commands.Cog):
     async def untrack(self, interaction: discord.Interaction, title: str):
         await interaction.response.defer()
 
-        tracked = db.list_tracked_movies()
+        tracked = await db.run(db.list_tracked_movies)
         title_lower = title.lower()
         matches = [m for m in tracked if title_lower in m["title"].lower()]
 
@@ -197,15 +199,16 @@ class TrackingCog(commands.Cog):
             return
 
         match = matches[0]
-        db.remove_tracked_movie(match["tmdb_id"])
+        await db.run(db.remove_tracked_movie, match["tmdb_id"])
         await interaction.followup.send(f"✅ Stopped tracking **{match['title']}**.")
 
     @app_commands.command(name="tracked", description="Show all movies on the watchlist")
     async def tracked(self, interaction: discord.Interaction):
-        movies = db.list_tracked_movies()
+        await interaction.response.defer()
+        movies = await db.run(db.list_tracked_movies)
 
         if not movies:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "No movies are being tracked yet. Add some with `/track`.",
                 ephemeral=True,
             )
@@ -221,7 +224,7 @@ class TrackingCog(commands.Cog):
             description="\n".join(lines),
             color=0x8B0000,
         )
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
 
 
 async def setup(bot: commands.Bot):

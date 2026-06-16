@@ -21,7 +21,7 @@ def _needs_disambiguation(results: list[dict]) -> bool:
 
 
 async def post_daily_recommendation(bot: discord.Client) -> bool:
-    channel_id = db.get_daily_rec_channel_id()
+    channel_id = await db.run(db.get_daily_rec_channel_id)
     if not channel_id:
         print("[daily-rec] No channel configured — skipping")
         return False
@@ -34,7 +34,7 @@ async def post_daily_recommendation(bot: discord.Client) -> bool:
             print(f"[daily-rec] Couldn't access channel: {e}")
             return False
 
-    excluded = db.recent_rec_ids(within_days=30)
+    excluded = await db.run(db.recent_rec_ids, within_days=30)
     movie = await picker.pick_random(exclude_ids=excluded)
     if not movie:
         print("[daily-rec] No suitable film found")
@@ -63,7 +63,7 @@ async def post_daily_recommendation(bot: discord.Client) -> bool:
 
     try:
         await channel.send(embed=embed, view=daily_view)
-        db.record_daily_rec(movie["id"], details.get("title", "Unknown"))
+        await db.run(db.record_daily_rec, movie["id"], details.get("title", "Unknown"))
         print(f"[daily-rec] Posted: {details.get('title')}")
         return True
     except discord.HTTPException as e:

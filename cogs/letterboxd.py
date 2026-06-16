@@ -48,7 +48,7 @@ def _resolve_lb_target(
     return lb_user, interaction.user.display_name, None
 
 
-def _resolve_explicit_lb_target(
+async def _resolve_explicit_lb_target(
     user: discord.Member | None,
     username: str | None,
     label: str,
@@ -57,7 +57,7 @@ def _resolve_explicit_lb_target(
         return None, None, f"pick either `{label}_user` or `{label}_username`, not both."
 
     if user is not None:
-        lb_user = db.get_lb_username(str(user.id))
+        lb_user = await db.run(db.get_lb_username, str(user.id))
         if not lb_user:
             return None, None, f"**{user.display_name}** hasn't linked a letterboxd account."
         return lb_user, user.display_name, None
@@ -182,7 +182,7 @@ async def lb_link(interaction: discord.Interaction, username: str):
         )
         return
 
-    db.link_lb_account(str(interaction.user.id), username)
+    await db.run(db.link_lb_account, str(interaction.user.id), username)
     await achievement_module.award_for_user(
         interaction.client,
         interaction.user,
@@ -198,13 +198,14 @@ async def lb_link(interaction: discord.Interaction, username: str):
 
 @lb_group.command(name="unlink", description="unlink your letterboxd account")
 async def lb_unlink(interaction: discord.Interaction):
-    removed = db.unlink_lb_account(str(interaction.user.id))
+    await interaction.response.defer(ephemeral=True)
+    removed = await db.run(db.unlink_lb_account, str(interaction.user.id))
     if removed:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "✅ letterboxd account unlinked.", ephemeral=True
         )
     else:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "you don't have a linked letterboxd account.", ephemeral=True
         )
 
@@ -225,7 +226,7 @@ async def lb_profile(
     await interaction.response.defer()
 
     if user is not None:
-        lb_user = db.get_lb_username(str(user.id))
+        lb_user = await db.run(db.get_lb_username, str(user.id))
         discord_tag = str(user)
         if not lb_user:
             await interaction.followup.send(
@@ -237,7 +238,7 @@ async def lb_profile(
         lb_user = username
         discord_tag = None
     else:
-        lb_user = db.get_lb_username(str(interaction.user.id))
+        lb_user = await db.run(db.get_lb_username, str(interaction.user.id))
         discord_tag = str(interaction.user)
         if not lb_user:
             await interaction.followup.send(
@@ -278,7 +279,7 @@ async def lb_watchlist_cmd(
     await interaction.response.defer()
 
     if user is not None:
-        lb_user = db.get_lb_username(str(user.id))
+        lb_user = await db.run(db.get_lb_username, str(user.id))
         if not lb_user:
             await interaction.followup.send(
                 f"**{user.display_name}** hasn't linked a letterboxd account."
@@ -287,7 +288,7 @@ async def lb_watchlist_cmd(
     elif username is not None:
         lb_user = username
     else:
-        lb_user = db.get_lb_username(str(interaction.user.id))
+        lb_user = await db.run(db.get_lb_username, str(interaction.user.id))
         if not lb_user:
             await interaction.followup.send(
                 "you haven't linked a letterboxd account yet. "
@@ -382,12 +383,12 @@ async def lb_tastecheck(
 ):
     await interaction.response.defer()
 
-    lb_a, label_a, err = _resolve_explicit_lb_target(a_user, a_username, "a")
+    lb_a, label_a, err = await _resolve_explicit_lb_target(a_user, a_username, "a")
     if err:
         await interaction.followup.send(err)
         return
 
-    lb_b, label_b, err = _resolve_explicit_lb_target(b_user, b_username, "b")
+    lb_b, label_b, err = await _resolve_explicit_lb_target(b_user, b_username, "b")
     if err:
         await interaction.followup.send(err)
         return

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.7.7] - 2026-06-16
+
+### Changed
+
+- Extended the off-event-loop database work to the remaining cog commands (discovery, tracking, watchlist, letterboxd, rentals, admin, achievements), so individual command database calls no longer run on the gateway thread.
+- Update announcements now read member-facing copy from a dedicated `ANNOUNCEMENTS.md` file and fall back to the changelog entry when a version has no blurb, keeping announcements casual instead of reposting developer-focused changelog text.
+
 ## [2.7.6] - 2026-06-16
 
 ### Changed
