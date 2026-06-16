@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.7.5] - 2026-06-16
+
+### Fixed
+
+- Achievement rescans now run without blocking the bot while badges are checked.
+
 ## [2.7.4] - 2026-06-10
 
 ### Fixed
