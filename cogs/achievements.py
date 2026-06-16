@@ -192,9 +192,11 @@ class AchievementsCog(commands.Cog):
         interaction: discord.Interaction,
         user: discord.Member | None = None,
     ):
+        ephemeral = user is None
+        await interaction.response.defer(ephemeral=ephemeral)
         target = user or interaction.user
-        embed = _profile_embed(target, viewer_id=str(interaction.user.id))
-        await interaction.response.send_message(embed=embed, ephemeral=user is None)
+        embed = await db.run(_profile_embed, target, viewer_id=str(interaction.user.id))
+        await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
     @app_commands.command(name="achievementdisplay", description="pin one earned achievement as a visible badge role")
     @app_commands.describe(
@@ -285,9 +287,16 @@ class AchievementsCog(commands.Cog):
 
     @app_commands.command(name="achievementboard", description="see community achievement activity")
     async def achievement_board(self, interaction: discord.Interaction):
-        recent = db.get_recent_achievement_unlocks(limit=5)
-        leaders = db.get_achievement_counts_by_user(limit=5)
-        rarity = db.get_achievement_rarity_counts()
+        await interaction.response.defer()
+
+        def _load():
+            return (
+                db.get_recent_achievement_unlocks(limit=5),
+                db.get_achievement_counts_by_user(limit=5),
+                db.get_achievement_rarity_counts(),
+            )
+
+        recent, leaders, rarity = await db.run(_load)
 
         embed = discord.Embed(title="Achievement Board", color=achievement_module.ROLE_COLOR)
         if recent:
@@ -322,7 +331,7 @@ class AchievementsCog(commands.Cog):
             embed.add_field(name="Rarest Badges", value="\n".join(lines), inline=False)
         if not embed.fields:
             embed.description = "No achievement unlocks yet."
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
 
     @app_commands.command(name="setfeed", description="set the channel for Suckling feed posts (admin only)")
     @app_commands.describe(channel="the channel where achievements should post")

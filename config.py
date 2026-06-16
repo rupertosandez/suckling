@@ -26,6 +26,9 @@ TAUTULLI_URL = (os.getenv("TAUTULLI_URL") or "").rstrip("/")
 TAUTULLI_API_KEY = os.getenv("TAUTULLI_API_KEY")
 PLEX_CLEANUP_ENABLED = os.getenv("PLEX_CLEANUP_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 BOT_TIMEZONE = os.getenv("BOT_TIMEZONE", "America/Los_Angeles")
+# Postgres connection pool sizing (only used when DATABASE_URL is set).
+DB_POOL_MIN_SIZE = int(os.getenv("DB_POOL_MIN_SIZE", "2"))
+DB_POOL_MAX_SIZE = int(os.getenv("DB_POOL_MAX_SIZE", "10"))
 ACHIEVEMENT_CATALOG_URL = (
     os.getenv("ACHIEVEMENT_CATALOG_URL")
     or "https://rupertosandez.github.io/sucklingsite/achievements/"

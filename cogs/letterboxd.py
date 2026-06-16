@@ -326,7 +326,7 @@ async def lb_watchlist_cmd(
 async def lb_group_cmd(interaction: discord.Interaction):
     await interaction.response.defer()
 
-    accounts = db.get_all_lb_accounts()
+    accounts = await db.run(db.get_all_lb_accounts)
     if not accounts:
         await interaction.followup.send(
             "no one has linked a letterboxd account yet. use `/lb link` to be first."

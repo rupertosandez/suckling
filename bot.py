@@ -77,6 +77,10 @@ class SucklingBot(commands.Bot):
             await cleanup_module.close_session()
         except Exception as e:
             logger.log_exception("bot_close_cleanup", e)
+        try:
+            db.close_pool()
+        except Exception as e:
+            logger.log_exception("bot_close_db_pool", e)
         await super().close()
 
 

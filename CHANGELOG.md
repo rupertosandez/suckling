@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.7.6] - 2026-06-16
+
+### Changed
+
+- Postgres now uses a shared connection pool instead of opening a new connection for every query, removing the per-call connection handshake that was stalling the bot.
+
+### Fixed
+
+- Heavy commands (`/achievements`, `/achievementboard`, `/botstatus`, `/rentalstats`, `/lb group`) now run their database work off the event loop, so the bot stays responsive and scheduled jobs no longer get missed during busy database operations.
+
 ## [2.7.5] - 2026-06-16
 
 ### Fixed

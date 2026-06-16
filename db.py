@@ -1,3 +1,4 @@
+import asyncio
 import re
 import sqlite3
 import json
@@ -275,22 +276,57 @@ class _PostgresCursor:
         return self._rows
 
 
-class _PostgresConnection:
-    def __init__(self):
-        from psycopg import connect
+_pg_pool = None
+
+
+def _get_pg_pool():
+    """Lazily create and open the shared Postgres connection pool.
+
+    Reused across all DB calls so we pay the TCP+auth handshake once per pooled
+    connection rather than once per query. SQLite never reaches this path.
+    """
+    global _pg_pool
+    if _pg_pool is None:
+        from psycopg_pool import ConnectionPool
         from psycopg.rows import dict_row
 
-        self._conn = connect(config.DATABASE_URL, row_factory=dict_row)
+        _pg_pool = ConnectionPool(
+            config.DATABASE_URL,
+            min_size=config.DB_POOL_MIN_SIZE,
+            max_size=config.DB_POOL_MAX_SIZE,
+            kwargs={"row_factory": dict_row},
+            open=False,
+        )
+        _pg_pool.open()
+    return _pg_pool
+
+
+def close_pool() -> None:
+    """Close the shared Postgres pool. Safe to call when no pool exists."""
+    global _pg_pool
+    if _pg_pool is not None:
+        _pg_pool.close()
+        _pg_pool = None
+
+
+class _PostgresConnection:
+    def __init__(self):
+        self._pool = _get_pg_pool()
+        self._conn = None
 
     def __enter__(self):
+        self._conn = self._pool.getconn()
         return self
 
     def __exit__(self, exc_type, exc, tb):
-        if exc_type is None:
-            self._conn.commit()
-        else:
-            self._conn.rollback()
-        self._conn.close()
+        try:
+            if exc_type is None:
+                self._conn.commit()
+            else:
+                self._conn.rollback()
+        finally:
+            self._pool.putconn(self._conn)
+            self._conn = None
 
     def execute(self, sql: str, params: Iterable[Any] = ()):
         try:
@@ -341,8 +377,18 @@ def _chunks(items: list, size: int = 900):
         yield items[start:start + size]
 
 
+async def run(fn, *args, **kwargs):
+    """Run a synchronous db.* helper off the event loop.
+
+    Use this from cog/command code for any DB work heavier than a single trivial
+    read so a Postgres round trip never blocks the gateway heartbeat thread.
+    """
+    return await asyncio.to_thread(fn, *args, **kwargs)
+
+
 def init_db() -> None:
     if _using_postgres():
+        _get_pg_pool()  # open the shared pool once at startup
         with _connect() as conn:
             conn.executescript(POSTGRES_SCHEMA_SQL)
         return

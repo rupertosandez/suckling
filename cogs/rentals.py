@@ -610,7 +610,7 @@ class RentalsCog(commands.Cog):
     ):
         await interaction.response.defer()
         target = user or interaction.user
-        history = db.get_user_rental_history(str(target.id))
+        history = await db.run(db.get_user_rental_history, str(target.id))
         total_pages = max(1, -(-len(history) // embeds.RENTAL_HISTORY_PAGE_SIZE))
         embed = embeds.rental_stats_embed(history, str(target), page=0, total_pages=total_pages)
         view = (

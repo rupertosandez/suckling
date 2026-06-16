@@ -276,15 +276,32 @@ class AdminCog(commands.Cog):
 
         await interaction.response.defer(ephemeral=True)
 
-        announcement_channel_id = db.get_announcement_channel_id()
-        daily_channel_id = db.get_daily_rec_channel_id()
-        lb_activity_channel_id = db.get_lb_activity_channel_id()
-        reviews_channel_id = db.get_reviews_channel_id()
-        rental_request_channel_id = db.get_rental_request_channel_id()
+        def _load():
+            return {
+                "announcement_channel_id": db.get_announcement_channel_id(),
+                "daily_channel_id": db.get_daily_rec_channel_id(),
+                "lb_activity_channel_id": db.get_lb_activity_channel_id(),
+                "reviews_channel_id": db.get_reviews_channel_id(),
+                "rental_request_channel_id": db.get_rental_request_channel_id(),
+                "announcements_enabled": db.is_announcements_enabled(),
+                "daily_rec_enabled": db.is_daily_rec_enabled(),
+                "lb_activity_enabled": db.is_lb_activity_enabled(),
+                "tracked_count": db.tracked_movie_count(),
+                "lb_account_count": db.lb_account_count(),
+                "active_rental_count": db.active_rental_count(),
+                "overdue_rental_count": db.overdue_active_rental_count(),
+            }
 
-        announcements_enabled = db.is_announcements_enabled()
-        daily_rec_enabled = db.is_daily_rec_enabled()
-        lb_activity_enabled = db.is_lb_activity_enabled()
+        data = await db.run(_load)
+        announcement_channel_id = data["announcement_channel_id"]
+        daily_channel_id = data["daily_channel_id"]
+        lb_activity_channel_id = data["lb_activity_channel_id"]
+        reviews_channel_id = data["reviews_channel_id"]
+        rental_request_channel_id = data["rental_request_channel_id"]
+
+        announcements_enabled = data["announcements_enabled"]
+        daily_rec_enabled = data["daily_rec_enabled"]
+        lb_activity_enabled = data["lb_activity_enabled"]
 
         warnings = []
         if announcements_enabled and not announcement_channel_id:
@@ -303,10 +320,10 @@ class AdminCog(commands.Cog):
             "uptime_seconds": (datetime.now(timezone.utc) - self.bot.started_at).total_seconds(),
             "latency_ms": self.bot.latency * 1000,
             "cache_size": cache_mod.size(),
-            "tracked_count": db.tracked_movie_count(),
-            "lb_account_count": db.lb_account_count(),
-            "active_rental_count": db.active_rental_count(),
-            "overdue_rental_count": db.overdue_active_rental_count(),
+            "tracked_count": data["tracked_count"],
+            "lb_account_count": data["lb_account_count"],
+            "active_rental_count": data["active_rental_count"],
+            "overdue_rental_count": data["overdue_rental_count"],
             "reviews_channel": _admin_channel_label(reviews_channel_id),
             "rental_request_channel": _admin_channel_label(rental_request_channel_id),
             "announcement_channel": _admin_channel_label(announcement_channel_id),
