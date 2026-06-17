@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.8.0] - 2026-06-16
+
+### Added
+
+- `/rent`: after you spend both rerolls, you now get to pick from any of the films you were shown during the roll instead of having the last one auto-locked. A dropdown switches the previewed film and an accept button locks in your choice.
+
 ## [2.7.7] - 2026-06-16
 
 ### Changed

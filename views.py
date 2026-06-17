@@ -758,6 +758,7 @@ class RentWarningView(discord.ui.View):
             user_id=self.user_id,
             user_name=self.user_name,
             rerolls_used=0,
+            shown_films=[movie],
         )
         embed = embeds.rental_offer_embed(movie, is_last_reroll=False)
         await interaction.edit_original_response(embed=embed, view=pick_view, content=None)
@@ -849,6 +850,7 @@ class RentPickView(discord.ui.View):
         user_id: str,
         user_name: str,
         rerolls_used: int,
+        shown_films: list[dict],
     ):
         super().__init__(timeout=300)
         self.bot = bot
@@ -858,6 +860,7 @@ class RentPickView(discord.ui.View):
         self.user_id = user_id
         self.user_name = user_name
         self.rerolls_used = rerolls_used
+        self.shown_films = shown_films
         self._processing = False
 
         async def accept_cb(interaction: discord.Interaction):
@@ -927,23 +930,20 @@ class RentPickView(discord.ui.View):
             return
 
         new_shown = self.shown_keys | {new_film["rating_key"]}
+        new_shown_films = self.shown_films + [new_film]
 
         if new_rerolls_remaining == 0:
-            # Auto-confirm — no more choices
-            await interaction.edit_original_response(
-                content=f"🎲 rerolled to **{new_film['title']}** - locking it in...",
-                embed=None,
-                view=None,
-            )
-            await _confirm_rental(
-                interaction=interaction,
+            # Out of rerolls — let them pick any film they've seen so far
+            embed = embeds.rental_offer_embed(new_film, is_last_reroll=False)
+            choice_view = RentFinalChoiceView(
                 bot=self.bot,
-                movie=new_film,
+                films=new_shown_films,
+                current_film=new_film,
                 user_id=self.user_id,
                 user_name=self.user_name,
                 rerolls_used=new_rerolls_used,
-                initiated_by="random",
             )
+            await interaction.edit_original_response(embed=embed, view=choice_view, content=None)
         else:
             # Show the next pick with updated buttons
             is_last = (new_rerolls_remaining == 1)
@@ -956,8 +956,110 @@ class RentPickView(discord.ui.View):
                 user_id=self.user_id,
                 user_name=self.user_name,
                 rerolls_used=new_rerolls_used,
+                shown_films=new_shown_films,
             )
             await interaction.edit_original_response(embed=embed, view=new_view, content=None)
+
+    async def on_timeout(self):
+        self.stop()
+
+
+class RentFinalChoiceView(discord.ui.View):
+    """
+    Final step of /rent once both rerolls are spent: lets the user pick any
+    of the films they were shown during the roll/reroll flow. A dropdown
+    switches which film is previewed in the embed; accept locks it in.
+    """
+
+    def __init__(
+        self,
+        bot: discord.Client,
+        films: list[dict],
+        current_film: dict,
+        user_id: str,
+        user_name: str,
+        rerolls_used: int,
+    ):
+        super().__init__(timeout=300)
+        self.bot = bot
+        self.films = films
+        self.current_film = current_film
+        self.user_id = user_id
+        self.user_name = user_name
+        self.rerolls_used = rerolls_used
+        self._processing = False
+
+        select = discord.ui.Select(
+            placeholder="pick one of your rolls...",
+            min_values=1,
+            max_values=1,
+        )
+        for film in films:
+            year = film.get("year") or "?"
+            select.add_option(
+                label=f"{film['title']} ({year})"[:100],
+                value=str(film["rating_key"]),
+                default=str(film["rating_key"]) == str(current_film["rating_key"]),
+            )
+
+        async def select_cb(interaction: discord.Interaction):
+            await self._select(interaction)
+
+        async def accept_cb(interaction: discord.Interaction):
+            await self._accept(interaction)
+
+        select.callback = select_cb
+        self.select = select
+        self.add_item(select)
+
+        accept_btn = discord.ui.Button(
+            label="accept rental",
+            style=discord.ButtonStyle.success,
+            emoji="📼",
+        )
+        accept_btn.callback = accept_cb
+        self.add_item(accept_btn)
+
+    def _refresh_select_defaults(self):
+        current_key = str(self.current_film["rating_key"])
+        for option in self.select.options:
+            option.default = option.value == current_key
+
+    async def _select(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await _send_component_denied(interaction, "this rental isn't for you.")
+            return
+        if self._processing:
+            await _defer_component(interaction)
+            return
+
+        chosen_key = self.select.values[0]
+        film = next(
+            (f for f in self.films if str(f["rating_key"]) == chosen_key),
+            self.current_film,
+        )
+        self.current_film = film
+        self._refresh_select_defaults()
+        embed = embeds.rental_offer_embed(film, is_last_reroll=False)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    async def _accept(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await _send_component_denied(interaction, "this rental isn't for you.")
+            return
+        if not await _mark_view_processing(interaction, self, "processing rental..."):
+            return
+
+        self.stop()
+        await _confirm_rental(
+            interaction=interaction,
+            bot=self.bot,
+            movie=self.current_film,
+            user_id=self.user_id,
+            user_name=self.user_name,
+            rerolls_used=self.rerolls_used,
+            initiated_by="random",
+        )
 
     async def on_timeout(self):
         self.stop()

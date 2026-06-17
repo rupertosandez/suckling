@@ -650,8 +650,8 @@ def rental_offer_embed(movie: dict, is_last_reroll: bool = False) -> discord.Emb
     desc = summary
     if is_last_reroll:
         desc += (
-            "\n\n-# this is your last reroll - if you reroll again, "
-            "the next film will be locked in automatically."
+            "\n\n-# this is your last reroll - after it you'll get to pick "
+            "from any of the films you've been shown."
         )
 
     embed = discord.Embed(

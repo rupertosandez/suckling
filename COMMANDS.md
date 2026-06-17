@@ -89,7 +89,7 @@ if you've set `/timezone`, rentals are due at 9 pm in your timezone. otherwise t
 
 the rental menu has three paths:
 
-- **roll random** - get a random film, with up to **2 re-rolls** before the bot locks one in
+- **roll random** - get a random film, with up to **2 re-rolls**, then pick your favorite of what you saw
 - **pick a movie** - choose a specific rb9 title yourself
 - **ask an admin** - post a recommendation request so an admin can assign a pick
 
@@ -97,7 +97,7 @@ random rolls work like this:
 
 1. bot shows a film: **[ accept rental ]** **[ re-roll ]**
 2. first reroll: bot shows another film: **[ accept rental ]** **[ re-roll (last one) ]**
-3. second reroll (final): bot picks a third film and locks it in automatically — no choice
+3. second reroll: bot shows a third film, then lets you pick any of the films you've been shown from a dropdown and accept it
 
 films you've rented before are never offered again (all-time exclusion, any status).
 
