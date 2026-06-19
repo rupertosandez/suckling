@@ -24,6 +24,12 @@ RECOMMENDATION_TAG_KEY = "recommendation_tag_id"
 REVIEW_TAG_KEY = "review_tag_id"
 LAST_UPDATE_ANNOUNCED_VERSION_KEY = "last_update_announced_version"
 FEED_CHANNEL_KEY = "feed_channel_id"
+
+# Digital (rent/buy) providers share the provider_snapshots table with
+# subscription providers; this prefix namespaces them so the two tiers can't
+# collide on provider name. Subscription rows stay bare for backward compat.
+DIGITAL_SNAPSHOT_PREFIX = "digital:"
+
 POSTGRES_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS config (
     key TEXT PRIMARY KEY,
@@ -60,6 +66,12 @@ CREATE TABLE IF NOT EXISTS guess_scores (
 );
 
 CREATE TABLE IF NOT EXISTS announced_movies (
+    tmdb_id INTEGER PRIMARY KEY,
+    title TEXT NOT NULL,
+    first_seen_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS announced_digital (
     tmdb_id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
     first_seen_at TEXT NOT NULL
@@ -243,6 +255,8 @@ def _postgres_query(sql: str) -> str:
     if "INSERT INTO provider_snapshots" in sql and "ON CONFLICT" not in sql:
         sql = f"{sql} ON CONFLICT DO NOTHING"
     if "INSERT INTO announced_movies" in sql and "ON CONFLICT" not in sql:
+        sql = f"{sql} ON CONFLICT DO NOTHING"
+    if "INSERT INTO announced_digital" in sql and "ON CONFLICT" not in sql:
         sql = f"{sql} ON CONFLICT DO NOTHING"
     if "INSERT INTO macguffin_free_claims" in sql and "ON CONFLICT" not in sql:
         sql = f"{sql} ON CONFLICT DO NOTHING"
@@ -432,6 +446,12 @@ def init_db() -> None:
             );
 
             CREATE TABLE IF NOT EXISTS announced_movies (
+                tmdb_id        INTEGER PRIMARY KEY,
+                title          TEXT NOT NULL,
+                first_seen_at  TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS announced_digital (
                 tmdb_id        INTEGER PRIMARY KEY,
                 title          TEXT NOT NULL,
                 first_seen_at  TEXT NOT NULL
@@ -1167,6 +1187,52 @@ def record_announced_movies_many(records: Iterable[tuple[int, str]]) -> None:
 def announced_count() -> int:
     with _connect() as conn:
         return conn.execute("SELECT COUNT(*) AS c FROM announced_movies").fetchone()["c"]
+
+
+# ---------- announced_digital (rent/buy availability) ----------
+
+def record_announced_digital(tmdb_id: int, title: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO announced_digital (tmdb_id, title, first_seen_at) "
+            "VALUES (?, ?, ?)",
+            (tmdb_id, title, _utc_now_iso()),
+        )
+
+
+def get_announced_digital_ids(tmdb_ids: Iterable[int]) -> set[int]:
+    ids = list(dict.fromkeys(tmdb_ids))
+    if not ids:
+        return set()
+
+    announced: set[int] = set()
+    with _connect() as conn:
+        for chunk in _chunks(ids):
+            placeholders = ",".join("?" for _ in chunk)
+            rows = conn.execute(
+                f"SELECT tmdb_id FROM announced_digital WHERE tmdb_id IN ({placeholders})",
+                chunk,
+            ).fetchall()
+            announced.update(row["tmdb_id"] for row in rows)
+    return announced
+
+
+def record_announced_digital_many(records: Iterable[tuple[int, str]]) -> None:
+    now = _utc_now_iso()
+    rows = [(tmdb_id, title, now) for tmdb_id, title in records]
+    if not rows:
+        return
+    with _connect() as conn:
+        conn.executemany(
+            "INSERT OR IGNORE INTO announced_digital (tmdb_id, title, first_seen_at) "
+            "VALUES (?, ?, ?)",
+            rows,
+        )
+
+
+def announced_digital_count() -> int:
+    with _connect() as conn:
+        return conn.execute("SELECT COUNT(*) AS c FROM announced_digital").fetchone()["c"]
 
 
 # ---------- six_scores ----------

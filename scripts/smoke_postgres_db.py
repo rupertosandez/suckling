@@ -27,6 +27,7 @@ def cleanup() -> None:
         conn.execute("DELETE FROM rentals WHERE user_id = ?", (SMOKE_USER_ID,))
         conn.execute("DELETE FROM watchlist WHERE user_id = ?", (SMOKE_USER_ID,))
         conn.execute("DELETE FROM announced_movies WHERE tmdb_id = ?", (SMOKE_TMDB_ID,))
+        conn.execute("DELETE FROM announced_digital WHERE tmdb_id = ?", (SMOKE_TMDB_ID,))
         conn.execute("DELETE FROM provider_snapshots WHERE tmdb_id = ?", (SMOKE_TMDB_ID,))
         conn.execute("DELETE FROM tracked_movies WHERE tmdb_id = ?", (SMOKE_TMDB_ID,))
         conn.execute("DELETE FROM lb_accounts WHERE user_id = ?", (SMOKE_USER_ID,))
@@ -50,6 +51,13 @@ def main() -> None:
     assert db.has_seen_provider(SMOKE_TMDB_ID, "Smoke Provider") is True
     db.record_announced_movie(SMOKE_TMDB_ID, "Smoke Movie")
     assert db.has_been_announced(SMOKE_TMDB_ID) is True
+
+    db.record_provider(SMOKE_TMDB_ID, db.DIGITAL_SNAPSHOT_PREFIX + "Smoke Store")
+    assert db.has_seen_provider(SMOKE_TMDB_ID, db.DIGITAL_SNAPSHOT_PREFIX + "Smoke Store") is True
+    assert db.get_announced_digital_ids([SMOKE_TMDB_ID]) == set()
+    db.record_announced_digital_many([(SMOKE_TMDB_ID, "Smoke Movie")])
+    assert db.get_announced_digital_ids([SMOKE_TMDB_ID]) == {SMOKE_TMDB_ID}
+    assert db.announced_digital_count() >= 1
 
     assert db.watchlist_add(SMOKE_USER_ID, "Smoke Movie", 2026, SMOKE_TMDB_ID, source="manual") is True
     assert db.watchlist_add(SMOKE_USER_ID, "Smoke Movie", 2026, SMOKE_TMDB_ID, source="manual") is False

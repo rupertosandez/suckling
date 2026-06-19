@@ -224,7 +224,7 @@ community achievement board with newest unlocks, top shelves, and rare badges.
 ## tracking
 
 ### `/track <title> [year]`
-add a movie to the watchlist. the bot will announce it in the streaming-alerts channel when it becomes available digitally for the first time. if the film is *already* streaming, the bot will tell you immediately and link to where.
+add a movie to the watchlist. the bot will announce it in the streaming-alerts channel the moment it shows up to rent or buy on a digital store (apple tv, google play, etc.), and again when it later lands on a subscription service like shudder. if the film is *already* available, the bot will tell you immediately and link to where.
 
 - `title` (required): the movie title to track
 - `year` (optional): filter by year if there are multiple matches

@@ -221,19 +221,32 @@ class RentalHistoryView(discord.ui.View):
         await interaction.edit_original_response(embed=embed, view=next_view)
 
 
-def _record_existing_providers(movie_id: int, providers: dict) -> list[str]:
-    """
-    Record any current subscription providers as seen, so the daily job won't
-    re-announce them. Returns the list of provider names found.
-    """
-    flatrate = providers.get("flatrate", [])
-    names = []
-    for provider in flatrate:
-        provider_name = provider.get("provider_name", "")
-        if provider_name:
-            db.record_provider(movie_id, provider_name)
-            names.append(provider_name)
+def _category_provider_names(providers: dict, *categories: str) -> list[str]:
+    """Collect deduped provider names across the given TMDB categories."""
+    names: list[str] = []
+    for category in categories:
+        for provider in providers.get(category, []):
+            provider_name = provider.get("provider_name", "")
+            if provider_name and provider_name not in names:
+                names.append(provider_name)
     return names
+
+
+def _record_existing_providers(movie_id: int, providers: dict) -> tuple[list[str], list[str]]:
+    """
+    Record any currently-available providers as seen, so the tracker job won't
+    re-announce them. Covers both subscription (flatrate) and digital (rent/buy).
+    Returns (subscription_names, digital_names).
+    """
+    sub_names = _category_provider_names(providers, "flatrate")
+    digital_names = _category_provider_names(providers, "rent", "buy")
+
+    records = [(movie_id, name) for name in sub_names]
+    records.extend((movie_id, db.DIGITAL_SNAPSHOT_PREFIX + name) for name in digital_names)
+    if records:
+        db.record_providers_many(records)
+
+    return sub_names, digital_names
 
 
 async def _build_track_response(movie_id: int, movie_title: str, movie_year: str) -> str:
@@ -250,21 +263,21 @@ async def _build_track_response(movie_id: int, movie_title: str, movie_year: str
             "You'll get an alert when it becomes streamable."
         )
 
-    current_providers = _record_existing_providers(movie_id, providers)
+    sub_providers, digital_providers = _record_existing_providers(movie_id, providers)
     justwatch_link = providers.get("link")
+    watch_link = f" → [See where to watch]({justwatch_link})" if justwatch_link else ""
 
     base = f"✅ Now tracking **{movie_title} ({movie_year})**."
 
-    if current_providers:
-        provider_list = ", ".join(current_providers)
-        if justwatch_link:
-            return (
-                f"{base}\n💻 Already streaming on **{provider_list}** "
-                f"→ [See where to watch]({justwatch_link})"
-            )
-        return f"{base}\n💻 Already streaming on **{provider_list}**."
+    if sub_providers:
+        provider_list = ", ".join(sub_providers)
+        return f"{base}\n💻 Already streaming on **{provider_list}**.{watch_link}"
 
-    return f"{base}\n⏳ Not yet streaming — you'll get an alert when it becomes streamable."
+    if digital_providers:
+        provider_list = ", ".join(digital_providers)
+        return f"{base}\n📀 Already available to rent or buy on **{provider_list}**.{watch_link}"
+
+    return f"{base}\n⏳ Not yet available - you'll get an alert when it becomes streamable or buyable."
 
 
 class MovieSelect(discord.ui.Select):

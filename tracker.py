@@ -27,7 +27,7 @@ class CheckResult:
     discover_count: int = 0
     candidate_count: int = 0
     is_first_run: bool = False
-    announcements: list[tuple[int, str, list[str], str | None]] = field(default_factory=list)
+    announcements: list[tuple[int, str, list[str], str | None, str]] = field(default_factory=list)
     posted_count: int = 0
     dry_run: bool = True
     warnings: list[str] = field(default_factory=list)
@@ -138,29 +138,38 @@ def _build_candidate_pool(discover_movies: list[dict]) -> dict[int, dict[str, st
     return candidates
 
 
+def _provider_names(providers: dict, *categories: str) -> list[str]:
+    """Collect deduped provider names across the given TMDB categories."""
+    names: list[str] = []
+    for category in categories:
+        for provider in providers.get(category, []):
+            name = provider.get("provider_name")
+            if name and name not in names:
+                names.append(name)
+    return names
+
+
 async def _fetch_movie_provider_names(
     movie_id: int,
     title: str,
     result: CheckResult,
-) -> tuple[list[str], bool]:
+) -> tuple[list[str], bool, list[str], bool]:
     """
-    Fetch current subscription provider names for a movie.
+    Fetch current provider names for a movie, split by tier.
 
-    Returns (provider_names, currently_has_any_streaming). Database reads/writes
-    happen later in the main loop so SQLite writes stay serialized.
+    Returns (sub_names, currently_streaming, digital_names, currently_digital).
+    Subscription is flatrate; digital is rent + buy. Database reads/writes happen
+    later in the main loop so SQLite writes stay serialized.
     """
     try:
         providers = await tmdb.get_watch_providers(movie_id, region="US", force=True)
     except tmdb.TMDBError as e:
         _log(result, f"  [warn] Couldn't fetch providers for {title}: {e}", warning=True)
-        return [], False
+        return [], False, [], False
 
-    provider_names = [
-        provider.get("provider_name", "")
-        for provider in providers.get("flatrate", [])
-        if provider.get("provider_name")
-    ]
-    return provider_names, bool(provider_names)
+    sub_names = _provider_names(providers, "flatrate")
+    digital_names = _provider_names(providers, "rent", "buy")
+    return sub_names, bool(sub_names), digital_names, bool(digital_names)
 
 
 async def _post_announcement(
@@ -169,6 +178,7 @@ async def _post_announcement(
     new_providers: list[str],
     tracker_user_id: str | None,
     result: CheckResult,
+    tier: str = "subscription",
 ) -> bool:
     channel_id = db.get_announcement_channel_id()
     if not channel_id:
@@ -192,8 +202,16 @@ async def _post_announcement(
         _log(result, f"  [warn] Couldn't fetch details for movie {movie_id}: {e}", warning=True)
         return False
 
-    embed = embeds.streaming_announcement_embed(details, new_providers)
-    content = f"<@{tracker_user_id}> your tracked movie is streaming." if tracker_user_id else None
+    if tier == "digital":
+        embed = embeds.digital_announcement_embed(details, new_providers)
+        content = (
+            f"<@{tracker_user_id}> your tracked movie is now available to rent or buy."
+            if tracker_user_id
+            else None
+        )
+    else:
+        embed = embeds.streaming_announcement_embed(details, new_providers)
+        content = f"<@{tracker_user_id}> your tracked movie is streaming." if tracker_user_id else None
     allowed_mentions = discord.AllowedMentions(users=True) if tracker_user_id else None
     try:
         await channel.send(content=content, embed=embed, allowed_mentions=allowed_mentions)
@@ -268,6 +286,18 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
             is_first_announce_run = True
             print("[tracker] First announce-aware run — marking currently-streaming films as already announced")
 
+    # Same one-time baseline for the digital (rent/buy) tier: announced_digital
+    # empty means we've never tracked digital availability, so silently mark
+    # currently-available tracked films instead of dumping the back catalog.
+    is_first_digital_run = False
+    if not result.is_first_run:
+        if db.announced_digital_count() == 0:
+            is_first_digital_run = True
+            print("[tracker] First digital-availability run — baselining currently-available tracked films")
+
+    # Digital availability is tracked-only; build the set once for scoping.
+    tracked_ids = {m["tmdb_id"] for m in db.list_tracked_movies()}
+
     discover_movies = await _discover_horror_movies(result)
     result.discover_count = len(discover_movies)
     print(f"[tracker] Pulled {result.discover_count} films from Discover")
@@ -289,6 +319,11 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
             if result.is_first_run or is_first_announce_run
             else db.get_announced_movie_ids(batch_movie_ids)
         )
+        announced_digital_ids = (
+            set()
+            if result.is_first_run or is_first_digital_run
+            else db.get_announced_digital_ids(batch_movie_ids)
+        )
         checks = await asyncio.gather(
             *(
                 _fetch_movie_provider_names(movie_id, title, result)
@@ -299,13 +334,15 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
 
         provider_records: list[tuple[int, str]] = []
         announce_records: list[tuple[int, str]] = []
+        digital_announce_records: list[tuple[int, str]] = []
 
         for (movie_id, title, tracker_user_id), check_result in zip(batch, checks):
             if isinstance(check_result, Exception):
                 _log(result, f"  [warn] Provider check failed for {title}: {check_result}", warning=True)
                 continue
 
-            provider_names, currently_streaming = check_result
+            provider_names, currently_streaming, digital_names, currently_digital = check_result
+            is_tracked = movie_id in tracked_ids
 
             known_provider_names = seen_providers.get(movie_id, set())
             newly_seen = [
@@ -315,6 +352,18 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
             ]
             provider_records.extend((movie_id, provider_name) for provider_name in newly_seen)
 
+            # Digital snapshots share provider_snapshots, namespaced by prefix.
+            newly_digital: list[str] = []
+            if is_tracked:
+                newly_digital = [
+                    name
+                    for name in digital_names
+                    if db.DIGITAL_SNAPSHOT_PREFIX + name not in known_provider_names
+                ]
+                provider_records.extend(
+                    (movie_id, db.DIGITAL_SNAPSHOT_PREFIX + name) for name in newly_digital
+                )
+
             # Skip everything during first-ever run (baseline only)
             if result.is_first_run:
                 continue
@@ -322,17 +371,30 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
             # First announce-aware run: silently mark currently-streaming films as announced
             if is_first_announce_run and currently_streaming:
                 announce_records.append((movie_id, title))
-                continue
-
-            # Normal flow: only announce if it has new providers AND hasn't been announced before
-            if newly_seen:
+            elif newly_seen:
+                # Only announce if it has new providers AND hasn't been announced before
                 if movie_id in announced_ids:
                     result.skipped_already_announced += 1
                 else:
-                    result.announcements.append((movie_id, title, newly_seen, tracker_user_id))
+                    result.announcements.append(
+                        (movie_id, title, newly_seen, tracker_user_id, "subscription")
+                    )
+
+            # Digital tier (tracked movies only)
+            if is_tracked:
+                if is_first_digital_run and currently_digital:
+                    digital_announce_records.append((movie_id, title))
+                elif newly_digital:
+                    if movie_id in announced_digital_ids:
+                        result.skipped_already_announced += 1
+                    else:
+                        result.announcements.append(
+                            (movie_id, title, newly_digital, tracker_user_id, "digital")
+                        )
 
         db.record_providers_many(provider_records)
         db.record_announced_movies_many(announce_records)
+        db.record_announced_digital_many(digital_announce_records)
 
     print(f"[tracker] Scan complete. {len(result.announcements)} new announcement(s).")
     if result.skipped_already_announced > 0:
@@ -354,9 +416,9 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
         return result
 
     print("[tracker] Announcements:")
-    for movie_id, title, providers, tracker_user_id in result.announcements:
+    for movie_id, title, providers, tracker_user_id, tier in result.announcements:
         provider_list = ", ".join(providers)
-        print(f"  • {title} → {provider_list}")
+        print(f"  • {title} → {provider_list} [{tier}]")
 
     if dry_run or bot is None:
         print("[tracker] Dry run — not posting to Discord.")
@@ -364,11 +426,14 @@ async def run_check(bot: discord.Client | None = None, dry_run: bool = True) -> 
         return result
 
     print("[tracker] Posting announcements to Discord...")
-    for movie_id, title, new_providers, tracker_user_id in result.announcements:
-        ok = await _post_announcement(bot, movie_id, new_providers, tracker_user_id, result)
+    for movie_id, title, new_providers, tracker_user_id, tier in result.announcements:
+        ok = await _post_announcement(bot, movie_id, new_providers, tracker_user_id, result, tier)
         if ok:
             result.posted_count += 1
-            db.record_announced_movie(movie_id, title)
+            if tier == "digital":
+                db.record_announced_digital(movie_id, title)
+            else:
+                db.record_announced_movie(movie_id, title)
             await _award_stream_prophet(bot, tracker_user_id, movie_id)
         await asyncio.sleep(1)
     print(f"[tracker] Posted {result.posted_count}/{len(result.announcements)} announcements.")

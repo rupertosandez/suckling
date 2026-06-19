@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.9.0] - 2026-06-18
+
+### Added
+
+- `/track` now alerts you the moment a tracked movie shows up to rent or buy on a digital store (Apple TV, Google Play, Amazon Video, etc.), not just when it lands on a subscription service. Digital and subscription are announced separately, so you still get the dedicated subscription ping (including the Shudder alert) when the movie later starts streaming.
+
+### Changed
+
+- The `/track` confirmation now tells you if a movie is already available to rent or buy, in addition to whether it is already streaming.
+
 ## [2.8.0] - 2026-06-16
 
 ### Added

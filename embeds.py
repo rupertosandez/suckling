@@ -178,6 +178,46 @@ def streaming_announcement_embed(details: dict, new_providers: list[str]) -> dis
     return embed
 
 
+def digital_announcement_embed(details: dict, new_providers: list[str]) -> discord.Embed:
+    title = details.get("title", "Unknown")
+    release_date = details.get("release_date", "")
+    year = release_date[:4] if release_date else "TBA"
+    overview = details.get("overview") or ""
+    director = tmdb.get_director(details)
+    tmdb_url = f"https://www.themoviedb.org/movie/{details['id']}"
+
+    if len(new_providers) == 1:
+        header = f"📀 Now available to rent or buy on **{new_providers[0]}**"
+    else:
+        provider_list = ", ".join(f"**{p}**" for p in new_providers)
+        header = f"📀 Now available to rent or buy on {provider_list}"
+
+    if len(overview) > 300:
+        overview = overview[:297].rstrip() + "..."
+
+    description_parts = [header]
+    if overview:
+        description_parts.append("")
+        description_parts.append(overview)
+
+    embed = discord.Embed(
+        title=f"{title} ({year})",
+        description="\n".join(description_parts),
+        url=tmdb_url,
+        color=0x1ABC9C,
+    )
+
+    if director:
+        embed.add_field(name="Director", value=director, inline=True)
+
+    poster = tmdb.poster_url(details.get("poster_path"))
+    if poster:
+        embed.set_thumbnail(url=poster)
+
+    embed.set_footer(text="Data from TMDB")
+    return embed
+
+
 def _cleanup_date_label(value) -> str:
     if not value:
         return "Never watched"
