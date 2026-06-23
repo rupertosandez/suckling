@@ -309,6 +309,14 @@ def _get_pg_pool():
             min_size=config.DB_POOL_MIN_SIZE,
             max_size=config.DB_POOL_MAX_SIZE,
             kwargs={"row_factory": dict_row},
+            # Validate (and transparently reconnect) a pooled connection on
+            # checkout. Without this, a connection the server dropped while idle
+            # gets handed to a command and fails on first use with "SSL
+            # connection has been closed unexpectedly".
+            check=ConnectionPool.check_connection,
+            # Proactively retire connections that have sat idle longer than this
+            # so we rarely even reach a server-side idle timeout.
+            max_idle=300,
             open=False,
         )
         _pg_pool.open()
