@@ -366,8 +366,8 @@ class AdminCog(commands.Cog):
             user_id = row["user_id"]
             member = None
             try:
-                member = guild.get_member(int(user_id)) if guild else None
-            except (TypeError, ValueError):
+                member = await guild.fetch_member(int(user_id)) if guild else None
+            except (discord.NotFound, discord.HTTPException, TypeError, ValueError):
                 member = None
 
             accounts.append({
