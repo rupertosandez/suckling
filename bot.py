@@ -33,6 +33,11 @@ import views
 LB_ACTIVITY_POST_LIMIT = 20
 LB_ACTIVITY_COMPACT_THRESHOLD = 3
 LB_ACTIVITY_WINDOW_MINUTES = 60
+# Cap how far back a single run will backfill after downtime, so a long gap
+# (e.g. the host PC being off) doesn't dump a huge backlog at once. Anything
+# newer than the last successful run is still posted, even if older than the
+# recency window.
+LB_ACTIVITY_MAX_BACKFILL_HOURS = 24
 ACHIEVEMENT_SPEEDRUN_SECONDS = 10
 COG_EXTENSIONS = (
     "cogs.achievements",
@@ -359,11 +364,14 @@ def _parse_iso_datetime(value: str | None) -> datetime | None:
 
 
 def _lb_activity_window_start(now: datetime) -> datetime:
-    recent_cutoff = now - timedelta(minutes=LB_ACTIVITY_WINDOW_MINUTES)
     last_run = _parse_iso_datetime(db.get_lb_activity_last_run_at())
     if last_run is None:
-        return recent_cutoff
-    return max(recent_cutoff, last_run)
+        return now - timedelta(minutes=LB_ACTIVITY_WINDOW_MINUTES)
+    # Trust the last successful run as the window start so entries logged during
+    # a short gap between runs (or across a restart) still post. Only floor the
+    # lookback to bound backfill after long downtime.
+    backfill_floor = now - timedelta(hours=LB_ACTIVITY_MAX_BACKFILL_HOURS)
+    return max(backfill_floor, last_run)
 
 
 async def run_lb_activity_check(
