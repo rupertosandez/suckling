@@ -92,6 +92,7 @@ class SucklingBot(commands.Bot):
 bot = SucklingBot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
 _shutdown_started = False
+_commands_synced = False
 _bot_loop: asyncio.AbstractEventLoop | None = None
 _instance_lock_handle = None
 _PID_FILE_NAME = "bot.pid"
@@ -578,6 +579,9 @@ async def _scheduled_plex_incremental_refresh():
         return
     try:
         await plex.refresh_incremental_cache()
+    except plex.PlexError as e:
+        logger.log_warning("scheduled_plex_incremental_refresh", f"Plex unreachable: {e}")
+        print(f"[scheduler] Plex incremental refresh failed: {e}")
     except Exception as e:
         logger.log_exception("scheduled_plex_incremental_refresh", e)
         print(f"[scheduler] Plex incremental refresh failed: {e}")
@@ -588,6 +592,9 @@ async def _scheduled_plex_full_refresh():
         return
     try:
         await plex.refresh_full_cache()
+    except plex.PlexError as e:
+        logger.log_warning("scheduled_plex_full_refresh", f"Plex unreachable: {e}")
+        print(f"[scheduler] Plex full refresh failed: {e}")
     except Exception as e:
         logger.log_exception("scheduled_plex_full_refresh", e)
         print(f"[scheduler] Plex full refresh failed: {e}")
@@ -595,17 +602,23 @@ async def _scheduled_plex_full_refresh():
 
 @bot.event
 async def on_ready():
-    global _bot_loop
+    global _bot_loop, _commands_synced
     _bot_loop = asyncio.get_running_loop()
 
     print(f"Logged in as {bot.user} (id: {bot.user.id})")
-    guild = discord.Object(id=config.GUILD_ID)
-    try:
-        bot.tree.copy_global_to(guild=guild)
-        synced = await bot.tree.sync(guild=guild)
-        print(f"Synced {len(synced)} slash command(s) to guild {config.GUILD_ID}")
-    except Exception as e:
-        print(f"Failed to sync commands: {e}")
+
+    # on_ready fires on every gateway reconnect, not just first login. Only
+    # sync the command tree once per process so a flapping connection can't
+    # spam Discord's sync rate limit.
+    if not _commands_synced:
+        guild = discord.Object(id=config.GUILD_ID)
+        try:
+            bot.tree.copy_global_to(guild=guild)
+            synced = await bot.tree.sync(guild=guild)
+            print(f"Synced {len(synced)} slash command(s) to guild {config.GUILD_ID}")
+            _commands_synced = True
+        except Exception as e:
+            print(f"Failed to sync commands: {e}")
 
     if not scheduler.running:
         scheduler.add_job(

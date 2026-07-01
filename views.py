@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from datetime import datetime, timezone
 import re
@@ -505,40 +506,41 @@ async def _confirm_rental(
     user_timezone = db.get_user_timezone(user_id)
     due_at = rental_module.compute_due_at(now, user_timezone)
 
-    active_count = _active_rental_count_for_user(user_id)
-    if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
-        await interaction.edit_original_response(
-            content=_active_rental_limit_message(active_count),
-            embed=None,
-            view=None,
-        )
-        return
+    async with _rental_lock(user_id):
+        active_count = _active_rental_count_for_user(user_id)
+        if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
+            await interaction.edit_original_response(
+                content=_active_rental_limit_message(active_count),
+                embed=None,
+                view=None,
+            )
+            return
 
-    # Check reviews channel is configured before committing
-    reviews_channel_id = db.get_reviews_channel_id()
-    if not reviews_channel_id:
-        await interaction.edit_original_response(
-            content=(
-                "⚠️ the reviews forum hasn't been configured yet. "
-                "ask an admin to run `/setreviews` first."
-            ),
-            embed=None,
-            view=None,
-        )
-        return
+        # Check reviews channel is configured before committing
+        reviews_channel_id = db.get_reviews_channel_id()
+        if not reviews_channel_id:
+            await interaction.edit_original_response(
+                content=(
+                    "⚠️ the reviews forum hasn't been configured yet. "
+                    "ask an admin to run `/setreviews` first."
+                ),
+                embed=None,
+                view=None,
+            )
+            return
 
-    rental_id = db.create_rental(
-        user_id=user_id,
-        user_name=user_name,
-        plex_key=movie["rating_key"],
-        title=movie["title"],
-        year=movie.get("year"),
-        poster_url=movie.get("thumb_url"),
-        rented_at=now.isoformat(),
-        due_at=due_at.isoformat(),
-        rerolls_used=rerolls_used,
-        initiated_by=initiated_by,
-    )
+        rental_id = db.create_rental(
+            user_id=user_id,
+            user_name=user_name,
+            plex_key=movie["rating_key"],
+            title=movie["title"],
+            year=movie.get("year"),
+            poster_url=movie.get("thumb_url"),
+            rented_at=now.isoformat(),
+            due_at=due_at.isoformat(),
+            rerolls_used=rerolls_used,
+            initiated_by=initiated_by,
+        )
 
     # Create the forum thread
     thread_ok = await rental_module.create_forum_thread(
@@ -581,6 +583,23 @@ def _active_rental_limit_message(active_count: int) -> str:
 
 def _active_rental_count_for_user(user_id: str) -> int:
     return len(db.get_active_rentals(user_id))
+
+
+_RENTAL_LOCKS: dict[str, asyncio.Lock] = {}
+
+
+def _rental_lock(user_id: str) -> asyncio.Lock:
+    """Serialize count-then-insert rental confirmation per user.
+
+    Without this, two near-simultaneous accepts (e.g. a double-clicked
+    confirm button) can both pass the active-rental count check before
+    either inserts, producing more than MAX_ACTIVE_RENTALS_PER_USER.
+    """
+    lock = _RENTAL_LOCKS.get(user_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _RENTAL_LOCKS[user_id] = lock
+    return lock
 
 
 class PickOwnRentalModal(discord.ui.Modal, title="pick a rental"):

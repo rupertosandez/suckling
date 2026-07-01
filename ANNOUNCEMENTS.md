@@ -17,3 +17,7 @@ How it works:
 ## [2.7.7]
 
 quicker on my feet now. commands don't make me freeze up while i talk to the database, so everything should feel snappier.
+
+## [2.9.1]
+
+just some housekeeping under the hood, nothing you'll notice day to day.

@@ -37,3 +37,8 @@ def setup_logging() -> None:
 def log_exception(source: str, exc: BaseException) -> None:
     """Log an exception with full traceback, tagged with a source name."""
     logging.getLogger(source).exception("Unhandled exception: %s", exc)
+
+
+def log_warning(source: str, message: str) -> None:
+    """Log an expected/transient failure without a traceback, at WARNING."""
+    logging.getLogger(source).warning(message)
