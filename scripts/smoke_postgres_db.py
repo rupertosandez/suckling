@@ -15,6 +15,8 @@ SMOKE_TMDB_ID = 999999001
 SMOKE_PLEX_KEY = "__smoke_plex_key__"
 SMOKE_MACGUFFIN_ID = "__smoke_macguffin__"
 SMOKE_ACHIEVEMENT_ID = "__smoke_achievement__"
+SMOKE_PLEX_RATING_KEY_A = "__smoke_plex_apple__"
+SMOKE_PLEX_RATING_KEY_B = "__smoke_plex_banana__"
 
 
 def cleanup() -> None:
@@ -32,6 +34,47 @@ def cleanup() -> None:
         conn.execute("DELETE FROM tracked_movies WHERE tmdb_id = ?", (SMOKE_TMDB_ID,))
         conn.execute("DELETE FROM lb_accounts WHERE user_id = ?", (SMOKE_USER_ID,))
         conn.execute("DELETE FROM user_timezones WHERE user_id = ?", (SMOKE_USER_ID,))
+        conn.execute(
+            "DELETE FROM plex_library_cache WHERE rating_key IN (?, ?)",
+            (SMOKE_PLEX_RATING_KEY_A, SMOKE_PLEX_RATING_KEY_B),
+        )
+
+
+def check_dialect_parity() -> None:
+    """Exercise the paths where SQLite and Postgres could silently diverge.
+
+    These guard the dialect handling in db.py: case-insensitive search, case-
+    insensitive ordering, and placeholder conversion that must not corrupt a
+    literal `?` inside a string literal.
+    """
+    # Case-insensitive LIKE. watchlist_remove_by_title is pure SQL with no
+    # Python-side fallback, so a Postgres regression to case-sensitive LIKE would
+    # make the lowercase fragment miss the mixed-case title and delete 0 rows.
+    assert db.watchlist_add(SMOKE_USER_ID, "CaseTest Film", 2026, source="manual") is True
+    assert db.watchlist_remove_by_title(SMOKE_USER_ID, "casetest film") == 1
+
+    # Case-insensitive ORDER BY. Lowercase "apple" sorts after uppercase "Banana"
+    # under case-sensitive ASCII ordering but before it when case-insensitive.
+    db.upsert_plex_library_cache([
+        {"rating_key": SMOKE_PLEX_RATING_KEY_A, "title": "apple (smoke)"},
+        {"rating_key": SMOKE_PLEX_RATING_KEY_B, "title": "Banana (smoke)"},
+    ])
+    ordered = [
+        movie["rating_key"]
+        for movie in db.get_plex_library_cache()
+        if movie["rating_key"] in {SMOKE_PLEX_RATING_KEY_A, SMOKE_PLEX_RATING_KEY_B}
+    ]
+    assert ordered == [SMOKE_PLEX_RATING_KEY_A, SMOKE_PLEX_RATING_KEY_B], ordered
+
+    # Placeholder conversion must bind `?` params without mangling a literal `?`
+    # that lives inside a quoted string in the SQL text.
+    with db._connect() as conn:
+        row = conn.execute(
+            "SELECT ? AS bound, 'literal ? mark' AS literal",
+            ("bound value",),
+        ).fetchone()
+    assert row["bound"] == "bound value"
+    assert row["literal"] == "literal ? mark"
 
 
 def main() -> None:
@@ -87,6 +130,8 @@ def main() -> None:
     assert db.add_earned_achievement(SMOKE_USER_ID, SMOKE_ACHIEVEMENT_ID, "smoke user") is False
     db.set_displayed_achievements(SMOKE_USER_ID, [SMOKE_ACHIEVEMENT_ID])
     assert db.get_displayed_achievements(SMOKE_USER_ID)
+
+    check_dialect_parity()
 
     cleanup()
     print("postgres smoke ok")

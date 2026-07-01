@@ -11,6 +11,7 @@ when shipping bot updates, keep the public github pages site in sync alongside t
 
 for each public bot release:
 
+- run `python scripts/prerelease_check.py` (against the live `DATABASE_URL` when the change touches `db.py` dialect handling) and confirm it passes.
 - update the bot code and any internal project notes/changelog as needed.
 - update the site `CHANGELOG.md` with member-facing release notes.
 - update the site `COMMANDS.md` if commands were added, renamed, removed, or visibly changed.

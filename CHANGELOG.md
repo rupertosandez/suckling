@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.9.1.1] - 2026-07-01
+
+### Changed
+
+- Centralized SQLite/Postgres dialect handling in `db.py`. Case-insensitive search and ordering and insert-returning-id are now declared per query (`_like_ci`, `_order_ci`, `_returning_id`) instead of guessed from SQL text; `INSERT OR IGNORE` is translated generically for any table; and placeholder conversion no longer corrupts a literal `?` inside a string literal. Removes the hardcoded table lists and token-matching that could silently diverge between the two backends.
+- Added `scripts/prerelease_check.py` and expanded the Postgres smoke test to cover the dialect-parity paths, wiring both into the pre-release sanity checks.
+
 ## [2.9.1] - 2026-07-01
 
 ### Changed

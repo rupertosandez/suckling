@@ -247,22 +247,91 @@ def _using_postgres() -> bool:
     return bool(config.DATABASE_URL)
 
 
-def _postgres_query(sql: str) -> str:
-    sql = sql.replace("INSERT OR IGNORE INTO", "INSERT INTO")
-    sql = sql.replace("COLLATE NOCASE", "")
-    sql = sql.replace(" title LIKE ", " title ILIKE ")
-    sql = sql.replace("?", "%s")
-    if "INSERT INTO provider_snapshots" in sql and "ON CONFLICT" not in sql:
-        sql = f"{sql} ON CONFLICT DO NOTHING"
-    if "INSERT INTO announced_movies" in sql and "ON CONFLICT" not in sql:
-        sql = f"{sql} ON CONFLICT DO NOTHING"
-    if "INSERT INTO announced_digital" in sql and "ON CONFLICT" not in sql:
-        sql = f"{sql} ON CONFLICT DO NOTHING"
-    if "INSERT INTO macguffin_free_claims" in sql and "ON CONFLICT" not in sql:
-        sql = f"{sql} ON CONFLICT DO NOTHING"
-    if sql.lstrip().upper().startswith("INSERT INTO RENTALS") and "RETURNING" not in sql.upper():
-        sql = f"{sql} RETURNING id"
+def _like_ci() -> str:
+    """Case-insensitive LIKE operator for the active dialect.
+
+    SQLite's LIKE is already case-insensitive for ASCII; Postgres's LIKE is not,
+    so it needs ILIKE to match. Declaring this per query (rather than pattern
+    matching the SQL text) keeps every column case-insensitive on both dialects.
+    """
+    return "ILIKE" if _using_postgres() else "LIKE"
+
+
+def _order_ci(column: str) -> str:
+    """Case-insensitive ORDER BY expression for the active dialect.
+
+    SQLite uses `COLLATE NOCASE`; Postgres has no NOCASE collation, so we lower
+    the column instead. Declared per query so ordering can't silently become
+    case-sensitive on Postgres.
+    """
+    if _using_postgres():
+        return f"LOWER({column})"
+    return f"{column} COLLATE NOCASE"
+
+
+def _returning_id(sql: str) -> str:
+    """Append `RETURNING id` on Postgres so an INSERT can surface the new id.
+
+    SQLite exposes the new rowid via `cursor.lastrowid`; Postgres needs an
+    explicit RETURNING, which _PostgresCursor reads back into lastrowid. Callers
+    that need the inserted id wrap their INSERT with this instead of relying on a
+    table-name guess.
+    """
+    if _using_postgres():
+        return f"{sql} RETURNING id"
     return sql
+
+
+def _convert_placeholders(sql: str) -> str:
+    """Rewrite `?` bind markers to Postgres `%s`, skipping quoted string literals.
+
+    A blind ``sql.replace("?", "%s")`` would corrupt a literal `?` inside a
+    single-quoted string. This walks the text and only rewrites `?` that sits
+    outside a string literal (handling the SQL `''` escape for an embedded
+    quote).
+    """
+    out: list[str] = []
+    in_string = False
+    i = 0
+    length = len(sql)
+    while i < length:
+        ch = sql[i]
+        if ch == "'":
+            if in_string and i + 1 < length and sql[i + 1] == "'":
+                # Escaped quote inside a literal ('') stays inside the literal.
+                out.append("''")
+                i += 2
+                continue
+            in_string = not in_string
+            out.append(ch)
+        elif ch == "?" and not in_string:
+            out.append("%s")
+        else:
+            out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _postgres_query(sql: str) -> str:
+    """Adapt SQLite-flavored SQL to Postgres.
+
+    Only two dialect concerns are handled here, both keyed off explicit markers
+    already present in the SQL rather than guessed from table names:
+
+    * insert-or-ignore: ``INSERT OR IGNORE INTO ...`` becomes
+      ``INSERT INTO ... ON CONFLICT DO NOTHING`` for any table. The `OR IGNORE`
+      is the explicit declaration of intent, so new tables need no change here.
+    * placeholders: `?` becomes `%s`, skipping `?` inside string literals.
+
+    Case-insensitivity (`_like_ci` / `_order_ci`) and insert-returning-id
+    (`_returning_id`) are declared at the call site so SQLite and Postgres are
+    guaranteed to agree, instead of relying on token matching in this function.
+    """
+    if "INSERT OR IGNORE INTO" in sql:
+        sql = sql.replace("INSERT OR IGNORE INTO", "INSERT INTO")
+        if "ON CONFLICT" not in sql.upper():
+            sql = f"{sql} ON CONFLICT DO NOTHING"
+    return _convert_placeholders(sql)
 
 
 class _PostgresCursor:
@@ -728,8 +797,8 @@ def get_plex_library_cache() -> list[dict]:
                    updated_at, genres_json, directors_json, writers_json,
                    actors_json, countries_json, collections_json
             FROM plex_library_cache
-            ORDER BY title COLLATE NOCASE
             """
+            f"ORDER BY {_order_ci('title')}"
         ).fetchall()
 
     movies = []
@@ -1300,10 +1369,12 @@ def create_rental(
     """Insert a new rental record. Returns the new rental id."""
     with _connect() as conn:
         cursor = conn.execute(
-            "INSERT INTO rentals "
-            "(user_id, user_name, plex_key, title, year, poster_url, "
-            " rented_at, due_at, rerolls_used, initiated_by, status) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')",
+            _returning_id(
+                "INSERT INTO rentals "
+                "(user_id, user_name, plex_key, title, year, poster_url, "
+                " rented_at, due_at, rerolls_used, initiated_by, status) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')"
+            ),
             (user_id, user_name, plex_key, title, year, poster_url,
              rented_at, due_at, rerolls_used, initiated_by),
         )
@@ -1360,7 +1431,7 @@ def find_active_rental(user_id: str, query: str) -> list[dict]:
     with _connect() as conn:
         rows = conn.execute(
             "SELECT * FROM rentals "
-            "WHERE user_id = ? AND status = 'active' AND title LIKE ? "
+            f"WHERE user_id = ? AND status = 'active' AND title {_like_ci()} ? "
             "ORDER BY rented_at ASC",
             (user_id, pattern),
         ).fetchall()
@@ -1731,7 +1802,7 @@ def watchlist_remove_by_title(user_id: str, title_fragment: str) -> int:
     """Remove entries matching a partial title (case-insensitive). Returns rows deleted."""
     with _connect() as conn:
         cursor = conn.execute(
-            "DELETE FROM watchlist WHERE user_id = ? AND title LIKE ?",
+            f"DELETE FROM watchlist WHERE user_id = ? AND title {_like_ci()} ?",
             (user_id, f"%{title_fragment}%"),
         )
         return cursor.rowcount
