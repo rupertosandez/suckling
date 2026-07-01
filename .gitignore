@@ -7,6 +7,9 @@
 data/
 local-docs/
 OPTIMIZATION_REPORT.md
+HEALTH_AND_EFFICIENCY_PLAN.md
+SCALING_ROADMAP.md
+scripts/replay_lb_activity.py
 *.db
 *.sqlite
 *.sqlite3
@@ -26,7 +29,8 @@ __pycache__/
 *.pyc
 *.pyo
 
-# ide/editor files
+# ide/editor / agent config (local only)
+CLAUDE.md
 .vscode/
 .idea/
 *.swp
