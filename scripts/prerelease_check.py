@@ -3,6 +3,7 @@
 Runs the sanity checks that should pass before shipping, in one command:
 
 * byte-compile the whole tree (catches syntax errors)
+* the pytest unit suite (dialect helpers, rental late-fee/due-date math)
 * the Postgres dialect smoke test, when DATABASE_URL is set
 
 Run it with the repo's venv, e.g. `venv\\Scripts\\python.exe scripts/prerelease_check.py`.
@@ -33,6 +34,7 @@ def main() -> None:
         "compile",
         [python, "-m", "compileall", "-q", "-x", r"venv|__pycache__", "."],
     )
+    _run("pytest", [python, "-m", "pytest", "-q", "tests"])
     if os.getenv("DATABASE_URL"):
         _run("postgres-smoke", [python, "scripts/smoke_postgres_db.py"])
     else:

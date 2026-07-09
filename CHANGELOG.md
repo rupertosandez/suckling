@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.9.1.2] - 2026-07-09
+
+### Changed
+
+- Scheduled jobs no longer log a spurious "missed" warning for the routine ~1 second of execution jitter every hour; the warning now only fires for a genuinely missed run.
+- Added a first pytest suite covering the SQLite/Postgres dialect helpers and rental late-fee/due-date math (including a DST-transition case), wired into `scripts/prerelease_check.py`.
+- Repo housekeeping: removed the fully-merged `codex/refactor-bot-cogs` branch/worktree and a stale local database backup file.
+
 ## [2.9.1.1] - 2026-07-01
 
 ### Changed

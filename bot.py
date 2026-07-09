@@ -90,7 +90,7 @@ class SucklingBot(commands.Bot):
 
 
 bot = SucklingBot(command_prefix="!", intents=intents)
-scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(job_defaults={"misfire_grace_time": 30})
 _shutdown_started = False
 _commands_synced = False
 _bot_loop: asyncio.AbstractEventLoop | None = None

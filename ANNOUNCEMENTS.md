@@ -25,3 +25,7 @@ just some housekeeping under the hood, nothing you'll notice day to day.
 ## [2.9.1.1]
 
 more behind-the-scenes tidying. searching for a movie works the same now no matter how you type it, caps or not. nothing new to click, just keeping things running smooth.
+
+## [2.9.1.2]
+
+another quiet one under the hood. nothing to click, nothing you'll notice.

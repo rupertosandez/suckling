@@ -7,3 +7,4 @@ plexapi>=4.15.0
 psycopg[binary,pool]>=3.2.0
 pystray>=0.19.5
 plyer>=2.1.0
+pytest>=8.0.0
