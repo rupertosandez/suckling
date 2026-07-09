@@ -32,8 +32,6 @@ another quiet one under the hood. nothing to click, nothing you'll notice.
 
 ## [2.10.0]
 
-a few new things:
-
-- `/guffinhistory <card>` shows a macguffin's ownership trail - who's had it and when it moved
-- every sunday, a weekly recap drops in the feed channel with top renters, new macguffin pulls, achievement unlocks, and the current game leaders
-- `/myrental` and `/achievements` both got clearer - multiple rentals now show full detail, and your full badge collection isn't hidden anymore
+- added ownership history to macguffins. use `/guffinhistory` to view.
+- weekly recap posts every sunday
+- UX fixes for the `/myrental` and `/achievements` flows
