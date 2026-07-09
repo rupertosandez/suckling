@@ -91,23 +91,42 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
         f"**{len(displayed_ids)} / {achievement_module.MAX_DISPLAYED_ACHIEVEMENTS}** visible badge roles"
     )
 
+    displayed_id_set = set(displayed_ids)
+
     if displayed_ids:
         lines = [_achievement_line(user_id, achievement_id, earned=True) for achievement_id in displayed_ids]
-        embed.add_field(name="Displayed Badges", value="\n\n".join(filter(None, lines)), inline=False)
+        embed.add_field(name="📌 Displayed Badges", value="\n\n".join(filter(None, lines)), inline=False)
     else:
-        embed.add_field(name="Displayed Badges", value="None pinned yet.", inline=False)
+        embed.add_field(name="📌 Displayed Badges", value="None pinned yet.", inline=False)
 
     recent_lines = []
     for row in earned_rows[:5]:
         achievement = achievement_module.ACHIEVEMENT_BY_ID.get(row["achievement_id"])
         if not achievement:
             continue
+        pin_marker = " 📌" if row["achievement_id"] in displayed_id_set else ""
         recent_lines.append(
-            f"**{achievement_module.display_name(achievement)}** - "
+            f"**{achievement_module.display_name(achievement)}**{pin_marker} - "
             f"<t:{int(_timestamp(row['earned_at']))}:R>"
         )
     if recent_lines:
-        embed.add_field(name="Recent Unlocks", value="\n".join(recent_lines), inline=False)
+        embed.add_field(name="🕒 Recent Unlocks", value="\n".join(recent_lines), inline=False)
+
+    other_earned_ids = [
+        row["achievement_id"] for row in earned_rows
+        if row["achievement_id"] not in displayed_id_set
+    ]
+    if other_earned_ids:
+        other_names = [
+            achievement_module.display_name(achievement_module.ACHIEVEMENT_BY_ID[achievement_id])
+            for achievement_id in other_earned_ids
+            if achievement_id in achievement_module.ACHIEVEMENT_BY_ID
+        ]
+        shown = other_names[:15]
+        value = ", ".join(shown)
+        if len(other_names) > 15:
+            value += f", and {len(other_names) - 15} more"
+        embed.add_field(name="🏅 Other Earned Badges", value=value or "None.", inline=False)
 
     if viewer_id == user_id:
         next_lines = []
@@ -118,7 +137,7 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
             if len(next_lines) >= 5:
                 break
         if next_lines:
-            embed.add_field(name="Next Up", value="\n\n".join(next_lines), inline=False)
+            embed.add_field(name="🔒 Next Up (Not Yet Earned)", value="\n\n".join(next_lines), inline=False)
         embed.set_footer(text="Pin up to 3 badges with /achievementdisplay")
 
     return embed

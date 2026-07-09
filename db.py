@@ -17,6 +17,7 @@ LB_ACTIVITY_LAST_RUN_KEY = "lb_activity_last_run_at"
 ANNOUNCEMENTS_ENABLED_KEY = "announcements_enabled"
 DAILY_REC_ENABLED_KEY = "daily_rec_enabled"
 LB_ACTIVITY_ENABLED_KEY = "lb_activity_enabled"
+WEEKLY_RECAP_ENABLED_KEY = "weekly_recap_enabled"
 REVIEWS_CHANNEL_KEY = "reviews_channel_id"
 RENTAL_REQUEST_CHANNEL_KEY = "rental_request_channel_id"
 RENTAL_TAG_KEY = "rental_tag_id"
@@ -123,6 +124,17 @@ CREATE TABLE IF NOT EXISTS macguffin_free_claims (
     user_id TEXT PRIMARY KEY
 );
 
+CREATE TABLE IF NOT EXISTS macguffin_events (
+    id SERIAL PRIMARY KEY,
+    macguffin_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    from_user_id TEXT,
+    from_user_tag TEXT,
+    to_user_id TEXT,
+    to_user_tag TEXT,
+    created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS user_timezones (
     user_id TEXT PRIMARY KEY,
     timezone TEXT NOT NULL,
@@ -225,6 +237,8 @@ CREATE INDEX IF NOT EXISTS idx_achievement_events_user_type
     ON achievement_events (user_id, event_type);
 CREATE INDEX IF NOT EXISTS idx_achievement_earned_earned_at
     ON achievement_earned (earned_at DESC);
+CREATE INDEX IF NOT EXISTS idx_macguffin_events_macguffin_id
+    ON macguffin_events (macguffin_id, created_at);
 """
 
 
@@ -580,6 +594,17 @@ def init_db() -> None:
                 user_id  TEXT PRIMARY KEY
             );
 
+            CREATE TABLE IF NOT EXISTS macguffin_events (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                macguffin_id   TEXT NOT NULL,
+                event_type     TEXT NOT NULL,
+                from_user_id   TEXT,
+                from_user_tag  TEXT,
+                to_user_id     TEXT,
+                to_user_tag    TEXT,
+                created_at     TEXT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS user_timezones (
                 user_id      TEXT PRIMARY KEY,
                 timezone     TEXT NOT NULL,
@@ -708,6 +733,8 @@ def init_db() -> None:
                 ON achievement_events (user_id, event_type);
             CREATE INDEX IF NOT EXISTS idx_achievement_earned_earned_at
                 ON achievement_earned (earned_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_macguffin_events_macguffin_id
+                ON macguffin_events (macguffin_id, created_at);
         """)
 
 
@@ -981,6 +1008,17 @@ def is_lb_activity_enabled() -> bool:
 
 def set_lb_activity_enabled(enabled: bool) -> None:
     set_setting(LB_ACTIVITY_ENABLED_KEY, "1" if enabled else "0")
+
+
+def is_weekly_recap_enabled() -> bool:
+    raw = get_setting(WEEKLY_RECAP_ENABLED_KEY)
+    if raw is None:
+        return True
+    return raw == "1"
+
+
+def set_weekly_recap_enabled(enabled: bool) -> None:
+    set_setting(WEEKLY_RECAP_ENABLED_KEY, "1" if enabled else "0")
 
 
 def get_reviews_channel_id() -> int | None:
@@ -1406,6 +1444,18 @@ def get_active_rental_count_for_user(user_id: str) -> int:
             "SELECT COUNT(*) AS c FROM rentals WHERE user_id = ? AND status = 'active'",
             (user_id,),
         ).fetchone()["c"]
+
+
+def get_weekly_top_renters(since_iso: str, limit: int = 3) -> list[dict]:
+    """Return the members with the most rentals returned since since_iso."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT user_id, user_name, COUNT(*) AS returned_count "
+            "FROM rentals WHERE status = 'returned' AND returned_at >= ? "
+            "GROUP BY user_id, user_name ORDER BY returned_count DESC, user_name ASC LIMIT ?",
+            (since_iso, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
 
 
 def get_active_rental_by_id(user_id: str, rental_id: int) -> dict | None:
@@ -1848,6 +1898,23 @@ def macguffin_is_claimed(macguffin_id: str) -> bool:
         return row is not None
 
 
+def _record_macguffin_event(
+    conn,
+    macguffin_id: str,
+    event_type: str,
+    from_user_id: str | None,
+    from_user_tag: str | None,
+    to_user_id: str | None,
+    to_user_tag: str | None,
+) -> None:
+    conn.execute(
+        "INSERT INTO macguffin_events "
+        "(macguffin_id, event_type, from_user_id, from_user_tag, to_user_id, to_user_tag, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (macguffin_id, event_type, from_user_id, from_user_tag, to_user_id, to_user_tag, _utc_now_iso()),
+    )
+
+
 def claim_macguffin(
     macguffin_id: str,
     owner_id: str,
@@ -1861,6 +1928,7 @@ def claim_macguffin(
             "VALUES (?, ?, ?, ?, ?)",
             (macguffin_id, owner_id, owner_tag, _utc_now_iso(), acquired_via),
         )
+        _record_macguffin_event(conn, macguffin_id, acquired_via, None, None, owner_id, owner_tag)
 
 
 def get_macguffin_inventory(user_id: str) -> list[dict]:
@@ -1898,20 +1966,39 @@ def transfer_macguffin(
     macguffin_id: str,
     new_owner_id: str,
     new_owner_tag: str,
+    via: str = "gift",
 ) -> bool:
     """Transfer a macguffin to a new owner. Returns True if the row was updated."""
     with _connect() as conn:
+        previous = conn.execute(
+            "SELECT owner_id, owner_tag FROM macguffins WHERE macguffin_id = ?",
+            (macguffin_id,),
+        ).fetchone()
         cursor = conn.execute(
-            "UPDATE macguffins SET owner_id = ?, owner_tag = ?, acquired_via = 'gift' "
+            "UPDATE macguffins SET owner_id = ?, owner_tag = ?, acquired_via = ? "
             "WHERE macguffin_id = ?",
-            (new_owner_id, new_owner_tag, macguffin_id),
+            (new_owner_id, new_owner_tag, via, macguffin_id),
         )
+        if cursor.rowcount > 0:
+            _record_macguffin_event(
+                conn,
+                macguffin_id,
+                via,
+                previous["owner_id"] if previous else None,
+                previous["owner_tag"] if previous else None,
+                new_owner_id,
+                new_owner_tag,
+            )
         return cursor.rowcount > 0
 
 
 def remove_macguffin(macguffin_id: str, owner_id: str | None = None) -> bool:
     """Delete a macguffin ownership record. Optionally require the current owner."""
     with _connect() as conn:
+        previous = conn.execute(
+            "SELECT owner_id, owner_tag FROM macguffins WHERE macguffin_id = ?",
+            (macguffin_id,),
+        ).fetchone()
         if owner_id is None:
             cursor = conn.execute(
                 "DELETE FROM macguffins WHERE macguffin_id = ?",
@@ -1922,7 +2009,39 @@ def remove_macguffin(macguffin_id: str, owner_id: str | None = None) -> bool:
                 "DELETE FROM macguffins WHERE macguffin_id = ? AND owner_id = ?",
                 (macguffin_id, owner_id),
             )
+        if cursor.rowcount > 0 and previous:
+            _record_macguffin_event(
+                conn,
+                macguffin_id,
+                "removed",
+                previous["owner_id"],
+                previous["owner_tag"],
+                None,
+                None,
+            )
         return cursor.rowcount > 0
+
+
+def get_macguffin_event_history(macguffin_id: str) -> list[dict]:
+    """Return a macguffin's ownership trail (claims, gifts, admin moves, removals), oldest first."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT event_type, from_user_id, from_user_tag, to_user_id, to_user_tag, created_at "
+            "FROM macguffin_events WHERE macguffin_id = ? ORDER BY created_at ASC",
+            (macguffin_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_macguffins_acquired_since(since_iso: str, limit: int = 5) -> list[dict]:
+    """Return macguffins claimed/transferred on or after since_iso, most recent first."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT macguffin_id, owner_id, owner_tag, acquired_at, acquired_via "
+            "FROM macguffins WHERE acquired_at >= ? ORDER BY acquired_at DESC LIMIT ?",
+            (since_iso, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
 
 
 def has_used_free_claim(user_id: str) -> bool:

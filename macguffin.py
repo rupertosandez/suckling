@@ -270,6 +270,6 @@ def drop_macguffin(
     return dict(card)
 
 
-def transfer(macguffin_id: str, new_owner_id: str, new_owner_tag: str) -> bool:
+def transfer(macguffin_id: str, new_owner_id: str, new_owner_tag: str, via: str = "gift") -> bool:
     """Transfer an already-claimed MacGuffin to a new owner."""
-    return db.transfer_macguffin(macguffin_id, new_owner_id, new_owner_tag)
+    return db.transfer_macguffin(macguffin_id, new_owner_id, new_owner_tag, via=via)

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.10.0] - 2026-07-09
+
+### Added
+
+- `/guffinhistory <card>`: see a MacGuffin's ownership trail - claims, gifts, admin moves, and removals, in order. Backed by a new `macguffin_events` log that records every future ownership change (existing cards start with an empty trail; history isn't retroactive).
+- Weekly community recap: every Sunday at 11am, Suckling posts a rundown to the feed channel - top renters, new MacGuffin pulls, new achievement unlocks, and the current `/guess` and `/six` leaders. Toggle with `/toggle feature:weekly recap`, or trigger manually with `/recapnow`.
+
+### Changed
+
+- `/myrental` now shows full detail (forum thread link, overdue flag, extension status) for every active rental, not just when you have exactly one. Previously, members with 2-3 active rentals got a stripped-down list missing the thread link and overdue warning.
+- `/achievements` now clearly separates pinned badges, other earned badges (previously invisible once you had more than 5 unpinned), and progress toward the next ones - instead of blending recent unlocks and progress hints together.
+- MacGuffins moved by an admin via `/adminguffins add` are now labeled `admin` instead of `gift` in ownership records, so provenance history reads correctly.
+
 ## [2.9.1.2] - 2026-07-09
 
 ### Changed

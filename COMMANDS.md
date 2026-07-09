@@ -129,7 +129,7 @@ if you return it late, a late fee is calculated: **$1 for every day (or part of 
 ---
 
 ### `/myrental`
-shows your active rentals, due times, and rental ids. if you only have one active rental, it shows the full rental status with the forum thread.
+shows your active rentals, due times, rental ids, and forum thread links. flags anything overdue.
 
 ephemeral — only you see it.
 
@@ -187,6 +187,15 @@ shows 5 at a time, with a **view** button for each card.
 gift one of your macguffins to another member.
 
 the card leaves your collection and moves to theirs. partial card names are fine as long as the bot can tell which one you mean.
+
+---
+
+### `/guffinhistory <card>`
+see a macguffin's ownership history - who's held it and when it moved. works on any card, even ones you don't own.
+
+- `card` (required): the macguffin's name or id
+
+history only tracks moves from when this feature shipped forward, so older cards may show a shorter trail than their real age.
 
 ---
 
@@ -317,7 +326,7 @@ show the top scorers for `/six`.
 
 ## auto-posting features
 
-the bot automatically posts in four ways (admins configure the channels):
+the bot automatically posts in five ways (admins configure the channels):
 
 🩸 **daily recommendation** - every day at noon, the bot drops a random pick in the configured channel. if the film is in the library, it includes a 📼 rent button.
 
@@ -328,6 +337,8 @@ the streaming feature only announces films hitting digital for the first time �
 🏆 **achievement feed** - when members unlock badges, suckling posts a gold achievement embed to the configured feed channel.
 
 📗 **letterboxd activity** - when admins enable it, suckling posts recent diary activity from linked members.
+
+📅 **weekly recap** - every sunday at 11am, suckling posts a rundown of the week to the feed channel: top renters, new macguffin pulls, new achievement unlocks, and the current `/guess` and `/six` leaders.
 
 ---
 
@@ -437,7 +448,7 @@ set the channel where the daily recommendation posts (at noon).
 set the channel where new diary entries from linked letterboxd accounts post. when you run this, the bot seeds the current feeds first so old watches do not flood the channel.
 
 ### `/setfeed <channel>`
-set the channel where suckling feed posts go, including achievement unlocks.
+set the channel where suckling feed posts go, including achievement unlocks and the weekly recap.
 
 the bot needs send-message and embed-link permissions in the chosen channel.
 
@@ -452,7 +463,7 @@ admin only. create a Suckling FAQ thread in the chosen channel. the bot posts a 
 ### `/toggle <feature> <enabled>`
 enable or disable an auto-posting feature without removing the channel setting.
 
-- `feature`: `streaming announcements`, `daily recommendation`, or `letterboxd activity`
+- `feature`: `streaming announcements`, `daily recommendation`, `letterboxd activity`, or `weekly recap`
 - `enabled`: `True` or `False`
 
 ### `/checknow`
@@ -463,6 +474,9 @@ manually trigger the streaming check **and post** announcements live. use sparin
 
 ### `/dailynow`
 manually trigger today's daily recommendation post.
+
+### `/recapnow`
+manually trigger the weekly recap post to the feed channel.
 
 ### `/postupdate`
 post the current bot update announcement, including the changelog entry for the current version.

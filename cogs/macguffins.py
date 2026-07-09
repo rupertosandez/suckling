@@ -243,6 +243,39 @@ class MacGuffinCog(commands.Cog):
         )
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
+    @app_commands.command(name="guffinhistory", description="see a macguffin's ownership history")
+    @app_commands.describe(card="name or id of the macguffin")
+    async def guffinhistory(self, interaction: discord.Interaction, card: str):
+        await interaction.response.defer(ephemeral=True)
+
+        if not macguffin_module.CARDS:
+            macguffin_module.load_cards()
+
+        matches = _find_matches(card, list(macguffin_module.CARDS.values()))
+        if not matches:
+            await interaction.followup.send(
+                "couldn't find a macguffin by that name or id.", ephemeral=True
+            )
+            return
+
+        if len(matches) > 1:
+            options = "\n".join(
+                f"{match.get('emoji', '')} **{match.get('name', 'unknown macguffin')}** "
+                f"(`{match.get('id')}`)"
+                for match in matches[:10]
+            )
+            await interaction.followup.send(
+                "that matched more than one macguffin. try a more specific name:\n"
+                f"{options}",
+                ephemeral=True,
+            )
+            return
+
+        selected = matches[0]
+        events = await asyncio.to_thread(db.get_macguffin_event_history, selected["id"])
+        embed = embeds.macguffin_history_embed(selected, events)
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
     @app_commands.command(
         name="adminguffins",
         description="view or edit a member's macguffins (admin only)",
@@ -417,6 +450,7 @@ class MacGuffinCog(commands.Cog):
                     selected["id"],
                     target_id,
                     str(user),
+                    via="admin",
                 )
                 if not transferred:
                     await interaction.followup.send(

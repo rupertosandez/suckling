@@ -257,6 +257,7 @@ class AdminCog(commands.Cog):
         lb_activity_summary: Callable[[dict], str],
         run_plex_cleanup: Callable[..., Awaitable[object]],
         run_unpopularity_audit: Callable[..., Awaitable[object]],
+        post_weekly_recap: Callable[[discord.Client], Awaitable[bool]],
     ):
         self.bot = bot
         self.restart_process = restart_process
@@ -265,6 +266,7 @@ class AdminCog(commands.Cog):
         self.lb_activity_summary = lb_activity_summary
         self.run_plex_cleanup = run_plex_cleanup
         self.run_unpopularity_audit = run_unpopularity_audit
+        self.post_weekly_recap = post_weekly_recap
 
     @app_commands.command(
         name="botstatus",
@@ -432,6 +434,7 @@ class AdminCog(commands.Cog):
         app_commands.Choice(name="streaming announcements", value="announcements"),
         app_commands.Choice(name="daily recommendation", value="daily"),
         app_commands.Choice(name="letterboxd activity", value="lb_activity"),
+        app_commands.Choice(name="weekly recap", value="weekly_recap"),
     ])
     @app_commands.default_permissions(manage_guild=True)
     async def toggle(
@@ -483,6 +486,16 @@ class AdminCog(commands.Cog):
                 f"{'✅ Enabled' if enabled else '🔕 Disabled'} **daily horror recommendation**.{channel_note}",
                 ephemeral=True,
             )
+        elif feature.value == "weekly_recap":
+            await db.run(db.set_weekly_recap_enabled, enabled)
+            channel_id = await db.run(db.get_feed_channel_id)
+            channel_note = ""
+            if enabled and not channel_id:
+                channel_note = " ⚠️ No feed channel set yet — use `/setfeed`."
+            await interaction.followup.send(
+                f"{'✅ Enabled' if enabled else '🔕 Disabled'} **weekly recap**.{channel_note}",
+                ephemeral=True,
+            )
 
     @app_commands.command(
         name="checknow",
@@ -530,6 +543,29 @@ class AdminCog(commands.Cog):
         ok = await self.post_daily_recommendation(self.bot)
         if ok:
             await interaction.followup.send("✅ Daily recommendation posted.", ephemeral=True)
+        else:
+            await interaction.followup.send(
+                "⚠️ Failed to post — see PowerShell for details.", ephemeral=True
+            )
+
+    @app_commands.command(
+        name="recapnow",
+        description="Manually trigger the weekly community recap post (admin only)",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    async def recapnow(self, interaction: discord.Interaction):
+        channel_id = await db.run(db.get_feed_channel_id)
+        if not channel_id:
+            await interaction.response.send_message(
+                "⚠️ No feed channel set. Use `/setfeed` first.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        ok = await self.post_weekly_recap(self.bot)
+        if ok:
+            await interaction.followup.send("✅ Weekly recap posted.", ephemeral=True)
         else:
             await interaction.followup.send(
                 "⚠️ Failed to post — see PowerShell for details.", ephemeral=True
@@ -722,5 +758,6 @@ async def setup(bot: commands.Bot):
             lb_activity_summary=bot.suckling_lb_activity_summary,
             run_plex_cleanup=bot.suckling_run_plex_cleanup,
             run_unpopularity_audit=bot.suckling_run_unpopularity_audit,
+            post_weekly_recap=bot.suckling_post_weekly_recap,
         )
     )

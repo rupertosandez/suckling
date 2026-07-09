@@ -2,6 +2,7 @@ from datetime import datetime
 
 import discord
 
+import achievements as achievement_module
 import macguffin as macguffin_module
 import tmdb
 import trivia_roulette
@@ -927,23 +928,38 @@ def rental_status_list_embed(
     max_active: int,
 ) -> discord.Embed:
     """Shown by /myrental when a user has multiple active rentals."""
-    embed = discord.Embed(
-        title=f"📼 Active Rentals - {user_tag}",
-        color=0xE5A00D,
-    )
-
+    any_overdue = False
     lines = []
     for rental in rentals:
         title = rental.get("title", "Unknown")
         year = rental.get("year") or "?"
+        due_at_iso = rental.get("due_at", "")
         try:
-            due = datetime.fromisoformat(rental.get("due_at", ""))
+            due = datetime.fromisoformat(due_at_iso)
             due_str = f"<t:{int(due.timestamp())}:R>"
+            is_overdue = due < datetime.now(due.tzinfo)
         except (ValueError, TypeError):
             due_str = "due time unknown"
-        lines.append(f"`{rental['id']}` **{title} ({year})** - {due_str}")
+            is_overdue = False
+        any_overdue = any_overdue or is_overdue
 
-    embed.description = "\n".join(lines)
+        line = f"`{rental['id']}` **{title} ({year})** - {'⚠️ overdue' if is_overdue else due_str}"
+
+        thread_id = rental.get("thread_id")
+        if thread_id:
+            line += f" - <#{thread_id}>"
+
+        extensions = rental.get("extensions_used", 0)
+        if extensions:
+            line += " - extended"
+
+        lines.append(line)
+
+    embed = discord.Embed(
+        title=f"📼 Active Rentals - {user_tag}",
+        description="\n".join(lines),
+        color=0xED4245 if any_overdue else 0xE5A00D,
+    )
     embed.set_footer(
         text=f"{len(rentals)}/{max_active} active - use rental ID with /return or /extend"
     )
@@ -1644,4 +1660,127 @@ def macguffin_list_embed(
 
     embed.description = "\n".join(lines)
     embed.set_footer(text=f"{total_count} MacGuffins - page {page + 1}/{total_pages}")
+    return embed
+
+
+def _macguffin_event_line(event: dict) -> str:
+    event_type = event.get("event_type")
+    from_tag = event.get("from_user_tag")
+    to_tag = event.get("to_user_tag")
+
+    try:
+        when = f"<t:{int(datetime.fromisoformat(event.get('created_at', '')).timestamp())}:D>"
+    except (ValueError, TypeError):
+        when = "unknown date"
+
+    if event_type == "removed":
+        return f"🗑️ removed from {_macguffin_owner_text(from_tag)} - {when}"
+    if not from_tag:
+        verb = "assigned by an admin to" if event_type == "admin" else "claimed by"
+        return f"🎉 {verb} {_macguffin_owner_text(to_tag)} - {when}"
+    if event_type == "admin":
+        return (
+            f"🛠️ moved by an admin from {_macguffin_owner_text(from_tag)} "
+            f"to {_macguffin_owner_text(to_tag)} - {when}"
+        )
+    return (
+        f"🎁 gifted from {_macguffin_owner_text(from_tag)} "
+        f"to {_macguffin_owner_text(to_tag)} - {when}"
+    )
+
+
+def macguffin_history_embed(card: dict, events: list[dict]) -> discord.Embed:
+    """Ownership trail for a single MacGuffin, shown by /guffinhistory."""
+    rarity = str(card.get("rarity", "common")).lower()
+    embed = discord.Embed(
+        title=f"{card.get('emoji', '')} {card.get('name', 'Unknown MacGuffin')}".strip(),
+        color=_macguffin_color(card),
+    )
+    embed.add_field(name="RARITY", value=_MACGUFFIN_RARITIES.get(rarity, rarity), inline=True)
+    embed.add_field(name="FROM", value=card.get("source", "Unknown"), inline=True)
+    embed.add_field(name="SET", value=_macguffin_set_text(card), inline=True)
+
+    if not events:
+        embed.description = "no ownership history recorded yet - this card hasn't moved since history tracking began."
+        return embed
+
+    lines = [_macguffin_event_line(event) for event in events]
+    embed.description = "\n".join(lines[-15:])
+    if len(lines) > 15:
+        embed.set_footer(text=f"showing the 15 most recent of {len(lines)} events")
+    return embed
+
+
+def weekly_recap_embed(
+    since: datetime,
+    until: datetime,
+    top_renters: list[dict],
+    new_macguffins: list[dict],
+    new_achievements: list[dict],
+    guess_leader: dict | None,
+    six_leader: dict | None,
+) -> discord.Embed:
+    """Weekly community digest posted to the feed channel."""
+    embed = discord.Embed(
+        title="📅 This Week at Return by 9",
+        description=f"{_format_date(since)} - {_format_date(until)}",
+        color=0x5865F2,
+    )
+
+    if top_renters:
+        medals = ["🥇", "🥈", "🥉"]
+        lines = []
+        for i, row in enumerate(top_renters):
+            prefix = medals[i] if i < len(medals) else f"#{i + 1}"
+            count = row.get("returned_count", 0)
+            lines.append(
+                f"{prefix} **{row.get('user_name', 'unknown')}** - "
+                f"{count} return{'s' if count != 1 else ''}"
+            )
+        embed.add_field(name="🎬 Top Renters", value="\n".join(lines), inline=False)
+    else:
+        embed.add_field(name="🎬 Top Renters", value="No returns this week.", inline=False)
+
+    if new_macguffins:
+        lines = []
+        for row in new_macguffins:
+            card = macguffin_module.CARDS.get(row.get("macguffin_id"))
+            emoji = card.get("emoji", "") if card else ""
+            name = card.get("name") if card else row.get("macguffin_id", "unknown")
+            lines.append(
+                f"{emoji} **{name}** - {_macguffin_owner_text(row.get('owner_tag', 'unknown'))}"
+            )
+        embed.add_field(name="🎁 New MacGuffins", value="\n".join(lines), inline=False)
+    else:
+        embed.add_field(name="🎁 New MacGuffins", value="No new pulls this week.", inline=False)
+
+    if new_achievements:
+        lines = []
+        for row in new_achievements:
+            achievement = achievement_module.ACHIEVEMENT_BY_ID.get(row.get("achievement_id"))
+            name = (
+                achievement_module.display_name(achievement)
+                if achievement
+                else row.get("achievement_id", "unknown")
+            )
+            lines.append(f"🏅 **{row.get('user_tag', 'unknown')}** unlocked **{name}**")
+        embed.add_field(name="🏆 New Achievements", value="\n".join(lines), inline=False)
+    else:
+        embed.add_field(name="🏆 New Achievements", value="No unlocks this week.", inline=False)
+
+    leader_lines = []
+    if guess_leader:
+        leader_lines.append(
+            f"🎯 **{guess_leader.get('user_tag', 'unknown')}** leads /guess & /play "
+            f"with {guess_leader.get('points', 0)} pts"
+        )
+    if six_leader:
+        leader_lines.append(
+            f"🔗 **{six_leader.get('user_tag', 'unknown')}** leads /six "
+            f"with {six_leader.get('points', 0)} pts"
+        )
+    if leader_lines:
+        embed.add_field(name="🕹️ Leaderboard Leaders", value="\n".join(leader_lines), inline=False)
+
+    embed.set_footer(text="new here? check /suck, /rent, /play, and /claimguffin")
     return embed

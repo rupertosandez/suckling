@@ -28,6 +28,7 @@ import macguffin as macguffin_module
 import cleanup as cleanup_module
 import achievements as achievement_module
 import update_announcements
+import recap
 import views
 
 LB_ACTIVITY_POST_LIMIT = 20
@@ -261,6 +262,17 @@ async def _scheduled_daily_rec():
     except Exception as e:
         logger.log_exception("scheduled_daily_rec", e)
         print(f"[scheduler] Daily recommendation failed: {e}")
+
+
+async def _scheduled_weekly_recap():
+    if not db.is_weekly_recap_enabled():
+        print("[scheduler] Weekly recap skipped — weekly recap disabled")
+        return
+    try:
+        await recap.post_weekly_recap(bot)
+    except Exception as e:
+        logger.log_exception("scheduled_weekly_recap", e)
+        print(f"[scheduler] Weekly recap failed: {e}")
 
 
 async def _restart_process(delay_seconds: float = 1.0) -> None:
@@ -653,6 +665,14 @@ async def on_ready():
             minute=0,
             id="plex_weekly_full_refresh", replace_existing=True,
         )
+        scheduler.add_job(
+            _scheduled_weekly_recap,
+            trigger="cron",
+            day_of_week="sun",
+            hour=11,
+            minute=0,
+            id="weekly_recap", replace_existing=True,
+        )
         scheduler.start()
         print("[scheduler] Daily tracker check scheduled for 9:00 local time")
         print("[scheduler] Daily horror recommendation scheduled for 12:00 local time")
@@ -811,6 +831,7 @@ bot.suckling_run_lb_activity_check = run_lb_activity_check
 bot.suckling_lb_activity_summary = _lb_activity_summary
 bot.suckling_run_plex_cleanup = cleanup_module.run_cleanup
 bot.suckling_run_unpopularity_audit = cleanup_module.run_unpopularity_audit
+bot.suckling_post_weekly_recap = recap.post_weekly_recap
 
 
 if __name__ == "__main__":
