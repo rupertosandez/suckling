@@ -5,6 +5,7 @@ Handles forum thread creation/editing, late fee calculation, overdue
 notifications, and 12-hour reminder DMs. All Discord API calls take
 the bot client as a parameter — this module never imports bot.py.
 """
+import asyncio
 from datetime import datetime, time, timezone, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -108,7 +109,7 @@ async def extend_rental(
     user_id: str,
     rental_id: int,
 ) -> tuple[bool, str]:
-    rental = db.get_rental_by_id(rental_id)
+    rental = await asyncio.to_thread(db.get_rental_by_id, rental_id)
     if not rental or rental.get("status") != "active":
         return False, "that rental is no longer active."
     if str(rental.get("user_id")) != str(user_id):
@@ -120,14 +121,16 @@ async def extend_rental(
     if new_due is None:
         return False, "i couldn't read the current due date for that rental."
 
-    if not db.extend_rental_due_at(
+    extended = await asyncio.to_thread(
+        db.extend_rental_due_at,
         rental_id=rental_id,
         due_at=new_due.isoformat(),
         max_extensions=MAX_RENTAL_EXTENSIONS,
-    ):
+    )
+    if not extended:
         return False, "that rental could not be extended."
 
-    updated = db.get_rental_by_id(rental_id)
+    updated = await asyncio.to_thread(db.get_rental_by_id, rental_id)
     if updated:
         await edit_thread_due_at(bot, updated)
 
@@ -142,7 +145,7 @@ async def extend_rental(
 # ---------- forum thread management ----------
 
 async def _get_forum_channel(bot: discord.Client) -> discord.ForumChannel | None:
-    channel_id = db.get_reviews_channel_id()
+    channel_id = await asyncio.to_thread(db.get_reviews_channel_id)
     if not channel_id:
         return None
     channel = bot.get_channel(channel_id)
@@ -156,16 +159,17 @@ async def _get_forum_channel(bot: discord.Client) -> discord.ForumChannel | None
     return channel
 
 
-def _get_applied_tags(
+async def _get_applied_tags(
     forum: discord.ForumChannel,
     recommend: bool | None = None,
     has_review: bool = False,
 ) -> list[discord.ForumTag]:
     """Build the list of ForumTag objects to apply based on stored tag IDs."""
     tags = []
-    rental_tag_id = db.get_rental_tag_id()
-    rec_tag_id = db.get_recommendation_tag_id()
-    review_tag_id = db.get_review_tag_id()
+    tag_ids = await asyncio.to_thread(db.get_rental_forum_tag_ids)
+    rental_tag_id = tag_ids["rental_tag_id"]
+    rec_tag_id = tag_ids["recommendation_tag_id"]
+    review_tag_id = tag_ids["review_tag_id"]
 
     for tag in forum.available_tags:
         if rental_tag_id and tag.id == rental_tag_id:
@@ -199,7 +203,7 @@ async def create_forum_thread(
         thread_name = thread_name[:97] + "..."
 
     embed = embeds.rental_confirmed_embed(movie, user_tag, due_at)
-    applied_tags = _get_applied_tags(forum)
+    applied_tags = await _get_applied_tags(forum)
 
     try:
         thread, message = await forum.create_thread(
@@ -207,7 +211,7 @@ async def create_forum_thread(
             embed=embed,
             applied_tags=applied_tags,
         )
-        db.set_rental_thread(rental_id, thread.id, message.id)
+        await asyncio.to_thread(db.set_rental_thread, rental_id, thread.id, message.id)
         return True
     except (discord.HTTPException, discord.Forbidden) as e:
         print(f"[rental] Failed to create forum thread: {e}")
@@ -251,7 +255,7 @@ async def edit_thread_returned(
         # Update tags (add recommendation/review tags if applicable) — title stays the same
         forum = await _get_forum_channel(bot)
         if forum:
-            applied_tags = _get_applied_tags(
+            applied_tags = await _get_applied_tags(
                 forum,
                 recommend=bool(rental.get("recommended")),
                 has_review=bool((rental.get("thoughts") or "").strip()),
@@ -295,7 +299,7 @@ async def edit_thread_returned_unwatched(
 
         forum = await _get_forum_channel(bot)
         if forum:
-            await thread.edit(applied_tags=_get_applied_tags(forum, recommend=False))
+            await thread.edit(applied_tags=await _get_applied_tags(forum, recommend=False))
 
     except (discord.NotFound, discord.Forbidden, discord.HTTPException) as e:
         print(f"[rental] Failed to edit thread after unwatched return: {e}")

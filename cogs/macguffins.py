@@ -188,13 +188,15 @@ class MacGuffinCog(commands.Cog):
             f"{interaction.user.mention} gifted {user.mention} "
             f"the [{rarity}] {emoji} **{name}**"
         )
-        achievement_module.record_event(
+        await asyncio.to_thread(
+            achievement_module.record_event,
             sender_id,
             str(interaction.user),
             "macguffin_gift_sent",
             macguffin_id,
         )
-        achievement_module.record_event(
+        await asyncio.to_thread(
+            achievement_module.record_event,
             recipient_id,
             str(user),
             "macguffin_gift_received",

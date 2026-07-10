@@ -1,3 +1,5 @@
+import asyncio
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -132,13 +134,16 @@ class WatchlistCog(commands.Cog):
 
         count = await db.run(db.watchlist_remove_by_title, str(interaction.user.id), title)
         if count:
-            for _ in range(count):
-                achievement_module.record_event(
-                    str(interaction.user.id),
-                    str(interaction.user),
-                    "watchlist_remove",
-                    title,
-                )
+            def _record_removals() -> None:
+                for _ in range(count):
+                    achievement_module.record_event(
+                        str(interaction.user.id),
+                        str(interaction.user),
+                        "watchlist_remove",
+                        title,
+                    )
+
+            await asyncio.to_thread(_record_removals)
             await achievement_module.award_for_user(
                 self.bot,
                 interaction.user,

@@ -690,7 +690,7 @@ async def post_unlocks(
 ) -> None:
     if not achievements:
         return
-    channel_id = db.get_feed_channel_id()
+    channel_id = await asyncio.to_thread(db.get_feed_channel_id)
     if not channel_id:
         return
 
@@ -723,7 +723,7 @@ async def post_unlocks(
 
 
 async def ensure_role(guild: discord.Guild, achievement: Achievement) -> discord.Role | None:
-    role_id = db.get_achievement_role_id(achievement.id)
+    role_id = await asyncio.to_thread(db.get_achievement_role_id, achievement.id)
     if role_id:
         role = guild.get_role(role_id)
         if role:
@@ -738,7 +738,7 @@ async def ensure_role(guild: discord.Guild, achievement: Achievement) -> discord
     name = visible_name(achievement)
     existing = discord.utils.get(guild.roles, name=name)
     if existing:
-        db.set_achievement_role_id(achievement.id, existing.id)
+        await asyncio.to_thread(db.set_achievement_role_id, achievement.id, existing.id)
         return existing
 
     legacy = discord.utils.get(guild.roles, name=legacy_visible_name(achievement))
@@ -747,7 +747,7 @@ async def ensure_role(guild: discord.Guild, achievement: Achievement) -> discord
             await legacy.edit(name=name, reason="Suckling achievement badge rename")
         except (discord.Forbidden, discord.HTTPException) as e:
             logger.log_exception("achievement_role_rename", e)
-        db.set_achievement_role_id(achievement.id, legacy.id)
+        await asyncio.to_thread(db.set_achievement_role_id, achievement.id, legacy.id)
         return legacy
 
     try:
@@ -759,7 +759,7 @@ async def ensure_role(guild: discord.Guild, achievement: Achievement) -> discord
             mentionable=False,
             reason="Suckling achievement badge",
         )
-        db.set_achievement_role_id(achievement.id, role.id)
+        await asyncio.to_thread(db.set_achievement_role_id, achievement.id, role.id)
         return role
     except (discord.Forbidden, discord.HTTPException) as e:
         logger.log_exception("achievement_role_create", e)
@@ -767,8 +767,8 @@ async def ensure_role(guild: discord.Guild, achievement: Achievement) -> discord
 
 
 async def sync_member_roles(member: discord.Member) -> tuple[bool, str]:
-    all_role_ids = db.get_all_achievement_role_ids()
-    displayed = db.get_displayed_achievements(str(member.id))
+    all_role_ids = await asyncio.to_thread(db.get_all_achievement_role_ids)
+    displayed = await asyncio.to_thread(db.get_displayed_achievements, str(member.id))
     desired_ids = [row["achievement_id"] for row in displayed]
     desired_roles = []
 

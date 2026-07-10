@@ -236,7 +236,8 @@ async def _award_stream_prophet(
         pass
 
     user_tag = str(user) if user else tracker_user_id
-    achievement_module.record_event(
+    await asyncio.to_thread(
+        achievement_module.record_event,
         tracker_user_id,
         user_tag,
         "stream_prophet",
@@ -250,7 +251,8 @@ async def _award_stream_prophet(
             source_id=str(movie_id),
         )
     else:
-        achievement_module.evaluate_user(
+        await asyncio.to_thread(
+            achievement_module.evaluate_user,
             tracker_user_id,
             user_tag,
             source_type="stream_prophet",

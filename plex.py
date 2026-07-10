@@ -22,10 +22,16 @@ from plexapi.myplex import MyPlexAccount
 
 import config
 import db
+import logger
 
 
 CACHE_TTL_SECONDS = 3600
-CONNECT_TIMEOUT_SECONDS = 15
+# Per-URI timeout when resolving all candidate connections from scratch (LAN,
+# WAN, plex.direct relay, etc.) — kept short so a genuinely down server is
+# detected in seconds rather than the ~15s x N candidates it used to take.
+CONNECT_TIMEOUT_SECONDS = 6
+# Timeout for retrying the last-known-good server URL directly (fast path).
+FAST_RECONNECT_TIMEOUT_SECONDS = 5
 
 _account: MyPlexAccount | None = None
 _server: Any | None = None
@@ -35,6 +41,7 @@ _movie_dict_cache: list[dict] | None = None
 _title_index: dict[str, list[dict]] = {}
 _cache_age: float = 0
 _refresh_lock = asyncio.Lock()
+_last_good_baseurl: str | None = None
 
 
 class PlexError(Exception):
@@ -42,13 +49,33 @@ class PlexError(Exception):
 
 
 def _connect_sync() -> None:
-    global _account, _server, _library
+    global _account, _server, _library, _last_good_baseurl
 
     if not config.PLEX_TOKEN:
         raise PlexError("PLEX_TOKEN not configured in .env")
 
     if _server is not None and _library is not None:
         return
+
+    # Fast path: reconnect directly to the last server URL that worked instead
+    # of re-resolving every candidate URI (LAN/WAN/relay) from scratch. Falls
+    # through to full resolution below if the cached address stopped working.
+    if _last_good_baseurl:
+        try:
+            from plexapi.server import PlexServer
+
+            _server = PlexServer(
+                _last_good_baseurl, config.PLEX_TOKEN, timeout=FAST_RECONNECT_TIMEOUT_SECONDS
+            )
+            _library = _server.library.section(config.PLEX_LIBRARY)
+            return
+        except Exception as exc:
+            logger.log_warning(
+                "plex_connect",
+                f"cached Plex address unreachable ({exc}); re-resolving server",
+            )
+            _server = None
+            _last_good_baseurl = None
 
     try:
         _account = MyPlexAccount(token=config.PLEX_TOKEN)
@@ -64,7 +91,10 @@ def _connect_sync() -> None:
     try:
         _server = resources[0].connect(timeout=CONNECT_TIMEOUT_SECONDS)
     except Exception as exc:
+        logger.log_warning("plex_connect", f"couldn't reach Plex server: {exc}")
         raise PlexError(f"Couldn't connect to Plex server: {exc}") from exc
+
+    _last_good_baseurl = _server._baseurl
 
     try:
         _library = _server.library.section(config.PLEX_LIBRARY)

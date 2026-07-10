@@ -1,3 +1,5 @@
+import asyncio
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -41,8 +43,10 @@ async def post_daily_recommendation(bot: discord.Client) -> bool:
         return False
 
     try:
-        details = await tmdb.get_movie_details(movie["id"])
-        providers = await tmdb.get_watch_providers(movie["id"], region="US")
+        details, providers = await asyncio.gather(
+            tmdb.get_movie_details(movie["id"]),
+            tmdb.get_watch_providers(movie["id"], region="US"),
+        )
     except tmdb.TMDBError as e:
         print(f"[daily-rec] TMDB error: {e}")
         return False
@@ -102,8 +106,10 @@ class DiscoveryCog(commands.Cog):
         if year is not None or not _needs_disambiguation(results):
             top = results[0]
             try:
-                details = await tmdb.get_movie_details(top["id"])
-                providers = await tmdb.get_watch_providers(top["id"], region="US")
+                details, providers = await asyncio.gather(
+                    tmdb.get_movie_details(top["id"]),
+                    tmdb.get_watch_providers(top["id"], region="US"),
+                )
             except tmdb.TMDBError as e:
                 await interaction.followup.send(f"Sorry, couldn't load details: {e}")
                 return
@@ -159,8 +165,10 @@ class DiscoveryCog(commands.Cog):
             return
 
         try:
-            details = await tmdb.get_movie_details(movie["id"])
-            providers = await tmdb.get_watch_providers(movie["id"], region="US")
+            details, providers = await asyncio.gather(
+                tmdb.get_movie_details(movie["id"]),
+                tmdb.get_watch_providers(movie["id"], region="US"),
+            )
         except tmdb.TMDBError as e:
             await interaction.followup.send(f"Sorry, TMDB lookup failed: {e}")
             return

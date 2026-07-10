@@ -33,6 +33,13 @@ def setup_logging() -> None:
     root.setLevel(logging.WARNING)
     root.addHandler(file_handler)
 
+    # plexapi logs one ERROR line per candidate URI (LAN/WAN/relay) it tries
+    # internally before we ever see the final exception, which floods the log
+    # every time the home Plex server is briefly unreachable. Our own
+    # plex.py catches that failure and logs a single WARNING summary instead,
+    # so silence plexapi's internal per-URI noise here.
+    logging.getLogger("plexapi").setLevel(logging.CRITICAL)
+
 
 def log_exception(source: str, exc: BaseException) -> None:
     """Log an exception with full traceback, tagged with a source name."""

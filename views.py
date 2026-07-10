@@ -314,8 +314,10 @@ class MovieSelect(discord.ui.Select):
         await interaction.response.defer()
 
         try:
-            details = await tmdb.get_movie_details(movie_id)
-            providers = await tmdb.get_watch_providers(movie_id, region="US")
+            details, providers = await asyncio.gather(
+                tmdb.get_movie_details(movie_id),
+                tmdb.get_watch_providers(movie_id, region="US"),
+            )
         except tmdb.TMDBError as e:
             await interaction.followup.send(f"Sorry, couldn't load details: {e}")
             return
@@ -503,11 +505,11 @@ async def _confirm_rental(
     Called from RentPickView and EmbedRentView on acceptance.
     """
     now = datetime.now(timezone.utc)
-    user_timezone = db.get_user_timezone(user_id)
+    user_timezone = await asyncio.to_thread(db.get_user_timezone, user_id)
     due_at = rental_module.compute_due_at(now, user_timezone)
 
     async with _rental_lock(user_id):
-        active_count = _active_rental_count_for_user(user_id)
+        active_count = await _active_rental_count_for_user(user_id)
         if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.edit_original_response(
                 content=_active_rental_limit_message(active_count),
@@ -517,7 +519,7 @@ async def _confirm_rental(
             return
 
         # Check reviews channel is configured before committing
-        reviews_channel_id = db.get_reviews_channel_id()
+        reviews_channel_id = await asyncio.to_thread(db.get_reviews_channel_id)
         if not reviews_channel_id:
             await interaction.edit_original_response(
                 content=(
@@ -529,7 +531,8 @@ async def _confirm_rental(
             )
             return
 
-        rental_id = db.create_rental(
+        rental_id = await asyncio.to_thread(
+            db.create_rental,
             user_id=user_id,
             user_name=user_name,
             plex_key=movie["rating_key"],
@@ -555,7 +558,7 @@ async def _confirm_rental(
     title_str = f"**{movie['title']} ({movie.get('year', '?')})**"
 
     if thread_ok:
-        rental = db.get_rental_by_id(rental_id)
+        rental = await asyncio.to_thread(db.get_rental_by_id, rental_id)
         thread_id = rental.get("thread_id") if rental else None
         thread_mention = f" - check <#{thread_id}>" if thread_id else ""
         confirm_text = (
@@ -581,8 +584,9 @@ def _active_rental_limit_message(active_count: int) -> str:
     )
 
 
-def _active_rental_count_for_user(user_id: str) -> int:
-    return len(db.get_active_rentals(user_id))
+async def _active_rental_count_for_user(user_id: str) -> int:
+    active = await asyncio.to_thread(db.get_active_rentals, user_id)
+    return len(active)
 
 
 _RENTAL_LOCKS: dict[str, asyncio.Lock] = {}
@@ -626,14 +630,14 @@ class PickOwnRentalModal(discord.ui.Modal, title="pick a rental"):
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
 
-        active_count = _active_rental_count_for_user(self.user_id)
+        active_count = await _active_rental_count_for_user(self.user_id)
         if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.followup.send(
                 _active_rental_limit_message(active_count), ephemeral=True
             )
             return
 
-        if not db.get_reviews_channel_id():
+        if not await asyncio.to_thread(db.get_reviews_channel_id):
             await interaction.followup.send(
                 "⚠️ the reviews forum hasn't been configured yet. "
                 "ask an admin to run `/setreviews` first.",
@@ -737,7 +741,7 @@ class RentWarningView(discord.ui.View):
 
         self.stop()
 
-        active_count = _active_rental_count_for_user(self.user_id)
+        active_count = await _active_rental_count_for_user(self.user_id)
         if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.edit_original_response(
                 content=_active_rental_limit_message(active_count),
@@ -747,7 +751,7 @@ class RentWarningView(discord.ui.View):
             return
 
         # Check reviews channel is set
-        if not db.get_reviews_channel_id():
+        if not await asyncio.to_thread(db.get_reviews_channel_id):
             await interaction.edit_original_response(
                 content=(
                     "⚠️ the reviews forum hasn't been configured yet. "
@@ -759,7 +763,7 @@ class RentWarningView(discord.ui.View):
             return
 
         # Pick the first film
-        exclude_keys = db.get_user_rented_plex_keys(self.user_id)
+        exclude_keys = await asyncio.to_thread(db.get_user_rented_plex_keys, self.user_id)
         try:
             movie = await plex.pick_random_for_rental(exclude_keys)
         except plex.PlexError as e:
@@ -816,7 +820,7 @@ class RentWarningView(discord.ui.View):
 
         self.stop()
 
-        active_count = _active_rental_count_for_user(self.user_id)
+        active_count = await _active_rental_count_for_user(self.user_id)
         if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.edit_original_response(
                 content=_active_rental_limit_message(active_count),
@@ -826,7 +830,7 @@ class RentWarningView(discord.ui.View):
             return
 
         request_channel = None
-        request_channel_id = db.get_rental_request_channel_id()
+        request_channel_id = await asyncio.to_thread(db.get_rental_request_channel_id)
         if request_channel_id:
             request_channel = self.bot.get_channel(request_channel_id)
             if request_channel is None:
@@ -942,7 +946,8 @@ class RentPickView(discord.ui.View):
         new_rerolls_used = self.rerolls_used + 1
 
         # Pick a new film, excluding everything shown so far + user's history
-        exclude_keys = self.shown_keys | db.get_user_rented_plex_keys(self.user_id)
+        rented_keys = await asyncio.to_thread(db.get_user_rented_plex_keys, self.user_id)
+        exclude_keys = self.shown_keys | rented_keys
         try:
             new_film = await plex.pick_random_for_rental(exclude_keys)
         except plex.PlexError as e:
@@ -1176,7 +1181,7 @@ class EmbedRentView(discord.ui.View):
             )
             return
 
-        active_count = _active_rental_count_for_user(self.user_id)
+        active_count = await _active_rental_count_for_user(self.user_id)
         if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
             await interaction.edit_original_response(
                 content=_active_rental_limit_message(active_count),
@@ -1551,8 +1556,10 @@ class LBWatchlistView(discord.ui.View):
 
         top = results[0]
         try:
-            details = await tmdb.get_movie_details(top["id"])
-            providers = await tmdb.get_watch_providers(top["id"], region="US")
+            details, providers = await asyncio.gather(
+                tmdb.get_movie_details(top["id"]),
+                tmdb.get_watch_providers(top["id"], region="US"),
+            )
         except tmdb.TMDBError as e:
             await interaction.followup.send(f"⚠️ TMDB error: {e}", ephemeral=True)
             return
@@ -1661,9 +1668,12 @@ class _RemoveSelect(discord.ui.Select):
         if not await _defer_component(interaction):
             return
         entry_id = int(self.values[0])
-        removed = db.watchlist_remove_by_id(entry_id, self.watchlist_view.user_id)
+        removed = await asyncio.to_thread(
+            db.watchlist_remove_by_id, entry_id, self.watchlist_view.user_id
+        )
         if removed:
-            achievement_module.record_event(
+            await asyncio.to_thread(
+                achievement_module.record_event,
                 self.watchlist_view.user_id,
                 str(interaction.user),
                 "watchlist_remove",
@@ -1675,7 +1685,9 @@ class _RemoveSelect(discord.ui.Select):
                 source_type="watchlist_remove",
                 source_id=str(entry_id),
             )
-        self.watchlist_view.entries = db.get_watchlist(self.watchlist_view.user_id)
+        self.watchlist_view.entries = await asyncio.to_thread(
+            db.get_watchlist, self.watchlist_view.user_id
+        )
         self.watchlist_view.total_pages = max(
             1,
             -(-len(self.watchlist_view.entries) // MY_WATCHLIST_PAGE_SIZE),
@@ -1830,8 +1842,10 @@ class MyWatchlistView(discord.ui.View):
 
         try:
             if tmdb_id:
-                details = await tmdb.get_movie_details(tmdb_id)
-                providers = await tmdb.get_watch_providers(tmdb_id, region="US")
+                details, providers = await asyncio.gather(
+                    tmdb.get_movie_details(tmdb_id),
+                    tmdb.get_watch_providers(tmdb_id, region="US"),
+                )
             else:
                 results = await tmdb.search_movie(title, year=year)
                 if not results:
@@ -1839,8 +1853,10 @@ class MyWatchlistView(discord.ui.View):
                         f"⚠️ couldn't find **{title}** on TMDB.", ephemeral=True
                     )
                     return
-                details = await tmdb.get_movie_details(results[0]["id"])
-                providers = await tmdb.get_watch_providers(results[0]["id"], region="US")
+                details, providers = await asyncio.gather(
+                    tmdb.get_movie_details(results[0]["id"]),
+                    tmdb.get_watch_providers(results[0]["id"], region="US"),
+                )
         except tmdb.TMDBError as e:
             await interaction.followup.send(f"⚠️ TMDB error: {e}", ephemeral=True)
             return

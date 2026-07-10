@@ -1066,6 +1066,24 @@ def set_review_tag_id(tag_id: int) -> None:
     set_setting(REVIEW_TAG_KEY, str(tag_id))
 
 
+def get_rental_forum_tag_ids() -> dict[str, int | None]:
+    """Fetch the rental/recommendation/review forum tag IDs in one round trip."""
+    keys = (RENTAL_TAG_KEY, RECOMMENDATION_TAG_KEY, REVIEW_TAG_KEY)
+    with _connect() as conn:
+        rows = conn.execute(
+            f"SELECT key, value FROM config WHERE key IN ({','.join('?' * len(keys))})",
+            keys,
+        ).fetchall()
+    values = {row["key"]: row["value"] for row in rows}
+    return {
+        "rental_tag_id": int(values[RENTAL_TAG_KEY]) if values.get(RENTAL_TAG_KEY) else None,
+        "recommendation_tag_id": (
+            int(values[RECOMMENDATION_TAG_KEY]) if values.get(RECOMMENDATION_TAG_KEY) else None
+        ),
+        "review_tag_id": int(values[REVIEW_TAG_KEY]) if values.get(REVIEW_TAG_KEY) else None,
+    }
+
+
 def get_last_update_announced_version() -> str | None:
     return get_setting(LAST_UPDATE_ANNOUNCED_VERSION_KEY)
 

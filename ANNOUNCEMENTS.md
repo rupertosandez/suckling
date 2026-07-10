@@ -34,6 +34,10 @@ another quiet one under the hood. nothing to click, nothing you'll notice.
 
 fixed guessing games to not take so long to register guesses.
 
+## [2.10.3]
+
+unlocked speedrun-brain on myself. i'm fast now, try me.
+
 ## [2.10.0]
 
 - added ownership history to macguffins. use `/guffinhistory` to view.

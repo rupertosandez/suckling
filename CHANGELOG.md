@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.10.3] - 2026-07-10
+
+### Fixed
+
+- General latency pass across the bot: `/suck`, `/roll`, and the daily rec now fetch TMDB details and watch providers concurrently instead of sequentially. The `/rent` confirm flow and `/return`'s forum-thread editing (previously ~10 sequential blocking Postgres round trips per click) now run entirely off the event loop, along with achievement role sync and event recording. `/lb group` now fetches each member's Letterboxd diary in parallel instead of one at a time. Collapsed 3 separate forum-tag lookups into one query (`db.get_rental_forum_tag_ids`).
+- Plex connection resilience: caches the last-working server address and retries it directly before falling back to full multi-candidate resolution, cut the per-candidate connect timeout from 15s to 6s, and quieted plexapi's internal per-URI error spam in favor of one clean warning line.
+
 ## [2.10.2] - 2026-07-10
 
 ### Fixed
