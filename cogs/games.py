@@ -70,6 +70,59 @@ class GamesCog(commands.Cog):
         except Exception as e:
             logger.log_exception("guess_achievement_award", e)
 
+    async def _finalize_trivia_win(
+        self,
+        guild: discord.Guild | None,
+        user_id: str,
+        user_tag: str,
+        category: str,
+    ) -> None:
+        try:
+            await asyncio.to_thread(
+                achievement_module.record_event,
+                user_id,
+                user_tag,
+                "trivia_win",
+                category,
+            )
+        except Exception as e:
+            logger.log_exception("trivia_win_event", e)
+
+        member = await _fetch_award_user(self.bot, guild, user_id)
+        if not member:
+            return
+
+        try:
+            await achievement_module.award_for_user(
+                self.bot,
+                member,
+                source_type="trivia_win",
+                source_id=category,
+            )
+        except Exception as e:
+            logger.log_exception("trivia_achievement_award", e)
+
+    async def _finalize_six_win(
+        self,
+        guild: discord.Guild | None,
+        user_id: str,
+        user_tag: str,
+        actor_a_id: int,
+    ) -> None:
+        member = await _fetch_award_user(self.bot, guild, user_id)
+        if not member:
+            return
+
+        try:
+            await achievement_module.award_for_user(
+                self.bot,
+                member,
+                source_type="six_win",
+                source_id=str(actor_a_id),
+            )
+        except Exception as e:
+            logger.log_exception("six_achievement_award", e)
+
     @app_commands.command(name="guess", description="Start a horror movie guessing round")
     @app_commands.describe(
         difficulty="Easy = full still (1 pt). Hard = cropped poster (2 pts). Default: random.",
@@ -296,27 +349,6 @@ class GamesCog(commands.Cog):
                 )
             except Exception as e:
                 logger.log_exception("trivia_score_save", e)
-            try:
-                await asyncio.to_thread(
-                    achievement_module.record_event,
-                    round_obj.winner_id,
-                    round_obj.winner_tag,
-                    "trivia_win",
-                    category,
-                )
-            except Exception as e:
-                logger.log_exception("trivia_win_event", e)
-            member = await _fetch_award_user(self.bot, interaction.guild, round_obj.winner_id)
-            if member:
-                try:
-                    await achievement_module.award_for_user(
-                        self.bot,
-                        member,
-                        source_type="trivia_win",
-                        source_id=category,
-                    )
-                except Exception as e:
-                    logger.log_exception("trivia_achievement_award", e)
             reveal_embed = embeds.trivia_reveal_embed(
                 category=category,
                 answer=round_obj.answer,
@@ -324,14 +356,22 @@ class GamesCog(commands.Cog):
                 winner_tag=round_obj.winner_tag,
                 new_total=new_total,
             )
+            await interaction.channel.send(embed=reveal_embed)
+            asyncio.create_task(
+                self._finalize_trivia_win(
+                    interaction.guild,
+                    round_obj.winner_id,
+                    round_obj.winner_tag,
+                    category,
+                )
+            )
         else:
             reveal_embed = embeds.trivia_reveal_embed(
                 category=category,
                 answer=round_obj.answer,
                 year=round_obj.year,
             )
-
-        await interaction.channel.send(embed=reveal_embed)
+            await interaction.channel.send(embed=reveal_embed)
 
     @app_commands.command(name="giveup", description="End the current guessing round in this channel")
     async def giveup(self, interaction: discord.Interaction):
@@ -465,17 +505,6 @@ class GamesCog(commands.Cog):
                 logger.log_exception("six_score_save", e)
                 new_total = "not saved"
             chain_str = " → ".join(round_obj.winning_chain)
-            member = await _fetch_award_user(self.bot, interaction.guild, round_obj.winner_id)
-            if member:
-                try:
-                    await achievement_module.award_for_user(
-                        self.bot,
-                        member,
-                        source_type="six_win",
-                        source_id=str(round_obj.actor_a_id),
-                    )
-                except Exception as e:
-                    logger.log_exception("six_achievement_award", e)
             win_embed = discord.Embed(
                 title=f"🏆 {round_obj.winner_tag} wins!",
                 description=(
@@ -485,6 +514,14 @@ class GamesCog(commands.Cog):
                 color=0x8B0000,
             )
             await interaction.channel.send(embed=win_embed)
+            asyncio.create_task(
+                self._finalize_six_win(
+                    interaction.guild,
+                    round_obj.winner_id,
+                    round_obj.winner_tag,
+                    round_obj.actor_a_id,
+                )
+            )
         else:
             await interaction.channel.send(
                 f"⏰ Time's up. Nobody connected **{actor_a['name']}** to **{actor_b['name']}**."

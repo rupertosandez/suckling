@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.10.2] - 2026-07-10
+
+### Fixed
+
+- Guessing games (`/play` trivia and `/six` degrees) waited for the full achievement-award pass - up to ~100 sequential DB queries, including a full Plex library re-fetch and JSON re-parse for ~60 "rb9 library" achievements - before posting the winner reveal. Reveal now posts immediately after the score is saved; achievement awarding runs in the background. `/guess` already worked this way.
+- `evaluate_user()` (the achievement scan) now caches a user's rental history, the Plex library lookup, and macguffin inventory for the duration of one evaluation instead of re-fetching per achievement, cutting DB round trips per evaluation from ~100+ to 3. Also speeds up `/achievementrescan`, which runs the same scan per user.
+
 ## [2.10.1] - 2026-07-10
 
 ### Fixed

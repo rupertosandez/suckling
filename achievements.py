@@ -6,6 +6,7 @@ from typing import Callable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import asyncio
+import threading
 
 import discord
 
@@ -17,6 +18,22 @@ import macguffin as macguffin_module
 MAX_DISPLAYED_ACHIEVEMENTS = 3
 ROLE_COLOR = discord.Color.from_rgb(142, 36, 52)
 UNLOCK_COLOR = discord.Color.gold()
+
+# Per-evaluation cache for achievement progress lookups. `evaluate_user` runs
+# every achievement's progress() against the same user in one pass; without
+# this, ~100 achievements each re-fetch the user's rental history and the
+# full Plex library cache from the DB, which is what made a single game win
+# take tens of seconds. Scoped to the calling thread and reset at the start
+# of each evaluate_user() call so it never serves stale data across calls.
+_progress_cache = threading.local()
+
+
+def _cache_dict() -> dict:
+    cache = getattr(_progress_cache, "cache", None)
+    if cache is None:
+        cache = {}
+        _progress_cache.cache = cache
+    return cache
 
 
 @dataclass(frozen=True)
@@ -33,22 +50,33 @@ class Achievement:
 
 
 def _returned_rentals(user_id: str) -> list[dict]:
-    return [
-        rental
-        for rental in db.get_user_rental_history(user_id)
-        if rental.get("status") == "returned"
-    ]
+    cache = _cache_dict()
+    key = ("rentals", user_id)
+    if key not in cache:
+        cache[key] = [
+            rental
+            for rental in db.get_user_rental_history(user_id)
+            if rental.get("status") == "returned"
+        ]
+    return cache[key]
 
 
 def _returned_count(user_id: str) -> int:
     return len(_returned_rentals(user_id))
 
 
+def _plex_library_by_key() -> dict[str, dict]:
+    cache = _cache_dict()
+    if "library_by_key" not in cache:
+        cache["library_by_key"] = {
+            str(movie["rating_key"]): movie
+            for movie in db.get_plex_library_cache()
+        }
+    return cache["library_by_key"]
+
+
 def _returned_plex_movies(user_id: str) -> list[dict]:
-    movies_by_key = {
-        str(movie["rating_key"]): movie
-        for movie in db.get_plex_library_cache()
-    }
+    movies_by_key = _plex_library_by_key()
     movies = []
     for rental in _returned_rentals(user_id):
         movie = movies_by_key.get(str(rental.get("plex_key")))
@@ -301,12 +329,20 @@ def _range_count(user_id: str) -> int:
     return len(groups)
 
 
+def _macguffin_inventory(user_id: str) -> list[dict]:
+    cache = _cache_dict()
+    key = ("macguffin_inventory", user_id)
+    if key not in cache:
+        cache[key] = db.get_macguffin_inventory(user_id)
+    return cache[key]
+
+
 def _macguffin_count(user_id: str) -> int:
-    return len(db.get_macguffin_inventory(user_id))
+    return len(_macguffin_inventory(user_id))
 
 
 def _owned_macguffin_ids(user_id: str) -> set[str]:
-    return {record["macguffin_id"] for record in db.get_macguffin_inventory(user_id)}
+    return {record["macguffin_id"] for record in _macguffin_inventory(user_id)}
 
 
 def _owns_suckling_macguffin(user_id: str) -> int:
@@ -320,7 +356,7 @@ def _owns_iconic_macguffin(user_id: str) -> int:
     except Exception as e:
         logger.log_exception("achievement_iconic_macguffin_load", e)
         return 0
-    for record in db.get_macguffin_inventory(user_id):
+    for record in _macguffin_inventory(user_id):
         card = macguffin_module.CARDS.get(record.get("macguffin_id"))
         if card and card.get("rarity") == "iconic":
             return 1
@@ -601,25 +637,29 @@ def evaluate_user(
     source_type: str | None = None,
     source_id: str | None = None,
 ) -> list[Achievement]:
-    earned_ids = db.get_earned_achievement_ids(user_id)
-    newly_earned: list[Achievement] = []
-    for achievement in ACHIEVEMENTS:
-        if achievement.id in earned_ids:
-            continue
-        try:
-            value = achievement.progress(user_id)
-        except Exception as e:
-            logger.log_exception(f"achievement_progress:{achievement.id}", e)
-            continue
-        if value >= achievement.threshold and db.add_earned_achievement(
-            user_id,
-            achievement.id,
-            user_tag,
-            source_type,
-            source_id,
-        ):
-            newly_earned.append(achievement)
-    return newly_earned
+    _progress_cache.cache = {}
+    try:
+        earned_ids = db.get_earned_achievement_ids(user_id)
+        newly_earned: list[Achievement] = []
+        for achievement in ACHIEVEMENTS:
+            if achievement.id in earned_ids:
+                continue
+            try:
+                value = achievement.progress(user_id)
+            except Exception as e:
+                logger.log_exception(f"achievement_progress:{achievement.id}", e)
+                continue
+            if value >= achievement.threshold and db.add_earned_achievement(
+                user_id,
+                achievement.id,
+                user_tag,
+                source_type,
+                source_id,
+            ):
+                newly_earned.append(achievement)
+        return newly_earned
+    finally:
+        _progress_cache.cache = {}
 
 
 async def award_for_user(

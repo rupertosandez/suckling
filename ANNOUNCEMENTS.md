@@ -30,6 +30,10 @@ more behind-the-scenes tidying. searching for a movie works the same now no matt
 
 another quiet one under the hood. nothing to click, nothing you'll notice.
 
+## [2.10.2]
+
+fixed guessing games to not take so long to register guesses.
+
 ## [2.10.0]
 
 - added ownership history to macguffins. use `/guffinhistory` to view.
