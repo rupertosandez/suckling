@@ -1646,14 +1646,14 @@ def get_late_fees_leaderboard(limit: int = 10) -> list[dict]:
     """Total late fees accumulated per user, descending."""
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT user_id, user_name, "
+            "SELECT user_id, MAX(user_name) AS user_name, "
             "  SUM(late_fee_dollars) AS total_fees, "
             "  COUNT(*) AS total_rentals, "
             "  SUM(CASE WHEN late_fee_dollars > 0 THEN 1 ELSE 0 END) AS late_count "
             "FROM rentals "
             "WHERE status IN ('returned', 'returned_unwatched') "
             "GROUP BY user_id "
-            "HAVING total_fees > 0 "
+            "HAVING SUM(late_fee_dollars) > 0 "
             "ORDER BY total_fees DESC "
             "LIMIT ?",
             (limit,),
@@ -2138,7 +2138,7 @@ def get_recent_achievement_unlocks(limit: int = 10) -> list[dict]:
 def get_achievement_counts_by_user(limit: int = 10) -> list[dict]:
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT user_id, user_tag, COUNT(*) AS total, MAX(earned_at) AS last_earned "
+            "SELECT user_id, MAX(user_tag) AS user_tag, COUNT(*) AS total, MAX(earned_at) AS last_earned "
             "FROM achievement_earned GROUP BY user_id "
             "ORDER BY total DESC, last_earned ASC LIMIT ?",
             (limit,),

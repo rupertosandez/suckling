@@ -33,6 +33,7 @@ ACHIEVEMENT_CATALOG_URL = (
     os.getenv("ACHIEVEMENT_CATALOG_URL")
     or "https://rupertosandez.github.io/sucklingsite/achievements/"
 )
+PORTAL_BASE_URL = (os.getenv("PORTAL_BASE_URL") or "https://sucklingweb.onrender.com").rstrip("/")
 
 if not DISCORD_TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set in .env")

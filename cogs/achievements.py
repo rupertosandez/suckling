@@ -57,19 +57,11 @@ async def _displayed_autocomplete(
     return _achievement_choices(displayed, current)
 
 
-def _achievement_line(user_id: str, achievement_id: str, *, earned: bool) -> str:
-    achievement = achievement_module.ACHIEVEMENT_BY_ID.get(achievement_id)
-    if not achievement:
+def _progress_bar(earned: int, total: int, *, width: int = 10) -> str:
+    if total <= 0:
         return ""
-    name = achievement_module.display_name(achievement)
-    if earned:
-        return f"**{name}**\n{achievement.description}"
-    progress = achievement_module.progress_for(user_id, achievement_id)
-    progress_note = ""
-    if progress:
-        value, threshold = progress
-        progress_note = f" ({min(value, threshold)}/{threshold})"
-    return f"**{name}**\n{achievement.hint}{progress_note}"
+    filled = max(0, min(width, round((earned / total) * width)))
+    return "▰" * filled + "▱" * (width - filled)
 
 
 def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | None = None) -> discord.Embed:
@@ -77,6 +69,7 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
     earned_rows = db.get_earned_achievements(user_id)
     earned_ids = {row["achievement_id"] for row in earned_rows}
     displayed_ids = [row["achievement_id"] for row in db.get_displayed_achievements(user_id)]
+    total = len(achievement_module.ACHIEVEMENTS)
 
     embed = discord.Embed(
         title="Achievement Shelf",
@@ -86,21 +79,26 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
         name=f"{member.display_name}'s achievements",
         icon_url=member.display_avatar.url,
     )
+    bar = _progress_bar(len(earned_ids), total)
     embed.description = (
-        f"**{len(earned_ids)} / {len(achievement_module.ACHIEVEMENTS)}** unlocked\n"
-        f"**{len(displayed_ids)} / {achievement_module.MAX_DISPLAYED_ACHIEVEMENTS}** visible badge roles"
+        f"{bar} **{len(earned_ids)}/{total}** unlocked\n"
+        f"**{len(displayed_ids)}/{achievement_module.MAX_DISPLAYED_ACHIEVEMENTS}** visible badge roles"
     )
 
     displayed_id_set = set(displayed_ids)
 
     if displayed_ids:
-        lines = [_achievement_line(user_id, achievement_id, earned=True) for achievement_id in displayed_ids]
-        embed.add_field(name="📌 Displayed Badges", value="\n\n".join(filter(None, lines)), inline=False)
+        lines = []
+        for achievement_id in displayed_ids:
+            achievement = achievement_module.ACHIEVEMENT_BY_ID.get(achievement_id)
+            if achievement:
+                lines.append(f"**{achievement_module.display_name(achievement)}**")
+        embed.add_field(name="📌 Displayed Badges", value="\n".join(lines) or "None pinned yet.", inline=False)
     else:
         embed.add_field(name="📌 Displayed Badges", value="None pinned yet.", inline=False)
 
     recent_lines = []
-    for row in earned_rows[:5]:
+    for row in earned_rows[:3]:
         achievement = achievement_module.ACHIEVEMENT_BY_ID.get(row["achievement_id"])
         if not achievement:
             continue
@@ -112,35 +110,29 @@ def _profile_embed(member: discord.User | discord.Member, *, viewer_id: str | No
     if recent_lines:
         embed.add_field(name="🕒 Recent Unlocks", value="\n".join(recent_lines), inline=False)
 
-    other_earned_ids = [
-        row["achievement_id"] for row in earned_rows
-        if row["achievement_id"] not in displayed_id_set
-    ]
-    if other_earned_ids:
-        other_names = [
-            achievement_module.display_name(achievement_module.ACHIEVEMENT_BY_ID[achievement_id])
-            for achievement_id in other_earned_ids
-            if achievement_id in achievement_module.ACHIEVEMENT_BY_ID
-        ]
-        shown = other_names[:15]
-        value = ", ".join(shown)
-        if len(other_names) > 15:
-            value += f", and {len(other_names) - 15} more"
-        embed.add_field(name="🏅 Other Earned Badges", value=value or "None.", inline=False)
+    other_count = len(earned_ids - displayed_id_set)
+    if other_count > 0:
+        embed.add_field(
+            name="🏅 Other Earned Badges",
+            value=f"{other_count} more earned - see the full shelf below.",
+            inline=False,
+        )
 
     if viewer_id == user_id:
-        next_lines = []
-        for achievement in achievement_module.ACHIEVEMENTS:
-            if achievement.id in earned_ids:
-                continue
-            next_lines.append(_achievement_line(user_id, achievement.id, earned=False))
-            if len(next_lines) >= 5:
-                break
-        if next_lines:
-            embed.add_field(name="🔒 Next Up (Not Yet Earned)", value="\n\n".join(next_lines), inline=False)
         embed.set_footer(text="Pin up to 3 badges with /achievementdisplay")
 
     return embed
+
+
+def _profile_view(user_id: str) -> discord.ui.View:
+    view = discord.ui.View()
+    view.add_item(
+        discord.ui.Button(
+            label="View Full Shelf",
+            url=f"{config.PORTAL_BASE_URL}/members/{user_id}?tab=badges",
+        )
+    )
+    return view
 
 
 def _timestamp(value: str) -> float:
@@ -218,7 +210,8 @@ class AchievementsCog(commands.Cog):
         await interaction.response.defer(ephemeral=ephemeral)
         target = user or interaction.user
         embed = await db.run(_profile_embed, target, viewer_id=str(interaction.user.id))
-        await interaction.followup.send(embed=embed, ephemeral=ephemeral)
+        view = _profile_view(str(target.id))
+        await interaction.followup.send(embed=embed, view=view, ephemeral=ephemeral)
 
     @app_commands.command(name="achievementdisplay", description="pin one earned achievement as a visible badge role")
     @app_commands.describe(

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.10.1] - 2026-07-10
+
+### Fixed
+
+- `/achievementboard` was crashing on every use with a Postgres `GroupingError` - the top-collectors query selected `user_tag` without grouping or aggregating it, which SQLite tolerates but Postgres rejects. Fixed the same latent bug in the late-fees leaderboard query before it could surface there too.
+- `/achievements` embed decluttered: a progress bar up top, pinned badges trimmed to name-only, recent unlocks cut to 3, the sprawling "other earned" badge list replaced with a count, and "next up" hints removed - replaced by a "View Full Shelf" link to your badges tab on the member portal.
+
 ## [2.10.0] - 2026-07-09
 
 ### Added
