@@ -496,6 +496,7 @@ def init_db() -> None:
         _get_pg_pool()  # open the shared pool once at startup
         with _connect() as conn:
             conn.executescript(POSTGRES_SCHEMA_SQL)
+            _apply_column_migrations(conn)
         return
 
     Path(config.DB_PATH).parent.mkdir(parents=True, exist_ok=True)
@@ -691,31 +692,7 @@ def init_db() -> None:
                 created_at       TEXT NOT NULL
             );
         """)
-        _ensure_column(
-            conn,
-            "tracked_movies",
-            "added_by_id",
-            "TEXT",
-        )
-        _ensure_column(
-            conn,
-            "rentals",
-            "extensions_used",
-            "INTEGER NOT NULL DEFAULT 0",
-        )
-        for column in (
-            "directors_json",
-            "writers_json",
-            "actors_json",
-            "countries_json",
-            "collections_json",
-        ):
-            _ensure_column(
-                conn,
-                "plex_library_cache",
-                column,
-                "TEXT NOT NULL DEFAULT '[]'",
-            )
+        _apply_column_migrations(conn)
         conn.executescript("""
             CREATE INDEX IF NOT EXISTS idx_rentals_user_status
                 ON rentals (user_id, status);
@@ -736,6 +713,39 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_macguffin_events_macguffin_id
                 ON macguffin_events (macguffin_id, created_at);
         """)
+
+
+def _apply_column_migrations(conn) -> None:
+    """Additive column migrations for existing databases, both dialects.
+
+    Columns added here must also be added to the CREATE TABLE definitions so
+    fresh installs and in-place upgrades stay in parity.
+    """
+    _ensure_column(
+        conn,
+        "tracked_movies",
+        "added_by_id",
+        "TEXT",
+    )
+    _ensure_column(
+        conn,
+        "rentals",
+        "extensions_used",
+        "INTEGER NOT NULL DEFAULT 0",
+    )
+    for column in (
+        "directors_json",
+        "writers_json",
+        "actors_json",
+        "countries_json",
+        "collections_json",
+    ):
+        _ensure_column(
+            conn,
+            "plex_library_cache",
+            column,
+            "TEXT NOT NULL DEFAULT '[]'",
+        )
 
 
 def _ensure_column(

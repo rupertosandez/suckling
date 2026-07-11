@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.10.3.1] - 2026-07-11
+
+### Fixed
+
+- Additive column migrations (`_ensure_column`) now run on the Postgres path at startup, not just SQLite. Previously `init_db()` returned before reaching them on Postgres, so a column added to an already-deployed Postgres database would never be applied in place. No effect on current schemas (all migrated columns already exist in both dialects); this closes the gap for the next column added.
+
 ## [2.10.3] - 2026-07-10
 
 ### Fixed
