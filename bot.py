@@ -598,6 +598,15 @@ async def _scheduled_plex_incremental_refresh():
         logger.log_exception("scheduled_plex_incremental_refresh", e)
         print(f"[scheduler] Plex incremental refresh failed: {e}")
 
+    try:
+        await plex.refresh_collections_cache()
+    except plex.PlexError as e:
+        logger.log_warning("scheduled_plex_collections_refresh", f"Plex unreachable: {e}")
+        print(f"[scheduler] Plex collections refresh failed: {e}")
+    except Exception as e:
+        logger.log_exception("scheduled_plex_collections_refresh", e)
+        print(f"[scheduler] Plex collections refresh failed: {e}")
+
 
 async def _scheduled_plex_full_refresh():
     if not config.PLEX_TOKEN:

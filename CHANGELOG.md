@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.10.3.2] - 2026-07-13
+
+### Added
+
+- Syncs real Plex Collection metadata (title, description, poster, curated item order) into new `plex_collections_cache`/`plex_collection_items` tables, piggybacking on the existing hourly Plex sync and startup cache warm - no new schedule. Backend-only; powers the web portal's upcoming "curation" section, no new bot commands.
+
 ## [2.10.3.1] - 2026-07-11
 
 ### Fixed

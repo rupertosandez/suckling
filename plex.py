@@ -334,6 +334,42 @@ async def refresh_incremental_cache() -> list[dict]:
         return await _refresh_incremental_cache_unlocked()
 
 
+def _collection_to_dict(collection: Any) -> dict:
+    thumb_path = getattr(collection, "thumb", None)
+    try:
+        items = collection.items()
+    except Exception:
+        items = []
+    return {
+        "collection_key": str(collection.ratingKey),
+        "title": collection.title or "Untitled",
+        "summary": collection.summary or "",
+        "thumb_path": thumb_path,
+        "thumb_url": _absolute_url(thumb_path),
+        "item_rating_keys": [str(item.ratingKey) for item in items],
+    }
+
+
+def _refresh_collections_sync() -> list[dict]:
+    if _library is None:
+        raise PlexError("Not connected to Plex")
+    return [_collection_to_dict(collection) for collection in _library.collections()]
+
+
+async def refresh_collections_cache() -> list[dict]:
+    """Syncs Plex Collection metadata (title/summary/poster/curated item
+    order) into plex_collections_cache + plex_collection_items - the web
+    portal's "curation" section reads these directly. Piggybacks on the
+    existing library sync cadence (called from warm_cache() and the hourly
+    scheduled refresh) rather than its own schedule, since collections are
+    curator-driven and change far less often than the library itself."""
+    await _connect()
+    collections = await asyncio.to_thread(_refresh_collections_sync)
+    db.replace_plex_collections_cache(collections)
+    print(f"[plex] Collections cache refreshed: {len(collections)} collections")
+    return collections
+
+
 async def _get_movies() -> list[dict]:
     """Get the movie list from memory, then the persisted snapshot, then Plex."""
     global _movies_cache, _cache_age
@@ -405,6 +441,7 @@ async def warm_cache() -> None:
     if not config.PLEX_TOKEN:
         return
     await refresh_incremental_cache()
+    await refresh_collections_cache()
 
 
 # ---------- random pick (existing /rb9) ----------

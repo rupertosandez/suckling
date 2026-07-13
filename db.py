@@ -187,6 +187,22 @@ CREATE TABLE IF NOT EXISTS plex_library_cache (
     cached_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS plex_collections_cache (
+    collection_key TEXT PRIMARY KEY,
+    title          TEXT NOT NULL,
+    summary        TEXT NOT NULL DEFAULT '',
+    thumb_path     TEXT,
+    thumb_url      TEXT,
+    cached_at      TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS plex_collection_items (
+    collection_key TEXT NOT NULL,
+    rating_key     TEXT NOT NULL,
+    sort_index     INTEGER NOT NULL,
+    PRIMARY KEY (collection_key, rating_key)
+);
+
 CREATE TABLE IF NOT EXISTS achievement_earned (
     user_id TEXT NOT NULL,
     achievement_id TEXT NOT NULL,
@@ -658,6 +674,22 @@ def init_db() -> None:
                 cached_at        TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS plex_collections_cache (
+                collection_key TEXT PRIMARY KEY,
+                title          TEXT NOT NULL,
+                summary        TEXT NOT NULL DEFAULT '',
+                thumb_path     TEXT,
+                thumb_url      TEXT,
+                cached_at      TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS plex_collection_items (
+                collection_key TEXT NOT NULL,
+                rating_key     TEXT NOT NULL,
+                sort_index     INTEGER NOT NULL,
+                PRIMARY KEY (collection_key, rating_key)
+            );
+
             CREATE TABLE IF NOT EXISTS achievement_earned (
                 user_id          TEXT NOT NULL,
                 achievement_id   TEXT NOT NULL,
@@ -950,6 +982,63 @@ def get_plex_library_cache_watermarks() -> tuple[str | None, str | None]:
     if not row:
         return None, None
     return row["max_added_at"], row["max_updated_at"]
+
+
+# ---------- Plex collections cache ----------
+# Portal-facing (the "curation" section on the web portal reads these two
+# tables directly, read-only, same trust boundary as plex_library_cache).
+# Unlike plex_library_cache's thumb_path (resolved lazily in-process from
+# the bot's own live Plex connection), thumb_url here is a fully-resolved
+# absolute URL captured *at sync time* - the portal has no Plex credentials
+# of its own and no per-item "rental" event to capture a resolved URL
+# through, so this is the only path it has to a working collection poster.
+
+def replace_plex_collections_cache(collections: Iterable[dict]) -> int:
+    """Full replace rather than upsert - collections are few enough that a
+    delete+reinsert each sync is simpler than diffing, and it naturally
+    drops any collection that no longer exists in Plex."""
+    cached_at = _utc_now_iso()
+    collection_rows = [
+        (
+            str(collection["collection_key"]),
+            collection.get("title") or "Untitled",
+            collection.get("summary") or "",
+            collection.get("thumb_path"),
+            collection.get("thumb_url"),
+            cached_at,
+        )
+        for collection in collections
+        if collection.get("collection_key")
+    ]
+    item_rows = [
+        (str(collection["collection_key"]), str(rating_key), index)
+        for collection in collections
+        if collection.get("collection_key")
+        for index, rating_key in enumerate(collection.get("item_rating_keys") or [])
+    ]
+
+    with _connect() as conn:
+        conn.execute("DELETE FROM plex_collection_items")
+        conn.execute("DELETE FROM plex_collections_cache")
+        if collection_rows:
+            conn.executemany(
+                """
+                INSERT INTO plex_collections_cache (
+                    collection_key, title, summary, thumb_path, thumb_url, cached_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                collection_rows,
+            )
+        if item_rows:
+            conn.executemany(
+                """
+                INSERT INTO plex_collection_items (collection_key, rating_key, sort_index)
+                VALUES (?, ?, ?)
+                """,
+                item_rows,
+            )
+    return len(collection_rows)
 
 
 def get_announcement_channel_id() -> int | None:

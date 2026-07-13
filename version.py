@@ -12,4 +12,4 @@ work. VERSION is only ever compared as an opaque string, so a fourth segment is
 safe. Keep the matching CHANGELOG.md header in sync with this string.
 """
 
-VERSION = "2.10.3.1"
+VERSION = "2.10.3.2"
