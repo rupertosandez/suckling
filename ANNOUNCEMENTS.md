@@ -47,3 +47,7 @@ database updates
 - added ownership history to macguffins. use `/guffinhistory` to view.
 - weekly recap posts every sunday
 - UX fixes for the `/myrental` and `/achievements` flows
+
+## [2.10.3.2]
+
+synced plex collections with online portal
