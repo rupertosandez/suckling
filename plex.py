@@ -196,10 +196,19 @@ def _refresh_incremental_cache_sync() -> list[dict]:
 
 
 def _absolute_url(relative: str | None) -> str | None:
-    """Convert a relative Plex image path to a full URL with auth token."""
+    """Convert a relative Plex image path to a full URL with auth token.
+
+    Collection "composite" thumbs (Plex's auto-generated grid poster, used
+    whenever a collection has no custom art) already carry a query string
+    (?width=...&height=...) - appending another `?` produced a URL with two
+    query strings, which silently swallowed X-Plex-Token as part of the
+    `height` value instead of a real parameter, so Plex rejected the
+    request. Plain movie/collection thumb paths never had a `?` so this
+    never surfaced before collections started using this helper too."""
     if not relative or _server is None:
         return None
-    return f"{_server._baseurl}{relative}?X-Plex-Token={config.PLEX_TOKEN}"
+    separator = "&" if "?" in relative else "?"
+    return f"{_server._baseurl}{relative}{separator}X-Plex-Token={config.PLEX_TOKEN}"
 
 
 def _tag_values(video: Any, tag: str) -> list[str]:

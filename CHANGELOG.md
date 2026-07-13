@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.10.3.3] - 2026-07-14
+
+### Fixed
+
+- Collection posters weren't loading on the portal's curation page. `plex.py`'s `_absolute_url()` appended `?X-Plex-Token=...` unconditionally, but Plex's auto-generated "composite" collection thumbs already carry their own `?width=...&height=...` query string - the result had two `?` characters, so the token got silently swallowed as part of the `height` value instead of being parsed as a real parameter, and Plex rejected the request. Now appends with `&` when the path already has a query string.
+
 ## [2.10.3.2] - 2026-07-13
 
 ### Added

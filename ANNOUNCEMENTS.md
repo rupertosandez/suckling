@@ -51,3 +51,7 @@ database updates
 ## [2.10.3.2]
 
 synced plex collections with online portal
+
+## [2.10.3.3]
+
+tiny bugfix for collection URL's in plex cache
