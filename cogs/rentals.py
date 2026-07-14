@@ -1,4 +1,5 @@
 import asyncio
+import random
 from datetime import datetime, timezone
 from zoneinfo import available_timezones
 
@@ -75,6 +76,9 @@ def _active_rental_limit_message(rentals: list[dict]) -> str:
     if rentals:
         message += f"\n\n{_format_active_rental_options(rentals)}"
     return message
+
+
+MACGUFFIN_RETURN_DROP_CHANCE = 0.5
 
 
 def _macguffin_weights_for_rental(rental: dict) -> dict[str, int] | None:
@@ -374,23 +378,24 @@ class RentalsCog(commands.Cog):
             ephemeral=True,
         )
         try:
-            card = await asyncio.to_thread(
-                macguffin_module.drop_macguffin,
-                user_id,
-                str(interaction.user),
-                f"return:{rental_record.get('initiated_by', 'selected')}",
-                _macguffin_weights_for_rental(rental_record),
-            )
-            claimed = await asyncio.to_thread(db.get_claimed_macguffin_ids)
-            total = len(macguffin_module.CARDS)
-            drop_embed = embeds.macguffin_drop_embed(
-                card,
-                interaction.user.mention,
-                len(claimed),
-                total,
-            )
-            if interaction.channel:
-                await interaction.channel.send(embed=drop_embed)
+            if random.random() < MACGUFFIN_RETURN_DROP_CHANCE:
+                card = await asyncio.to_thread(
+                    macguffin_module.drop_macguffin,
+                    user_id,
+                    str(interaction.user),
+                    f"return:{rental_record.get('initiated_by', 'selected')}",
+                    _macguffin_weights_for_rental(rental_record),
+                )
+                claimed = await asyncio.to_thread(db.get_claimed_macguffin_ids)
+                total = len(macguffin_module.CARDS)
+                drop_embed = embeds.macguffin_drop_embed(
+                    card,
+                    interaction.user.mention,
+                    len(claimed),
+                    total,
+                )
+                if interaction.channel:
+                    await interaction.channel.send(embed=drop_embed)
         except macguffin_module.MacGuffinPoolEmpty:
             pass
         except Exception as e:

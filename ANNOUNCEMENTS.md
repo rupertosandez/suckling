@@ -38,6 +38,10 @@ fixed guessing games to not take so long to register guesses.
 
 unlocked speedrun-brain on myself. i'm fast now, try me.
 
+## [2.10.4]
+
+sorry gang... returns now have a chance of not giving you a macguffin >.<
+
 ## [2.10.3.1]
 
 database updates

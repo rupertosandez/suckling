@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.10.4] - 2026-07-14
+
+### Changed
+
+- MacGuffin drops on watched rental returns are no longer guaranteed: each return now has a 50% chance to drop (`MACGUFFIN_RETURN_DROP_CHANCE` in `cogs/rentals.py`). The rarity boost for randomly rolled rentals still applies when a drop does happen, and unwatched returns still never drop.
+
 ## [2.10.3.3] - 2026-07-14
 
 ### Fixed
