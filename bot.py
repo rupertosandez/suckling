@@ -688,6 +688,7 @@ async def on_ready():
             # slips filed on the portal. A cheap indexed no-op query on
             # most ticks; the db work runs off-loop inside process_pending.
             outbox.process_pending, trigger="interval", seconds=5,
+            args=[bot],
             id="portal_outbox", replace_existing=True,
         )
         scheduler.start()

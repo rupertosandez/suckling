@@ -63,3 +63,7 @@ tiny bugfix for collection URL's in plex cache
 ## [2.10.4.1]
 
 quiet plumbing behind the counter. the clerk is learning to take rental requests from the portal - nothing to click yet, but soon you won't have to walk to discord to check out a tape.
+
+## [2.11.0]
+
+big one: you can rent from the portal now. find a film page, hit rent, and the clerk takes it from there - your thread shows up in discord like always, due dates and macguffin odds all work the same. rolling a random tape still lives in discord for now.

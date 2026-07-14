@@ -2363,3 +2363,30 @@ def complete_rental_request(
             "result_rental_id = ?, processed_at = ? WHERE id = ?",
             (status, result_message, result_rental_id, _utc_now_iso(), request_id),
         )
+
+
+def get_plex_movie_by_key(rating_key: str) -> dict | None:
+    """One plex_library_cache row in the same decoded-JSON shape
+    get_plex_library_cache() returns (spec 18 M-R-b: the outbox worker
+    resolves a portal rent slip's plex_key to the movie dict the rental
+    flow expects)."""
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT rating_key, title, year, summary, thumb_path, art_path,
+                   duration_minutes, rating, audience_rating, added_at,
+                   updated_at, genres_json, directors_json, writers_json,
+                   actors_json, countries_json, collections_json
+            FROM plex_library_cache WHERE rating_key = ?
+            """,
+            (str(rating_key),),
+        ).fetchone()
+    if not row:
+        return None
+    movie = dict(row)
+    for key in ("genres", "directors", "writers", "actors", "countries", "collections"):
+        try:
+            movie[key] = json.loads(movie.pop(f"{key}_json") or "[]")
+        except json.JSONDecodeError:
+            movie[key] = []
+    return movie

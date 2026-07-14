@@ -500,67 +500,31 @@ async def _confirm_rental(
     initiated_by: str,
 ) -> None:
     """
-    Shared finalization: creates the DB record, forum thread, DMs the user,
-    and edits the ephemeral message to a confirmation.
-    Called from RentPickView and EmbedRentView on acceptance.
+    Shared finalization: delegates the actual work (cap check, DB record,
+    forum thread) to rental.execute_confirmed_rental - the same core the
+    portal outbox worker calls (spec 18 M-R-b) - then edits the ephemeral
+    message to a confirmation. Called from RentPickView and EmbedRentView
+    on acceptance.
     """
-    now = datetime.now(timezone.utc)
-    user_timezone = await asyncio.to_thread(db.get_user_timezone, user_id)
-    due_at = rental_module.compute_due_at(now, user_timezone)
-
-    async with _rental_lock(user_id):
-        active_count = await _active_rental_count_for_user(user_id)
-        if active_count >= rental_module.MAX_ACTIVE_RENTALS_PER_USER:
-            await interaction.edit_original_response(
-                content=_active_rental_limit_message(active_count),
-                embed=None,
-                view=None,
-            )
-            return
-
-        # Check reviews channel is configured before committing
-        reviews_channel_id = await asyncio.to_thread(db.get_reviews_channel_id)
-        if not reviews_channel_id:
-            await interaction.edit_original_response(
-                content=(
-                    "⚠️ the reviews forum hasn't been configured yet. "
-                    "ask an admin to run `/setreviews` first."
-                ),
-                embed=None,
-                view=None,
-            )
-            return
-
-        rental_id = await asyncio.to_thread(
-            db.create_rental,
-            user_id=user_id,
-            user_name=user_name,
-            plex_key=movie["rating_key"],
-            title=movie["title"],
-            year=movie.get("year"),
-            poster_url=movie.get("thumb_url"),
-            rented_at=now.isoformat(),
-            due_at=due_at.isoformat(),
-            rerolls_used=rerolls_used,
-            initiated_by=initiated_by,
-        )
-
-    # Create the forum thread
-    thread_ok = await rental_module.create_forum_thread(
+    result = await rental_module.execute_confirmed_rental(
         bot=bot,
-        rental_id=rental_id,
         movie=movie,
-        user_tag=user_name,
-        due_at=due_at,
+        user_id=user_id,
+        user_name=user_name,
+        rerolls_used=rerolls_used,
+        initiated_by=initiated_by,
     )
+    if not result["ok"]:
+        await interaction.edit_original_response(
+            content=result["error"], embed=None, view=None,
+        )
+        return
 
-    due_ts = int(due_at.timestamp())
+    due_ts = int(result["due_at"].timestamp())
     title_str = f"**{movie['title']} ({movie.get('year', '?')})**"
 
-    if thread_ok:
-        rental = await asyncio.to_thread(db.get_rental_by_id, rental_id)
-        thread_id = rental.get("thread_id") if rental else None
-        thread_mention = f" - check <#{thread_id}>" if thread_id else ""
+    if result["thread_ok"]:
+        thread_mention = f" - check <#{result['thread_id']}>" if result["thread_id"] else ""
         confirm_text = (
             f"📼 rental confirmed: {title_str}\n"
             f"due back <t:{due_ts}:F> (<t:{due_ts}:R>){thread_mention}\n\n"
@@ -577,33 +541,11 @@ async def _confirm_rental(
     await interaction.edit_original_response(content=confirm_text, embed=None, view=None)
 
 
-def _active_rental_limit_message(active_count: int) -> str:
-    return (
-        f"you already have **{active_count}** active rentals. "
-        "return one before checking out another."
-    )
-
-
-async def _active_rental_count_for_user(user_id: str) -> int:
-    active = await asyncio.to_thread(db.get_active_rentals, user_id)
-    return len(active)
-
-
-_RENTAL_LOCKS: dict[str, asyncio.Lock] = {}
-
-
-def _rental_lock(user_id: str) -> asyncio.Lock:
-    """Serialize count-then-insert rental confirmation per user.
-
-    Without this, two near-simultaneous accepts (e.g. a double-clicked
-    confirm button) can both pass the active-rental count check before
-    either inserts, producing more than MAX_ACTIVE_RENTALS_PER_USER.
-    """
-    lock = _RENTAL_LOCKS.get(user_id)
-    if lock is None:
-        lock = asyncio.Lock()
-        _RENTAL_LOCKS[user_id] = lock
-    return lock
+# Cap helpers moved to rental.py (spec 18 M-R-b) so the portal outbox
+# worker shares the same lock map and copy; thin aliases keep this
+# module's existing call sites unchanged.
+_active_rental_limit_message = rental_module.active_rental_limit_message
+_active_rental_count_for_user = rental_module.active_rental_count
 
 
 class PickOwnRentalModal(discord.ui.Modal, title="pick a rental"):

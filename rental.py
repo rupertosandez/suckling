@@ -504,3 +504,104 @@ async def check_reminders(bot: discord.Client) -> None:
             db.mark_reminder_sent(r["id"])
         except Exception as e:
             logger.log_exception("rental_reminder_notify", e)
+
+
+# ---------- confirmed-rental service (shared by views + portal outbox) ----------
+# Spec 18 M-R-b: the interaction-free core of rental confirmation. The
+# Discord views and the portal outbox worker both call this, so there is
+# exactly one place that checks the cap, creates the row, and opens the
+# forum thread - the outbox's whole reason to exist.
+
+_RENTAL_LOCKS: dict[str, asyncio.Lock] = {}
+
+
+def rental_lock(user_id: str) -> asyncio.Lock:
+    """Serialize count-then-insert rental confirmation per user.
+
+    Without this, two near-simultaneous confirmations (a double-clicked
+    button, or a portal slip racing a Discord confirm) can both pass the
+    active-rental count check before either inserts, producing more than
+    MAX_ACTIVE_RENTALS_PER_USER. Moved here from views.py so the outbox
+    worker shares the same lock map as the buttons.
+    """
+    lock = _RENTAL_LOCKS.get(user_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _RENTAL_LOCKS[user_id] = lock
+    return lock
+
+
+async def active_rental_count(user_id: str) -> int:
+    active = await asyncio.to_thread(db.get_active_rentals, user_id)
+    return len(active)
+
+
+def active_rental_limit_message(active_count: int) -> str:
+    return (
+        f"you already have **{active_count}** active rentals. "
+        "return one before checking out another."
+    )
+
+
+async def execute_confirmed_rental(
+    bot: discord.Client,
+    movie: dict,
+    user_id: str,
+    user_name: str,
+    rerolls_used: int,
+    initiated_by: str,
+) -> dict:
+    """Create the rental row and forum thread. Returns a result dict:
+    {"ok": True, "rental_id", "due_at", "thread_id", "thread_ok"} or
+    {"ok": False, "error": member-facing message}. Callers own their own
+    messaging (ephemeral edit for views, result_message for the outbox).
+    """
+    now = datetime.now(timezone.utc)
+    user_timezone = await asyncio.to_thread(db.get_user_timezone, user_id)
+    due_at = compute_due_at(now, user_timezone)
+
+    async with rental_lock(user_id):
+        active_count = await active_rental_count(user_id)
+        if active_count >= MAX_ACTIVE_RENTALS_PER_USER:
+            return {"ok": False, "error": active_rental_limit_message(active_count)}
+
+        # Check the reviews channel is configured before committing
+        reviews_channel_id = await asyncio.to_thread(db.get_reviews_channel_id)
+        if not reviews_channel_id:
+            return {
+                "ok": False,
+                "error": (
+                    "⚠️ the reviews forum hasn't been configured yet. "
+                    "ask an admin to run `/setreviews` first."
+                ),
+            }
+
+        rental_id = await asyncio.to_thread(
+            db.create_rental,
+            user_id=user_id,
+            user_name=user_name,
+            plex_key=movie["rating_key"],
+            title=movie["title"],
+            year=movie.get("year"),
+            poster_url=movie.get("thumb_url"),
+            rented_at=now.isoformat(),
+            due_at=due_at.isoformat(),
+            rerolls_used=rerolls_used,
+            initiated_by=initiated_by,
+        )
+
+    thread_ok = await create_forum_thread(
+        bot=bot,
+        rental_id=rental_id,
+        movie=movie,
+        user_tag=user_name,
+        due_at=due_at,
+    )
+    rental = await asyncio.to_thread(db.get_rental_by_id, rental_id)
+    return {
+        "ok": True,
+        "rental_id": rental_id,
+        "due_at": due_at,
+        "thread_ok": thread_ok,
+        "thread_id": rental.get("thread_id") if rental else None,
+    }

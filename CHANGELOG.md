@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.11.0] - 2026-07-14
+
+### Added
+
+- Renting from the portal (sucklingweb spec 18, M-R-b): the outbox worker now handles `rent` slips - the pick-a-movie path executed through the new `rental.execute_confirmed_rental`, the same interaction-free core the Discord confirm buttons now delegate to. One code path for cap check, rental row, and forum thread, whether the request came from a slash command or the portal. Portal rentals are `initiated_by='selected'` (economy parity: macguffin weights and achievement events key off that value; portal provenance lives in the outbox row's `result_rental_id`). `db.get_plex_movie_by_key` added for the worker's film lookup.
+
+### Changed
+
+- `views._confirm_rental` and the rental cap helpers (`rental_lock`, `active_rental_count`, `active_rental_limit_message`) moved to `rental.py` so the buttons and the worker share one lock map - a portal slip racing a Discord confirm can't overshoot the 3-rental cap.
+
 ## [2.10.4.1] - 2026-07-14
 
 ### Added
