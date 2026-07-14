@@ -66,4 +66,4 @@ quiet plumbing behind the counter. the clerk is learning to take rental requests
 
 ## [2.11.0]
 
-big one: you can rent from the portal now. find a film page, hit rent, and the clerk takes it from there - your thread shows up in discord like always, due dates and macguffin odds all work the same. rolling a random tape still lives in discord for now.
+rental functionality added to web portal
