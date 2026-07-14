@@ -59,3 +59,7 @@ synced plex collections with online portal
 ## [2.10.3.3]
 
 tiny bugfix for collection URL's in plex cache
+
+## [2.10.4.1]
+
+quiet plumbing behind the counter. the clerk is learning to take rental requests from the portal - nothing to click yet, but soon you won't have to walk to discord to check out a tape.

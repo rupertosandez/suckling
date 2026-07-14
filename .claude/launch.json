@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sucklingweb",
+      "runtimeExecutable": "powershell.exe",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "Set-Location 'D:\\git\\Sites\\sucklingweb'; .\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --port 8000"
+      ],
+      "port": 8000
+    }
+  ]
+}

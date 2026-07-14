@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.10.4.1] - 2026-07-14
+
+### Added
+
+- Portal rental outbox worker (sucklingweb spec 18, M-R-a): a 5-second scheduler job (`outbox.py`) consumes request slips the portal files into the web-owned `web_rental_requests` table and writes results back. Ships with the `ping` action only - the contract proof; rent/return handlers arrive in later milestones. Per the column-split contract (C1 amendment in the sucklingweb repo), the bot updates only its result columns and never inserts or deletes request rows, and it degrades quietly (one log line, not one per tick) when the portal's migration hasn't created the table yet.
+
 ## [2.10.4] - 2026-07-14
 
 ### Changed

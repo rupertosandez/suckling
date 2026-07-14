@@ -2320,3 +2320,46 @@ def get_all_achievement_role_ids() -> set[int]:
     with _connect() as conn:
         rows = conn.execute("SELECT role_id FROM achievement_roles").fetchall()
         return {int(row["role_id"]) for row in rows}
+
+
+# ---------- portal rental outbox (sucklingweb spec 18) ----------
+# web_rental_requests is WEB-OWNED (Alembic-migrated by sucklingweb; this
+# bot never creates or drops it). Per the C1 amendment's column-split
+# contract, the helpers below UPDATE only: status, result_message,
+# result_rental_id, processed_at, offer_plex_key, offer_title, offer_year,
+# rerolls_remaining. Never INSERT or DELETE here.
+
+def get_pending_rental_requests(limit: int = 5) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM web_rental_requests WHERE status = 'pending' "
+            "ORDER BY created_at ASC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def claim_rental_request(request_id: int) -> bool:
+    """Atomic claim: only a still-pending slip can move to processing, so
+    a slip the portal expired between fetch and claim is left alone."""
+    with _connect() as conn:
+        cursor = conn.execute(
+            "UPDATE web_rental_requests SET status = 'processing', processed_at = ? "
+            "WHERE id = ? AND status = 'pending'",
+            (_utc_now_iso(), request_id),
+        )
+        return cursor.rowcount == 1
+
+
+def complete_rental_request(
+    request_id: int,
+    status: str,
+    result_message: str,
+    result_rental_id: int | None = None,
+) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE web_rental_requests SET status = ?, result_message = ?, "
+            "result_rental_id = ?, processed_at = ? WHERE id = ?",
+            (status, result_message, result_rental_id, _utc_now_iso(), request_id),
+        )

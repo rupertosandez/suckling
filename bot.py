@@ -27,6 +27,7 @@ import letterboxd as lb_module
 import macguffin as macguffin_module
 import cleanup as cleanup_module
 import achievements as achievement_module
+import outbox
 import update_announcements
 import recap
 import views
@@ -681,6 +682,13 @@ async def on_ready():
             hour=11,
             minute=0,
             id="weekly_recap", replace_existing=True,
+        )
+        scheduler.add_job(
+            # Portal rental outbox (sucklingweb spec 18): consume request
+            # slips filed on the portal. A cheap indexed no-op query on
+            # most ticks; the db work runs off-loop inside process_pending.
+            outbox.process_pending, trigger="interval", seconds=5,
+            id="portal_outbox", replace_existing=True,
         )
         scheduler.start()
         print("[scheduler] Daily tracker check scheduled for 9:00 local time")
