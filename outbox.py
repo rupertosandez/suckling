@@ -248,7 +248,12 @@ async def _validated_parent_offer(row: dict) -> tuple[dict | None, str | None]:
     if parent.get("status") != "offered" or not parent.get("offer_plex_key"):
         return None, "that offer never happened - roll again."
     siblings = await db.run(db.get_rental_request_children, int(parent_id))
-    answered = [s for s in siblings if int(s["id"]) != int(row["id"])]
+    # A FAILED answer doesn't claim the offer - a member whose accept was
+    # refused (at cap, invalid choice) can answer again once unblocked.
+    answered = [
+        s for s in siblings
+        if int(s["id"]) != int(row["id"]) and s.get("status") != "failed"
+    ]
     if answered:
         return None, "that offer was already answered - roll again."
     return parent, None
@@ -281,12 +286,21 @@ async def _handle_roll_accept(bot: discord.Client | None, row: dict) -> tuple[st
     if _offer_stale(parent):
         return "failed", "that tape went back on the shelf - roll again.", None
 
-    movie_row = await db.run(db.get_plex_movie_by_key, str(parent["offer_plex_key"]))
+    # Pick-your-favorite (parity with the Discord 2.8.0 flow): once the
+    # rerolls are spent, the accept slip may carry a plex_key naming ANY
+    # film offered in this chain, not just the final one. No plex_key
+    # means the parent offer, as before.
+    chain_exclusions, _chain = await _roll_chain_exclusions(row)
+    offered_keys = chain_exclusions | {str(parent["offer_plex_key"])}
+    chosen_key = str(row.get("plex_key") or "").strip() or str(parent["offer_plex_key"])
+    if chosen_key not in offered_keys:
+        return "failed", "that tape wasn't one of your rolls - pick from the ones the clerk showed you.", None
+
+    movie_row = await db.run(db.get_plex_movie_by_key, chosen_key)
     if not movie_row:
         return "failed", "that tape isn't on the shelf anymore - roll again.", None
     movie = plex._hydrate_cached_movie(movie_row)
 
-    _, chain = await _roll_chain_exclusions(row)
     rerolls_used = ROLL_MAX_REROLLS - int(parent.get("rerolls_remaining") or 0)
 
     user_id = str(row["discord_id"])

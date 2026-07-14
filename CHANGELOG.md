@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.12.1] - 2026-07-14
+
+### Fixed
+
+- Portal roll now matches the Discord 2.8.0 flow at the end: once both rerolls are spent, the member picks their favorite from ALL the films they were shown, not just the last offer. The accept slip may carry a `plex_key` naming any chain offer (validated against the chain); a *failed* answer (at cap, invalid choice) no longer claims the offer, so a refused accept can be retried.
+- Confusing exhausted-rerolls copy replaced by the pick-your-favorite screen; posters on roll offers degrade to letter tiles instead of broken images; roll/return links styled as buttons (maintainer live-testing notes).
+
 ## [2.12.0] - 2026-07-14
 
 ### Added

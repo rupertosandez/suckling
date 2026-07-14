@@ -71,3 +71,7 @@ rental functionality added to web portal
 ## [2.12.0]
 
 returns and random rolls added to web portal
+
+## [2.12.1]
+
+roll polish: out of rerolls now means you pick your favorite of the three, same as discord
