@@ -75,3 +75,7 @@ returns and random rolls added to web portal
 ## [2.12.1]
 
 roll polish: out of rerolls now means you pick your favorite of the three, same as discord
+
+## [2.12.1.1]
+
+quiet fix behind the counter - portal requests get picked up faster now. nothing to click.

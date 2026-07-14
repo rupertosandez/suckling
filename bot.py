@@ -694,7 +694,9 @@ async def on_ready():
         # LISTEN/NOTIFY companion to the poll (spec 18 M-R-d): wakes the
         # worker the instant the portal files a slip. Guarded by the same
         # once-only block as the scheduler; the poll above is the fallback.
-        asyncio.create_task(outbox.listen_for_slips(bot))
+        # Daemon thread with a sync connection - async psycopg refuses the
+        # Windows Proactor loop this bot runs on.
+        outbox.start_listener(bot, asyncio.get_running_loop())
         scheduler.start()
         print("[scheduler] Daily tracker check scheduled for 9:00 local time")
         print("[scheduler] Daily horror recommendation scheduled for 12:00 local time")

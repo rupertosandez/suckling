@@ -391,28 +391,44 @@ async def process_pending(bot: discord.Client | None = None) -> None:
         print(f"[outbox] tick: {processed} processed, {skipped} skipped/expired")
 
 
-async def listen_for_slips(bot: discord.Client) -> None:
+def start_listener(bot: discord.Client, loop: asyncio.AbstractEventLoop) -> None:
     """Spec 18 M-R-d: LISTEN on the shared Postgres so a freshly filed
     slip wakes the worker in well under a second instead of waiting out
     the 5s poll - the poll stays on as the permanent fallback, so a
-    dropped listener degrades to sluggish, never to broken. No-op on
-    sqlite dev (no NOTIFY there)."""
+    dropped listener degrades to sluggish, never to broken.
+
+    Runs a SYNC psycopg connection on a daemon thread, not an async one
+    on the bot's loop: psycopg's async mode refuses Windows'
+    ProactorEventLoop (the loop discord.py runs on), which crash-looped
+    the first version of this every 30s. A blocking notifies() generator
+    on plain sockets needs no event loop at all; each notify schedules
+    one worker tick back onto the bot's loop. No-op on sqlite dev."""
     if not config.DATABASE_URL:
         return
+    import threading
+
+    thread = threading.Thread(
+        target=_listen_thread, args=(bot, loop), name="outbox-listener", daemon=True,
+    )
+    thread.start()
+
+
+def _listen_thread(bot: discord.Client, loop: asyncio.AbstractEventLoop) -> None:
+    import time
+
     import psycopg
 
     while True:
         try:
-            aconn = await psycopg.AsyncConnection.connect(config.DATABASE_URL, autocommit=True)
-            try:
-                await aconn.execute(f"LISTEN {NOTIFY_CHANNEL}")
+            with psycopg.connect(config.DATABASE_URL, autocommit=True) as conn:
+                conn.execute(f"LISTEN {NOTIFY_CHANNEL}")
                 print(f"[outbox] listening for portal notifies on '{NOTIFY_CHANNEL}'")
-                async for _notify in aconn.notifies():
-                    await process_pending(bot)
-            finally:
-                await aconn.close()
-        except asyncio.CancelledError:
-            raise
+                for _notify in conn.notifies():
+                    # One tick at a time; blocking here coalesces a burst
+                    # of notifies into however many ticks it takes, and
+                    # surfaces tick errors into this thread's retry loop.
+                    future = asyncio.run_coroutine_threadsafe(process_pending(bot), loop)
+                    future.result(timeout=120)
         except Exception as exc:
             print(f"[outbox] listener dropped ({exc.__class__.__name__}: {exc}) - retrying in 30s (poll continues)")
-            await asyncio.sleep(30)
+            time.sleep(30)

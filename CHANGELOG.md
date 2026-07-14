@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.12.1.1] - 2026-07-14
+
+### Fixed
+
+- The outbox LISTEN/NOTIFY listener crash-looped every 30s on Windows: psycopg's async mode refuses the ProactorEventLoop discord.py runs on (`InterfaceError` spam in the launcher log; the 5s poll carried all traffic, so nothing member-facing broke). The listener is now a sync psycopg connection on a daemon thread - no event loop involved - scheduling worker ticks onto the bot's loop via `run_coroutine_threadsafe`.
+
 ## [2.12.1] - 2026-07-14
 
 ### Fixed
