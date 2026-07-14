@@ -605,3 +605,146 @@ async def execute_confirmed_rental(
         "thread_ok": thread_ok,
         "thread_id": rental.get("thread_id") if rental else None,
     }
+
+
+# ---------- return service (shared by the return modals + portal outbox) ----------
+# Spec 18 M-R-c: the interaction-free cores of watched/unwatched returns.
+# Everything with stakes lives here once: fee math, thread edit, the 50%
+# macguffin roll (2.10.4) with per-rental weights, achievements.
+
+MACGUFFIN_RETURN_DROP_CHANCE = 0.5
+
+
+def macguffin_weights_for_rental(rental: dict) -> dict[str, int] | None:
+    """Boosted rarity odds for rolled rentals (and legacy 'command' rows);
+    picked/admin rentals use the default weights. Moved here from
+    cogs/rentals.py so the outbox worker shares the exact table."""
+    if rental.get("initiated_by") in ("random", "command"):
+        return {"common": 50, "rare": 40, "iconic": 10}
+    return None
+
+
+async def _drop_macguffin_for_return(
+    bot: discord.Client,
+    rental_record: dict,
+    user_id: str,
+    user_tag: str,
+    announce_channel,
+) -> dict | None:
+    """The 50% drop roll. Returns the card dict when one dropped (already
+    announced to announce_channel when possible), else None. Never raises -
+    a broken drop must not break the return."""
+    import random as _random
+
+    import achievements as _  # noqa: F401  (import order sanity; see award below)
+    import embeds as embeds_module
+    import macguffin as macguffin_module
+
+    try:
+        if _random.random() >= MACGUFFIN_RETURN_DROP_CHANCE:
+            return None
+        card = await asyncio.to_thread(
+            macguffin_module.drop_macguffin,
+            user_id,
+            user_tag,
+            f"return:{rental_record.get('initiated_by', 'selected')}",
+            macguffin_weights_for_rental(rental_record),
+        )
+        claimed = await asyncio.to_thread(db.get_claimed_macguffin_ids)
+        total = len(macguffin_module.CARDS)
+        drop_embed = embeds_module.macguffin_drop_embed(
+            card, f"<@{user_id}>", len(claimed), total,
+        )
+        if announce_channel:
+            await announce_channel.send(embed=drop_embed)
+        return card
+    except macguffin_module.MacGuffinPoolEmpty:
+        return None
+    except Exception as e:
+        logger.log_exception("macguffin_return_drop", e)
+        return None
+
+
+async def execute_watched_return(
+    bot: discord.Client,
+    user,
+    user_id: str,
+    user_tag: str,
+    rental_id: int,
+    rating: int | None,
+    recommend: bool | None,
+    thoughts: str | None,
+    announce_channel=None,
+) -> dict:
+    """Interaction-free core of a watched return (spec 18 M-R-c), shared by
+    the Discord return modal and the portal outbox worker. `user` is the
+    discord user object for achievement awarding (None skips achievements
+    with a log line - better a missed badge than a stuck return);
+    announce_channel is where a macguffin drop embed lands (the command
+    channel for Discord returns, the rental's forum thread for portal
+    ones). Returns {"ok": True, "rental", "late_fee", "dropped_card"} or
+    {"ok": False, "error": member-facing}."""
+    rental_record = await asyncio.to_thread(db.get_active_rental_by_id, user_id, rental_id)
+    if not rental_record:
+        return {"ok": False, "error": "that rental is no longer active."}
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    late_fee = compute_late_fee(rental_record["due_at"], now_iso)
+
+    await asyncio.to_thread(
+        db.mark_rental_returned,
+        rental_id=rental_record["id"],
+        returned_at=now_iso,
+        rating=rating,
+        thoughts=thoughts,
+        recommended=recommend,
+        late_fee_dollars=late_fee,
+    )
+    updated_rental = await asyncio.to_thread(db.get_rental_by_id, rental_record["id"])
+    await edit_thread_returned(bot, updated_rental)
+
+    dropped_card = await _drop_macguffin_for_return(
+        bot, rental_record, user_id, user_tag, announce_channel,
+    )
+
+    if user is not None:
+        import achievements as achievement_module
+
+        await achievement_module.award_for_user(
+            bot,
+            user,
+            source_type="rental_return",
+            source_id=str(rental_record["id"]),
+            rental=updated_rental,
+        )
+    else:
+        print(f"[rental] return {rental_record['id']}: no user object, achievements skipped")
+
+    return {"ok": True, "rental": updated_rental, "late_fee": late_fee, "dropped_card": dropped_card}
+
+
+async def execute_unwatched_return(
+    bot: discord.Client,
+    user_id: str,
+    rental_id: int,
+    reason: str | None,
+) -> dict:
+    """Interaction-free core of an unwatched return: fee + thread edit,
+    deliberately no review, no achievements, no macguffin roll."""
+    rental_record = await asyncio.to_thread(db.get_active_rental_by_id, user_id, rental_id)
+    if not rental_record:
+        return {"ok": False, "error": "that rental is no longer active."}
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    late_fee = compute_late_fee(rental_record["due_at"], now_iso)
+
+    await asyncio.to_thread(
+        db.mark_rental_returned_unwatched,
+        rental_id=rental_record["id"],
+        returned_at=now_iso,
+        reason=reason,
+        late_fee_dollars=late_fee,
+    )
+    updated_rental = await asyncio.to_thread(db.get_rental_by_id, rental_record["id"])
+    await edit_thread_returned_unwatched(bot, updated_rental)
+    return {"ok": True, "rental": updated_rental, "late_fee": late_fee}

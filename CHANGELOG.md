@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.12.0] - 2026-07-14
+
+### Added
+
+- Portal returns (sucklingweb spec 18, M-R-c): the outbox worker handles `return` slips, both branches, through new `rental.execute_watched_return` / `execute_unwatched_return` - the interaction-free cores the Discord return modals now delegate to. Fees, thread edit, the 50% macguffin roll, and achievements fire identically; a portal return's drop embed lands in the rental's forum thread.
+- Portal random rolls (spec 18, M-R-d): `roll` produces an offer row (film + rerolls remaining); `roll_accept` / `roll_reroll` answer it via `parent_request_id` - one answer per offer, 2-reroll budget enforced across the chain, offers stale after 30 minutes, accepted rolls are `initiated_by='random'` with `rerolls_used` carried. New db helpers: `get_rental_request`, `get_rental_request_children`, `set_rental_request_offer`.
+- Postgres LISTEN/NOTIFY listener (`outbox.listen_for_slips`): the portal notifies on insert, the worker wakes instantly; the 5s poll stays on as the permanent fallback (a dropped listener degrades to sluggish, never broken).
+
+### Changed
+
+- `MACGUFFIN_RETURN_DROP_CHANCE` and the per-rental weights moved from `cogs/rentals.py` to `rental.py` (aliased in the cog) so the worker shares the exact economy.
+
 ## [2.11.0] - 2026-07-14
 
 ### Added

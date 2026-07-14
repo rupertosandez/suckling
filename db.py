@@ -2390,3 +2390,41 @@ def get_plex_movie_by_key(rating_key: str) -> dict | None:
         except json.JSONDecodeError:
             movie[key] = []
     return movie
+
+
+def get_rental_request(request_id: int) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM web_rental_requests WHERE id = ?", (request_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def get_rental_request_children(parent_request_id: int) -> list[dict]:
+    """Roll protocol (spec 18 M-R-d): an offer is 'unclaimed' while no
+    accept/reroll row answers it - one answer per offer."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM web_rental_requests WHERE parent_request_id = ?",
+            (parent_request_id,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def set_rental_request_offer(
+    request_id: int,
+    plex_key: str,
+    title: str,
+    year: int | None,
+    rerolls_remaining: int,
+) -> None:
+    """Write a roll offer onto its request row (bot-writable columns only;
+    'offered' is terminal for the row - the member answers with a child
+    row, never by mutating this one)."""
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE web_rental_requests SET status = 'offered', "
+            "offer_plex_key = ?, offer_title = ?, offer_year = ?, "
+            "rerolls_remaining = ?, processed_at = ? WHERE id = ?",
+            (plex_key, title, year, rerolls_remaining, _utc_now_iso(), request_id),
+        )

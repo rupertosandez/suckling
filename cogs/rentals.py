@@ -78,13 +78,10 @@ def _active_rental_limit_message(rentals: list[dict]) -> str:
     return message
 
 
-MACGUFFIN_RETURN_DROP_CHANCE = 0.5
-
-
-def _macguffin_weights_for_rental(rental: dict) -> dict[str, int] | None:
-    if rental.get("initiated_by") in ("random", "command"):
-        return {"common": 50, "rare": 40, "iconic": 10}
-    return None
+# Drop chance + weights moved to rental.py (spec 18 M-R-c) so the portal
+# outbox worker shares the exact economy; aliases keep call sites stable.
+MACGUFFIN_RETURN_DROP_CHANCE = rental_module.MACGUFFIN_RETURN_DROP_CHANCE
+_macguffin_weights_for_rental = rental_module.macguffin_weights_for_rental
 
 
 async def _resolve_active_rental_for_command(
@@ -341,32 +338,27 @@ class RentalsCog(commands.Cog):
         recommend: bool,
         thoughts: str | None,
     ) -> None:
+        """Delegates to rental.execute_watched_return - the same core the
+        portal outbox worker calls (spec 18 M-R-c) - then handles the
+        ephemeral messaging."""
         user_id = str(interaction.user.id)
-        rental_record = await db.run(db.get_active_rental_by_id, user_id, rental_id)
-        if not rental_record:
-            await interaction.followup.send(
-                "that rental is no longer active.",
-                ephemeral=True,
-            )
+        result = await rental_module.execute_watched_return(
+            bot=self.bot,
+            user=interaction.user,
+            user_id=user_id,
+            user_tag=str(interaction.user),
+            rental_id=rental_id,
+            rating=rating,
+            recommend=recommend,
+            thoughts=thoughts,
+            announce_channel=interaction.channel,
+        )
+        if not result["ok"]:
+            await interaction.followup.send(result["error"], ephemeral=True)
             return
 
-        now = datetime.now(timezone.utc)
-        now_iso = now.isoformat()
-        late_fee = rental_module.compute_late_fee(rental_record["due_at"], now_iso)
-
-        await db.run(
-            db.mark_rental_returned,
-            rental_id=rental_record["id"],
-            returned_at=now_iso,
-            rating=rating,
-            thoughts=thoughts,
-            recommended=recommend,
-            late_fee_dollars=late_fee,
-        )
-
-        updated_rental = await db.run(db.get_rental_by_id, rental_record["id"])
-        await rental_module.edit_thread_returned(self.bot, updated_rental)
-
+        rental_record = result["rental"]
+        late_fee = result["late_fee"]
         title = rental_record.get("title", "your film")
         late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
         rec_note = "recommended" if recommend else "not recommended"
@@ -377,37 +369,6 @@ class RentalsCog(commands.Cog):
             f"-# review posted to the forum.",
             ephemeral=True,
         )
-        try:
-            if random.random() < MACGUFFIN_RETURN_DROP_CHANCE:
-                card = await asyncio.to_thread(
-                    macguffin_module.drop_macguffin,
-                    user_id,
-                    str(interaction.user),
-                    f"return:{rental_record.get('initiated_by', 'selected')}",
-                    _macguffin_weights_for_rental(rental_record),
-                )
-                claimed = await asyncio.to_thread(db.get_claimed_macguffin_ids)
-                total = len(macguffin_module.CARDS)
-                drop_embed = embeds.macguffin_drop_embed(
-                    card,
-                    interaction.user.mention,
-                    len(claimed),
-                    total,
-                )
-                if interaction.channel:
-                    await interaction.channel.send(embed=drop_embed)
-        except macguffin_module.MacGuffinPoolEmpty:
-            pass
-        except Exception as e:
-            logger.log_exception("macguffin_return_drop", e)
-
-        await achievement_module.award_for_user(
-            self.bot,
-            interaction.user,
-            source_type="rental_return",
-            source_id=str(rental_record["id"]),
-            rental=updated_rental,
-        )
 
     async def _complete_unwatched_return(
         self,
@@ -415,28 +376,18 @@ class RentalsCog(commands.Cog):
         rental_id: int,
         reason: str | None,
     ) -> None:
-        rental_record = await db.run(db.get_active_rental_by_id, str(interaction.user.id), rental_id)
-        if not rental_record:
-            await interaction.followup.send(
-                "that rental is no longer active.",
-                ephemeral=True,
-            )
+        result = await rental_module.execute_unwatched_return(
+            bot=self.bot,
+            user_id=str(interaction.user.id),
+            rental_id=rental_id,
+            reason=reason,
+        )
+        if not result["ok"]:
+            await interaction.followup.send(result["error"], ephemeral=True)
             return
 
-        now = datetime.now(timezone.utc)
-        now_iso = now.isoformat()
-        late_fee = rental_module.compute_late_fee(rental_record["due_at"], now_iso)
-
-        await db.run(
-            db.mark_rental_returned_unwatched,
-            rental_id=rental_record["id"],
-            returned_at=now_iso,
-            reason=reason,
-            late_fee_dollars=late_fee,
-        )
-
-        updated_rental = await db.run(db.get_rental_by_id, rental_record["id"])
-        await rental_module.edit_thread_returned_unwatched(self.bot, updated_rental)
+        rental_record = result["rental"]
+        late_fee = result["late_fee"]
 
         late_note = f"\nlate fee: **${late_fee:.2f}**" if late_fee > 0 else ""
         await interaction.followup.send(

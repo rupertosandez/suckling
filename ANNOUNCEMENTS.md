@@ -67,3 +67,7 @@ quiet plumbing behind the counter. the clerk is learning to take rental requests
 ## [2.11.0]
 
 rental functionality added to web portal
+
+## [2.12.0]
+
+returns and random rolls added to web portal
