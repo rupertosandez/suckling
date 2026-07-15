@@ -2365,6 +2365,47 @@ def complete_rental_request(
         )
 
 
+def get_pending_watchlist_requests(limit: int = 10) -> list[dict]:
+    """sucklingweb spec 20: watchlist slips, the outbox's second table.
+    Web-owned (portal alembic migrates it); same claim/complete contract
+    as web_rental_requests."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM web_watchlist_requests WHERE status = 'pending' "
+            "ORDER BY created_at ASC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def claim_watchlist_request(request_id: int) -> bool:
+    with _connect() as conn:
+        cursor = conn.execute(
+            "UPDATE web_watchlist_requests SET status = 'processing', processed_at = ? "
+            "WHERE id = ? AND status = 'pending'",
+            (_utc_now_iso(), request_id),
+        )
+        return cursor.rowcount == 1
+
+
+def complete_watchlist_request(request_id: int, status: str, result_message: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE web_watchlist_requests SET status = ?, result_message = ?, "
+            "processed_at = ? WHERE id = ?",
+            (status, result_message, _utc_now_iso(), request_id),
+        )
+
+
+def get_watchlist_entry(entry_id: int, user_id: str) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM watchlist WHERE id = ? AND user_id = ?",
+            (entry_id, user_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+
 def get_plex_movie_by_key(rating_key: str) -> dict | None:
     """One plex_library_cache row in the same decoded-JSON shape
     get_plex_library_cache() returns (spec 18 M-R-b: the outbox worker

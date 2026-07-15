@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.13.0] - 2026-07-15
+
+### Added
+
+- Portal watchlist (sucklingweb spec 20, M-WL): the outbox worker consumes a second web-owned table, `web_watchlist_requests` (portal migrates it), with `add`/`remove` actions executed through `db.watchlist_add` / `watchlist_remove_by_id` plus the same `award_for_user` achievement hooks the slash commands fire - both directions, add AND remove. New `source="portal"` provenance joins manual/button/letterboxd. New db helpers: `get_pending_watchlist_requests`, `claim_watchlist_request`, `complete_watchlist_request`, `get_watchlist_entry`. Same claim/expiry discipline and NOTIFY channel as rental slips; one worker tick drains both tables.
+
 ## [2.12.1.1] - 2026-07-14
 
 ### Fixed

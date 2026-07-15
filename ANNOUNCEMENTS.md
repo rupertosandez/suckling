@@ -78,4 +78,8 @@ roll polish: out of rerolls now means you pick your favorite of the three, same 
 
 ## [2.12.1.1]
 
-quiet fix behind the counter - portal requests get picked up faster now. nothing to click.
+bug fix for portal requests
+
+## [2.13.0]
+
+your watchlist lives on the portal now. add or drop films from any film page (even ones not in the library yet), tend the list from your profile, and spot your watchlisted films starring in watch together rooms.

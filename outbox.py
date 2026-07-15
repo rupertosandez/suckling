@@ -28,6 +28,7 @@ from datetime import datetime, timedelta, timezone
 
 import discord
 
+import achievements as achievement_module
 import config
 import db
 import plex
@@ -334,6 +335,121 @@ _HANDLERS = {
 }
 
 
+# ---------- watchlist slips (sucklingweb spec 20) ----------
+
+async def _award_watchlist(bot: discord.Client | None, user_id: str, source_type: str, source_id: str) -> None:
+    """Mirror the slash commands' achievement hook - BOTH add and remove
+    fire one, and skipping them is exactly the drift the outbox exists to
+    prevent. Best-effort: an unresolvable user skips the award, never the
+    watchlist write itself."""
+    if bot is None:
+        return
+    try:
+        user = bot.get_user(int(user_id)) or await bot.fetch_user(int(user_id))
+    except (discord.HTTPException, ValueError):
+        return
+    if user is None:
+        return
+    try:
+        await achievement_module.award_for_user(
+            bot, user, source_type=source_type, source_id=source_id,
+        )
+    except Exception as exc:
+        print(f"[outbox] watchlist achievement check failed for {user_id}: {exc.__class__.__name__}: {exc}")
+
+
+async def _handle_watchlist_add(bot: discord.Client | None, row: dict) -> tuple[str, str]:
+    title = str(row.get("title") or "").strip()
+    if not title:
+        return "failed", "that slip had no film on it - try again from a film page."
+    user_id = str(row["discord_id"])
+    year = row.get("year")
+    added = await db.run(
+        db.watchlist_add,
+        user_id=user_id,
+        title=title,
+        year=int(year) if year is not None else None,
+        tmdb_id=int(row["tmdb_id"]) if row.get("tmdb_id") is not None else None,
+        poster_url=row.get("poster_url"),
+        source="portal",
+    )
+    year_str = f" ({year})" if year else ""
+    if not added:
+        return "done", f"{title}{year_str} is already on your watchlist."
+    await _award_watchlist(bot, user_id, "watchlist_add", str(row.get("tmdb_id") or title))
+    return "done", f"added {title}{year_str} to your watchlist."
+
+
+async def _handle_watchlist_remove(bot: discord.Client | None, row: dict) -> tuple[str, str]:
+    entry_id = row.get("watchlist_entry_id")
+    if not entry_id:
+        return "failed", "that slip didn't name a watchlist entry - try again."
+    user_id = str(row["discord_id"])
+    entry = await db.run(db.get_watchlist_entry, int(entry_id), user_id)
+    removed = await db.run(db.watchlist_remove_by_id, int(entry_id), user_id)
+    if not removed:
+        return "done", "that wasn't on your watchlist anymore."
+    title = (entry or {}).get("title") or "it"
+    await _award_watchlist(bot, user_id, "watchlist_remove", str(entry_id))
+    return "done", f"took {title} off your watchlist."
+
+
+_WATCHLIST_HANDLERS = {
+    "add": _handle_watchlist_add,
+    "remove": _handle_watchlist_remove,
+}
+
+_watchlist_table_missing_logged = False
+
+
+async def _process_watchlist_pending(bot: discord.Client | None) -> tuple[int, int]:
+    """The watchlist half of a worker tick. Same claim/expire discipline
+    as rental slips; separate table keeps the rental columns honest."""
+    global _watchlist_table_missing_logged
+    try:
+        rows = await db.run(db.get_pending_watchlist_requests)
+    except Exception as exc:
+        if not _watchlist_table_missing_logged:
+            print(f"[outbox] web_watchlist_requests unavailable ({exc.__class__.__name__}) - waiting for the portal migration")
+            _watchlist_table_missing_logged = True
+        return 0, 0
+    _watchlist_table_missing_logged = False
+
+    processed = 0
+    skipped = 0
+    for row in rows:
+        request_id = int(row["id"])
+        if _too_old(row):
+            await db.run(
+                db.complete_watchlist_request, request_id, "expired",
+                "the clerk never came back - try again later, or use /watchlist in discord.",
+            )
+            skipped += 1
+            continue
+        if not await db.run(db.claim_watchlist_request, request_id):
+            continue
+        handler = _WATCHLIST_HANDLERS.get(str(row["action"]))
+        if handler is None:
+            await db.run(
+                db.complete_watchlist_request, request_id, "failed",
+                "the clerk doesn't know how to handle that request yet.",
+            )
+            skipped += 1
+            continue
+        try:
+            status, message = await handler(bot, row)
+            await db.run(db.complete_watchlist_request, request_id, status, message)
+            processed += 1
+        except Exception as exc:
+            print(f"[outbox] watchlist request {request_id} ({row['action']}) failed: {exc.__class__.__name__}: {exc}")
+            await db.run(
+                db.complete_watchlist_request, request_id, "failed",
+                "something went wrong behind the counter - try again, or use /watchlist in discord.",
+            )
+            skipped += 1
+    return processed, skipped
+
+
 async def process_pending(bot: discord.Client | None = None) -> None:
     """One worker tick (scheduler entry point). DB reads/writes run off
     the event loop via db.run (the P0 lesson); the handlers themselves are
@@ -387,6 +503,10 @@ async def process_pending(bot: discord.Client | None = None) -> None:
                 "something went wrong behind the counter - try again, or rent in discord.",
             )
             skipped += 1
+
+    wl_processed, wl_skipped = await _process_watchlist_pending(bot)
+    processed += wl_processed
+    skipped += wl_skipped
     if processed or skipped:
         print(f"[outbox] tick: {processed} processed, {skipped} skipped/expired")
 
