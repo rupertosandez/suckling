@@ -10,9 +10,11 @@ How it works:
 - When the bot announces a new version it looks here first. If a matching version is
   found, that casual copy is posted. If not, it falls back to the changelog entry, then
   to a generic message.
-- Keep the copy casual and lowercase to match the bot's voice. No em dashes. Skip the
-  internal details (refactors, library names, db plumbing) unless a member would notice
-  the difference. One or two short lines is plenty.
+- Write in sentence case with a neutral tone (the voice from the 2026-07-15 portal
+  copy pass; entries below from before that date are in the old casual lowercase
+  voice). No em dashes. Skip the internal details (refactors, library names, db
+  plumbing) unless a member would notice the difference. One or two short lines
+  is plenty.
 
 ## [2.7.7]
 
@@ -86,4 +88,4 @@ your watchlist lives on the portal now. add or drop films from any film page (ev
 
 ## [2.13.1]
 
-the "request it" link on films we don't have works again. request away.
+The "request it" link on films outside the library works again.

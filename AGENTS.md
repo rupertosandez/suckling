@@ -22,7 +22,7 @@ for each public bot release:
 the github pages site is for rb9 community members, not maintainers.
 
 - preserve jekyll front matter at the top of site pages.
-- keep the casual lowercase voice already used on the site.
+- write in sentence case with a neutral tone (the voice from the 2026-07-15 portal copy pass). older site copy in the casual lowercase voice gets updated to match when touched.
 - explain what changed for members and what the bot does now.
 - avoid technical jargon, implementation details, dependency notes, database details, or internal architecture.
 - prefer concise command-focused descriptions over developer release notes.
