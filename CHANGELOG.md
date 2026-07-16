@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.13.1] - 2026-07-16
+
+### Fixed
+
+- The `/suck` embed's "request it" link pointed at the retired Seerr host (`seerr.cajou.enyo.bysh.me`, dead since the Plex host migration). Now points at the new instance on `seerr.cajou.cronos.bysh.me`.
+
 ## [2.13.0] - 2026-07-15
 
 ### Added

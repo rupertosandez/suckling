@@ -12,7 +12,7 @@ LB_WATCHLIST_PAGE_SIZE = 5
 
 
 SHUDDER_PROVIDER_NAME = "Shudder"
-SEERR_BASE_URL = "https://seerr.cajou.enyo.bysh.me"
+SEERR_BASE_URL = "https://seerr.cajou.cronos.bysh.me"
 
 BOT_DESCRIPTION = (
     "a discord bot for the return by 9 movie community. looks up films, "

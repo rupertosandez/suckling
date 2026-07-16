@@ -83,3 +83,7 @@ bug fix for portal requests
 ## [2.13.0]
 
 your watchlist lives on the portal now. add or drop films from any film page (even ones not in the library yet), tend the list from your profile, and spot your watchlisted films starring in watch together rooms.
+
+## [2.13.1]
+
+the "request it" link on films we don't have works again. request away.
