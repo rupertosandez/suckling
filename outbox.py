@@ -24,6 +24,7 @@ buttons and modals call.
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 
 import discord
@@ -450,6 +451,107 @@ async def _process_watchlist_pending(bot: discord.Client | None) -> tuple[int, i
     return processed, skipped
 
 
+# ---------- member collection slips (sucklingweb spec 23) ----------
+#
+# The outbox's third table. Unlike rental/watchlist slips these are
+# admin approvals, not member-interactive requests, so there is NO
+# 15-minute expiry: an approval filed while the bot is down should
+# execute whenever the bot comes back, and the portal never stamps
+# these expired. Result copy is the neutral sentence-case voice (the
+# 2026-07-15 standard for new user-facing copy).
+
+_collection_table_missing_logged = False
+
+
+async def _handle_collection_apply(row: dict) -> tuple[str, str, str | None]:
+    """Import one approved member collection into Plex 1:1. Returns
+    (status, result_message, result_collection_key)."""
+    try:
+        payload = json.loads(row.get("payload_json") or "{}")
+    except json.JSONDecodeError:
+        return "failed", "The approval slip was unreadable. Ask an admin to retry.", None
+    items = payload.get("items") or []
+    if not items:
+        return "failed", "The approved collection had no films on it.", None
+
+    tmdb_ids = [int(item["tmdb_id"]) for item in items]
+    mapping = await db.run(db.resolve_tmdb_rating_keys, tmdb_ids)
+    # Submitted order preserved; films the library doesn't have are
+    # skipped, not fatal (spec 23: approval means "yes, with what we have").
+    rating_keys = [mapping[tmdb_id] for tmdb_id in tmdb_ids if tmdb_id in mapping]
+    skipped = [item for item in items if int(item["tmdb_id"]) not in mapping]
+    if not rating_keys:
+        return "failed", "None of the films are in the library yet, so there was nothing to add.", None
+
+    poster = None
+    if payload.get("has_poster") and payload.get("collection_id"):
+        try:
+            poster = await db.run(db.get_member_collection_poster, int(payload["collection_id"]))
+        except Exception as exc:
+            print(f"[outbox] collection poster read failed: {exc.__class__.__name__}: {exc}")
+
+    try:
+        collection_key, added = await plex.apply_member_collection(payload, rating_keys, poster)
+    except plex.PlexError as exc:
+        return "failed", f"Plex couldn't be reached ({exc}). An admin can retry from the dashboard.", None
+
+    try:
+        await plex.refresh_collections_cache()
+    except Exception as exc:
+        # The hourly refresh will catch up; the import itself succeeded.
+        print(f"[outbox] collections cache refresh after import failed: {exc.__class__.__name__}: {exc}")
+
+    total = len(items)
+    message = f"Added to Plex with {added} of {total} films."
+    if added == total:
+        message = f"Added to Plex with all {total} films."
+    if skipped:
+        names = ", ".join(
+            f"{item.get('title') or 'untitled'}" + (f" ({item['year']})" if item.get("year") else "")
+            for item in skipped[:5]
+        )
+        if len(skipped) > 5:
+            names += f", and {len(skipped) - 5} more"
+        message += f" Not in the library yet: {names}."
+    return "done", message, collection_key
+
+
+async def _process_collection_pending() -> tuple[int, int]:
+    """The collection half of a worker tick. Claim discipline matches the
+    other slips; no expiry (see the section note above)."""
+    global _collection_table_missing_logged
+    try:
+        rows = await db.run(db.get_pending_collection_requests)
+    except Exception as exc:
+        if not _collection_table_missing_logged:
+            print(f"[outbox] web_collection_requests unavailable ({exc.__class__.__name__}) - waiting for the portal migration")
+            _collection_table_missing_logged = True
+        return 0, 0
+    _collection_table_missing_logged = False
+
+    processed = 0
+    skipped = 0
+    for row in rows:
+        request_id = int(row["id"])
+        if not await db.run(db.claim_collection_request, request_id):
+            continue
+        try:
+            status, message, collection_key = await _handle_collection_apply(row)
+            await db.run(
+                db.complete_collection_request, request_id, status, message, collection_key,
+            )
+            processed += 1
+        except Exception as exc:
+            print(f"[outbox] collection request {request_id} failed: {exc.__class__.__name__}: {exc}")
+            await db.run(
+                db.complete_collection_request, request_id, "failed",
+                "Something went wrong during the import. An admin can retry from the dashboard.",
+                None,
+            )
+            skipped += 1
+    return processed, skipped
+
+
 async def process_pending(bot: discord.Client | None = None) -> None:
     """One worker tick (scheduler entry point). DB reads/writes run off
     the event loop via db.run (the P0 lesson); the handlers themselves are
@@ -507,6 +609,9 @@ async def process_pending(bot: discord.Client | None = None) -> None:
     wl_processed, wl_skipped = await _process_watchlist_pending(bot)
     processed += wl_processed
     skipped += wl_skipped
+    mc_processed, mc_skipped = await _process_collection_pending()
+    processed += mc_processed
+    skipped += mc_skipped
     if processed or skipped:
         print(f"[outbox] tick: {processed} processed, {skipped} skipped/expired")
 

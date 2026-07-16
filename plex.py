@@ -379,6 +379,108 @@ async def refresh_collections_cache() -> list[dict]:
     return collections
 
 
+# ---------- member collections (sucklingweb spec 23) ----------
+
+def _apply_member_collection_sync(
+    payload: dict, rating_keys: list[str], poster: tuple[bytes, str] | None,
+) -> tuple[str, int]:
+    """Create or update a Plex collection from an approved member
+    collection snapshot - the 1:1 import: title, sort title, summary,
+    poster, and item order all come straight from the payload. Returns
+    (collection_key, added_count). Raises PlexError when nothing can be
+    imported or the server is unreachable.
+
+    Update path (re-submission): the existing collection is edited in
+    place - items diffed, fields rewritten - so Plex watch state and the
+    collection's identity survive."""
+    if _library is None:
+        raise PlexError("Not connected to Plex")
+
+    movies = []
+    for rating_key in rating_keys:
+        try:
+            movies.append(_library.fetchItem(int(rating_key)))
+        except Exception:
+            continue  # left the library since the cache row was written
+    if not movies:
+        raise PlexError("none of the films could be found in the library")
+
+    existing_key = payload.get("plex_collection_key")
+    collection = None
+    if existing_key:
+        try:
+            collection = _library.fetchItem(int(existing_key))
+        except Exception:
+            collection = None  # deleted in Plex since it went live; recreate
+
+    title = str(payload.get("title") or "Untitled")
+    if collection is None:
+        collection = _library.createCollection(title, items=movies)
+    else:
+        if collection.title != title:
+            collection.editTitle(title)
+        current = {str(item.ratingKey): item for item in collection.items()}
+        wanted = {str(movie.ratingKey) for movie in movies}
+        to_remove = [item for key, item in current.items() if key not in wanted]
+        to_add = [movie for movie in movies if str(movie.ratingKey) not in current]
+        if to_remove:
+            collection.removeItems(to_remove)
+        if to_add:
+            collection.addItems(to_add)
+
+    summary = str(payload.get("summary") or "")
+    collection.editSummary(summary)
+    sort_title = payload.get("sort_title")
+    if sort_title:
+        collection.editSortTitle(str(sort_title))
+
+    ordering = str(payload.get("ordering") or "custom")
+    if ordering not in ("custom", "release", "alpha"):
+        ordering = "custom"
+    collection.sortUpdate(sort=ordering)
+    if ordering == "custom":
+        # Enforce the member's exact order: walk the wanted sequence and
+        # move each film after its predecessor. moveItem(item) with no
+        # anchor puts it first.
+        collection.reload()
+        by_key = {str(item.ratingKey): item for item in collection.items()}
+        previous = None
+        for movie in movies:
+            item = by_key.get(str(movie.ratingKey))
+            if item is None:
+                continue
+            collection.moveItem(item, after=previous)
+            previous = item
+
+    if poster:
+        data, content_type = poster
+        suffix = {"image/png": ".png", "image/webp": ".webp"}.get(content_type, ".jpg")
+        import os
+        import tempfile
+
+        handle, path = tempfile.mkstemp(suffix=suffix)
+        try:
+            with os.fdopen(handle, "wb") as file:
+                file.write(data)
+            collection.uploadPoster(filepath=path)
+        finally:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+    return str(collection.ratingKey), len(movies)
+
+
+async def apply_member_collection(
+    payload: dict, rating_keys: list[str], poster: tuple[bytes, str] | None,
+) -> tuple[str, int]:
+    await _connect()
+    return await asyncio.to_thread(
+        _apply_member_collection_sync, payload, rating_keys, poster
+    )
+
+
 async def _get_movies() -> list[dict]:
     """Get the movie list from memory, then the persisted snapshot, then Plex."""
     global _movies_cache, _cache_age

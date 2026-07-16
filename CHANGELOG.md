@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.14.0] - 2026-07-16
+
+### Added
+
+- Member collections import (sucklingweb spec 23, M-MC-c): the outbox worker consumes a third web-owned table, `web_collection_requests` (portal migrates it). An admin-approved member collection is imported into Plex 1:1 via plexapi - title, sort title, summary, member-uploaded poster (bytes read from `member_collection_posters` through the shared DB, no network dependency on the portal), and item order (`custom` enforced with `moveItem`, `release`/`alpha` via `sortUpdate`). Items resolve tmdb_id -> rating_key through `web_film_cache`; films not in the library are skipped and named in the result message. Re-submissions update the existing collection in place by `plex_collection_key` (items diffed, fields rewritten). A successful import triggers `refresh_collections_cache()` so the portal's Curation page updates immediately. Unlike rental/watchlist slips there is no 15-minute expiry - approvals filed while the bot is down execute on reconnect. New db helpers: `get_pending_collection_requests`, `claim_collection_request`, `complete_collection_request`, `resolve_tmdb_rating_keys`, `get_member_collection_poster`. New plex helper: `apply_member_collection`.
+
 ## [2.13.1] - 2026-07-16
 
 ### Fixed

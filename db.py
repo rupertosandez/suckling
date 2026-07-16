@@ -2397,6 +2397,73 @@ def complete_watchlist_request(request_id: int, status: str, result_message: str
         )
 
 
+def get_pending_collection_requests(limit: int = 5) -> list[dict]:
+    """sucklingweb spec 23: member collection slips, the outbox's third
+    table. Web-owned (portal alembic migrates it); same claim/complete
+    contract as the other two, plus result_collection_key so the portal
+    can flip the member's collection to 'live' with the Plex key."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM web_collection_requests WHERE status = 'pending' "
+            "ORDER BY created_at ASC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def claim_collection_request(request_id: int) -> bool:
+    with _connect() as conn:
+        cursor = conn.execute(
+            "UPDATE web_collection_requests SET status = 'processing', processed_at = ? "
+            "WHERE id = ? AND status = 'pending'",
+            (_utc_now_iso(), request_id),
+        )
+        return cursor.rowcount == 1
+
+
+def complete_collection_request(
+    request_id: int, status: str, result_message: str,
+    result_collection_key: str | None = None,
+) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE web_collection_requests SET status = ?, result_message = ?, "
+            "result_collection_key = ?, processed_at = ? WHERE id = ?",
+            (status, result_message, result_collection_key, _utc_now_iso(), request_id),
+        )
+
+
+def resolve_tmdb_rating_keys(tmdb_ids: list[int]) -> dict[int, str]:
+    """tmdb_id -> library rating_key via the portal's web_film_cache
+    enrichment (shared DB). Films the cache hasn't enriched read as
+    missing - the worker skips them and says so in the result message."""
+    if not tmdb_ids:
+        return {}
+    placeholders = ", ".join("?" for _ in tmdb_ids)
+    with _connect() as conn:
+        rows = conn.execute(
+            f"SELECT tmdb_id, rating_key FROM web_film_cache "
+            f"WHERE tmdb_id IN ({placeholders})",
+            tuple(int(t) for t in tmdb_ids),
+        ).fetchall()
+    return {int(row["tmdb_id"]): str(row["rating_key"]) for row in rows}
+
+
+def get_member_collection_poster(collection_id: int) -> tuple[bytes, str] | None:
+    """Member-uploaded poster bytes from the portal's table (spec 23) -
+    the DB is the one channel between Render and this worker, so posters
+    travel as bytes, never as URLs the bot might not reach."""
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT content_type, image FROM member_collection_posters "
+            "WHERE collection_id = ?",
+            (int(collection_id),),
+        ).fetchone()
+    if not row:
+        return None
+    return bytes(row["image"]), str(row["content_type"])
+
+
 def get_watchlist_entry(entry_id: int, user_id: str) -> dict | None:
     with _connect() as conn:
         row = conn.execute(

@@ -89,3 +89,7 @@ your watchlist lives on the portal now. add or drop films from any film page (ev
 ## [2.13.1]
 
 The "request it" link on films outside the library works again.
+
+## [2.14.0]
+
+You can now build your own collections on the portal. Put any films you like together, show the collection on your profile, and submit it for review. If it gets approved, it lands in Plex and on the Curation page with your name on it.
