@@ -2397,6 +2397,22 @@ def complete_watchlist_request(request_id: int, status: str, result_message: str
         )
 
 
+def get_macguffin_catalog() -> list[dict]:
+    """The card catalog from web_macguffin_catalog (portal-owned, admin
+    dashboard CRUD) - the shared-DB source of truth since 2026-07-16.
+    Returns [] when the table is missing or empty so macguffin.load_cards
+    falls back to the vendored assets JSON."""
+    with _connect() as conn:
+        try:
+            rows = conn.execute(
+                "SELECT id, name, emoji, rarity, source, flavor, retired "
+                "FROM web_macguffin_catalog ORDER BY created_at ASC, id ASC"
+            ).fetchall()
+        except Exception:
+            return []
+        return [dict(row) for row in rows]
+
+
 def get_known_member_ids() -> list[str]:
     """Every member id the portal surfaces somewhere (rentals, identity
     cache, macguffin owners) - the audience for the avatar sync. Tables

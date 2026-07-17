@@ -33,16 +33,27 @@ class MacGuffinAssetError(MacGuffinError):
 
 
 def load_cards() -> dict[str, dict]:
-    """Load and validate the MacGuffin asset file."""
+    """Load and validate the card catalog. web_macguffin_catalog (the
+    shared DB, admin-editable from the portal's dashboard since
+    2026-07-16) is the source of truth; the vendored assets JSON remains
+    the fallback for a missing table or an empty DB. Retired cards load
+    (owned copies must resolve) but never drop - see _available_cards."""
     global CARDS
 
+    raw_cards: list | None = None
     try:
-        with _ASSET_PATH.open("r", encoding="utf-8") as f:
-            raw_cards = json.load(f)
-    except FileNotFoundError as e:
-        raise MacGuffinAssetError(f"macguffin asset file missing: {_ASSET_PATH}") from e
-    except json.JSONDecodeError as e:
-        raise MacGuffinAssetError(f"macguffin asset file is invalid json: {e}") from e
+        raw_cards = db.get_macguffin_catalog() or None
+    except Exception:
+        raw_cards = None
+
+    if raw_cards is None:
+        try:
+            with _ASSET_PATH.open("r", encoding="utf-8") as f:
+                raw_cards = json.load(f)
+        except FileNotFoundError as e:
+            raise MacGuffinAssetError(f"macguffin asset file missing: {_ASSET_PATH}") from e
+        except json.JSONDecodeError as e:
+            raise MacGuffinAssetError(f"macguffin asset file is invalid json: {e}") from e
 
     if not isinstance(raw_cards, list):
         raise MacGuffinAssetError("macguffin asset file must contain a list")
@@ -72,6 +83,7 @@ def load_cards() -> dict[str, dict]:
         normalized = dict(card)
         normalized["id"] = card_id
         normalized["rarity"] = rarity
+        normalized["retired"] = bool(card.get("retired"))
         loaded[card_id] = normalized
 
     CARDS = loaded
@@ -203,7 +215,9 @@ def set_labels_for_card(macguffin_id: str) -> list[str]:
 def _available_cards(claimed_ids: set[str]) -> dict[str, list[dict]]:
     available = {rarity: [] for rarity in RARITY_WEIGHTS}
     for card in CARDS.values():
-        if card["id"] not in claimed_ids:
+        # Retired cards (dashboard lever) stay loaded for owner lookups
+        # but never drop again.
+        if card["id"] not in claimed_ids and not card.get("retired"):
             available[card["rarity"]].append(card)
     return available
 
@@ -251,7 +265,14 @@ def drop_macguffin(
     rarity_weights: dict[str, int] | None = None,
 ) -> dict:
     """Claim one random unowned MacGuffin for a user and return its card dict."""
-    _ensure_loaded()
+    # Full reload, not _ensure_loaded: drops are rare and the catalog is
+    # admin-editable at runtime now, so every roll sees dashboard changes
+    # (new cards, retirements) immediately. One cheap query; falls back
+    # to the module cache only if the reload fails outright.
+    try:
+        load_cards()
+    except MacGuffinAssetError:
+        _ensure_loaded()
 
     # A concurrent claim can win the unique macguffin_id insert first, so retry
     # with a fresh claimed set a few times before surfacing the DB error.

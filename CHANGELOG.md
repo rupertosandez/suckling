@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.15.0] - 2026-07-16
+
+### Changed
+
+- MacGuffin card catalog moved to the shared DB (`web_macguffin_catalog`, portal-owned, seeded from the JSON): the Admin Dashboard can now add, edit, and retire cards without a bot release. `macguffin.load_cards()` reads the table with the vendored `assets/macguffins.json` as fallback; `drop_macguffin` reloads the catalog per roll so dashboard changes apply immediately. Retired cards leave the drop pool but keep resolving for their owners. New cards join the pool silently by design. Sets stay JSON-managed (they award achievements). New db helper: `get_macguffin_catalog`.
+
 ## [2.14.1] - 2026-07-16
 
 ### Fixed

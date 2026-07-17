@@ -97,3 +97,7 @@ You can now build your own collections on the portal. Put any films you like tog
 ## [2.14.1]
 
 Member avatars on the portal now stay up to date on their own, even if you never sign in there.
+
+## [2.15.0]
+
+Housekeeping behind the counter. Keep an eye on the MacGuffin pool though, you never know what might turn up in there.
