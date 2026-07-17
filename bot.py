@@ -583,6 +583,43 @@ async def _scheduled_lb_activity_check():
         print(f"[scheduler] Letterboxd activity check failed: {e}")
 
 
+async def _scheduled_avatar_sync():
+    """Refresh the portal's discord_users identity cache with live avatar
+    hashes. The portal only updates a member's row when they log in, so
+    members who never visit showed stale or default avatars on every
+    portal surface (home shelves, journals, members page). fetch_user is
+    a plain REST call - no privileged members intent needed - and the
+    audience is only members the portal already knows about."""
+    try:
+        member_ids = await db.run(db.get_known_member_ids)
+    except Exception as e:
+        print(f"[avatar sync] couldn't list known members: {e}")
+        return
+    updated = 0
+    for user_id in member_ids:
+        try:
+            user = bot.get_user(int(user_id)) or await bot.fetch_user(int(user_id))
+        except (discord.NotFound, ValueError):
+            continue  # deleted account or junk id; nothing to refresh
+        except discord.HTTPException as e:
+            print(f"[avatar sync] fetch failed for {user_id}: {e}")
+            continue
+        avatar_hash = user.avatar.key if user.avatar else None
+        try:
+            await db.run(
+                db.upsert_discord_user, str(user.id), user.name,
+                user.global_name, avatar_hash,
+            )
+            updated += 1
+        except Exception as e:
+            # discord_users is portal-owned; before its migration has run
+            # there is nothing to refresh. Log once and stop the pass.
+            print(f"[avatar sync] discord_users unavailable ({e.__class__.__name__}) - skipping this pass")
+            return
+    if updated:
+        print(f"[avatar sync] refreshed {updated} of {len(member_ids)} member identities")
+
+
 async def _scheduled_plex_cleanup():
     await cleanup_module.scheduled_cleanup(bot)
 
@@ -682,6 +719,16 @@ async def on_ready():
             hour=11,
             minute=0,
             id="weekly_recap", replace_existing=True,
+        )
+        scheduler.add_job(
+            _scheduled_avatar_sync, trigger="cron", hour=7, minute=30,
+            id="avatar_sync", replace_existing=True,
+        )
+        scheduler.add_job(
+            # One catch-up pass right after startup so a restart repairs
+            # stale portal avatars without waiting for the daily cron.
+            _scheduled_avatar_sync, trigger="date",
+            id="avatar_sync_startup", replace_existing=True,
         )
         scheduler.add_job(
             # Portal rental outbox (sucklingweb spec 18): consume request

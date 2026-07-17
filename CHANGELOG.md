@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.14.1] - 2026-07-16
+
+### Fixed
+
+- Portal avatars: members who never (or rarely) log into the portal showed stale or default Discord avatars on every portal surface, because the `discord_users` identity cache was only refreshed at portal login. A new daily avatar sync (plus a catch-up pass at startup) fetches every known member via the REST API (no privileged members intent required) and upserts fresh username/global_name/avatar_hash, honoring the portal's never-overwrite rule on `first_seen_at`. New db helpers: `get_known_member_ids`, `upsert_discord_user`.
+
 ## [2.14.0] - 2026-07-16
 
 ### Added

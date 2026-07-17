@@ -2397,6 +2397,52 @@ def complete_watchlist_request(request_id: int, status: str, result_message: str
         )
 
 
+def get_known_member_ids() -> list[str]:
+    """Every member id the portal surfaces somewhere (rentals, identity
+    cache, macguffin owners) - the audience for the avatar sync. Tables
+    are probed independently; discord_users is portal-owned and may not
+    exist on a fresh sqlite dev db."""
+    ids: set[str] = set()
+    queries = (
+        "SELECT DISTINCT user_id FROM rentals",
+        "SELECT DISTINCT user_id FROM discord_users",
+        "SELECT DISTINCT owner_id AS user_id FROM macguffins",
+        "SELECT DISTINCT user_id FROM achievement_earned",
+    )
+    with _connect() as conn:
+        for sql in queries:
+            try:
+                rows = conn.execute(sql).fetchall()
+            except Exception:
+                continue
+            ids.update(str(row["user_id"]) for row in rows if row["user_id"])
+    return sorted(ids)
+
+
+def upsert_discord_user(
+    user_id: str, username: str, global_name: str | None, avatar_hash: str | None,
+) -> None:
+    """Refresh one row of the portal's discord_users identity cache with
+    live gateway truth. Same upsert shape as the portal's login-time
+    save_discord_user, including the never-overwrite rule on
+    first_seen_at (its "member since" fallback). The portal only updates
+    a member's row when THEY log in, so members who never visit the
+    portal showed stale or default avatars everywhere until this sync."""
+    now = _utc_now_iso()
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO discord_users (user_id, username, global_name, avatar_hash, updated_at, first_seen_at) "
+            "VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (user_id) DO UPDATE SET "
+            "username = excluded.username, "
+            "global_name = excluded.global_name, "
+            "avatar_hash = excluded.avatar_hash, "
+            "updated_at = excluded.updated_at, "
+            "first_seen_at = COALESCE(discord_users.first_seen_at, excluded.first_seen_at)",
+            (str(user_id), username, global_name, avatar_hash, now, now),
+        )
+
+
 def get_pending_collection_requests(limit: int = 5) -> list[dict]:
     """sucklingweb spec 23: member collection slips, the outbox's third
     table. Web-owned (portal alembic migrates it); same claim/complete

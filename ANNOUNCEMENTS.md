@@ -93,3 +93,7 @@ The "request it" link on films outside the library works again.
 ## [2.14.0]
 
 You can now build your own collections on the portal. Put any films you like together, show the collection on your profile, and submit it for review. If it gets approved, it lands in Plex and on the Curation page with your name on it.
+
+## [2.14.1]
+
+Member avatars on the portal now stay up to date on their own, even if you never sign in there.
