@@ -101,3 +101,7 @@ Member avatars on the portal now stay up to date on their own, even if you never
 ## [2.15.0]
 
 Housekeeping behind the counter. Keep an eye on the MacGuffin pool though, you never know what might turn up in there.
+
+## [2.16.0]
+
+Behind the scenes: I now check in with the portal once a minute, so if I ever go down the admins hear about it right away instead of when your rental gets stuck.

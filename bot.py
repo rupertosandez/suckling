@@ -620,6 +620,28 @@ async def _scheduled_avatar_sync():
         print(f"[avatar sync] refreshed {updated} of {len(member_ids)} member identities")
 
 
+_heartbeat_failing = False
+
+
+async def _scheduled_heartbeat():
+    """Portal ops heartbeat (sucklingweb spec 25 M-OBS-a): upsert an
+    I-am-alive row every minute so the Admin Dashboard can show bot
+    status and alert when the outbox has no consumer. Must never hurt
+    the bot: failures are swallowed, logged only on state change (the
+    table is portal-owned and may not exist until its migration runs)."""
+    global _heartbeat_failing
+    try:
+        await db.run(db.write_web_heartbeat, version.VERSION)
+    except Exception as e:
+        if not _heartbeat_failing:
+            _heartbeat_failing = True
+            print(f"[heartbeat] write failed ({e.__class__.__name__}: {e}) - will keep trying quietly")
+        return
+    if _heartbeat_failing:
+        _heartbeat_failing = False
+        print("[heartbeat] writes recovered")
+
+
 async def _scheduled_plex_cleanup():
     await cleanup_module.scheduled_cleanup(bot)
 
@@ -729,6 +751,14 @@ async def on_ready():
             # stale portal avatars without waiting for the daily cron.
             _scheduled_avatar_sync, trigger="date",
             id="avatar_sync_startup", replace_existing=True,
+        )
+        scheduler.add_job(
+            # Portal ops heartbeat (sucklingweb spec 25): first beat
+            # immediately so the dashboard flips green right after a
+            # restart instead of a minute later.
+            _scheduled_heartbeat, trigger="interval", seconds=60,
+            next_run_time=datetime.now(),
+            id="ops_heartbeat", replace_existing=True,
         )
         scheduler.add_job(
             # Portal rental outbox (sucklingweb spec 18): consume request

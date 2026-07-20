@@ -825,6 +825,21 @@ def set_setting(key: str, value: str) -> None:
         )
 
 
+# ---------- portal ops heartbeat (sucklingweb spec 25 M-OBS-a) ----------
+
+def write_web_heartbeat(version: str) -> None:
+    """Upsert the bot's I-am-alive row. The table is portal-owned
+    (alembic migration e9c2b5f41a77); callers must tolerate it not
+    existing yet so bot/portal deploy order doesn't matter."""
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO web_ops_heartbeat (id, seen_at, version) VALUES (1, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET "
+            "seen_at = excluded.seen_at, version = excluded.version",
+            (_utc_now_iso(), version),
+        )
+
+
 # ---------- user preferences ----------
 
 def get_user_timezone(user_id: str) -> str | None:

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.16.0] - 2026-07-19
+
+### Added
+
+- Portal ops heartbeat (sucklingweb spec 25 M-OBS-a): the bot upserts an
+  I-am-alive row (`web_ops_heartbeat`, portal-owned table) every 60 seconds and
+  once at startup, carrying the bot version. The portal's Admin Dashboard shows
+  bot status from it and will alert when the outbox has no consumer. Failures
+  are swallowed and logged only on state change, so a missing table (portal
+  migration not yet deployed) or a db blip never hurts the bot. New db helper:
+  `write_web_heartbeat`.
+
 ## [2.15.0] - 2026-07-16
 
 ### Changed
