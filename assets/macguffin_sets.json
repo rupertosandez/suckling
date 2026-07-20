@@ -416,5 +416,76 @@
       "brides-yellow-suit",
       "inglourious-pipe"
     ]
-  }
+  },
+  {
+      "id": "jurassic",
+      "label": "Jurassic",
+      "achievement_id": "set-jurassic-clever-girl",
+      "achievement_name": "clever girl",
+      "description": "completed the Jurassic Park MacGuffin set.",
+      "hint": "complete the Jurassic Park MacGuffin set.",
+      "emoji": "🦖",
+      "macguffin_ids": [
+        "amber-cane",
+        "barbasol-can",
+        "rippling-water-glass"
+      ]
+    },
+    {
+      "id": "princessbride",
+      "label": "Princess Bride",
+      "achievement_id": "set-princessbride-as-you-wish",
+      "achievement_name": "as you wish",
+      "description": "completed the Princess Bride MacGuffin set.",
+      "hint": "complete the Princess Bride MacGuffin set.",
+      "emoji": "🏰",
+      "macguffin_ids": [
+        "iocane-powder",
+        "six-fingered-sword",
+        "miracle-pill"
+      ]
+    },
+    {
+      "id": "kubrick",
+      "label": "Kubrick",
+      "achievement_id": "set-kubrick-star-child",
+      "achievement_name": "star child",
+      "description": "completed the Kubrick MacGuffin set.",
+      "hint": "complete the Kubrick MacGuffin set.",
+      "emoji": "🌠",
+      "macguffin_ids": [
+        "monolith",
+        "overlook-typewriter",
+        "redrum-axe",
+        "room-237-key"
+      ]
+    },
+    {
+      "id": "goonies",
+      "label": "Goonies",
+      "achievement_id": "set-goonies-never-say-die",
+      "achievement_name": "never say die",
+      "description": "completed the Goonies MacGuffin set.",
+      "hint": "complete the Goonies MacGuffin set.",
+      "emoji": "🏴‍☠️",
+      "macguffin_ids": [
+        "goonies-map",
+        "one-eyed-willys-doubloon",
+        "sloths-baby-ruth"
+      ]
+    },
+    {
+      "id": "matrix",
+      "label": "Matrix",
+      "achievement_id": "set-matrix-the-one",
+      "achievement_name": "the one",
+      "description": "completed the Matrix MacGuffin set.",
+      "hint": "complete the Matrix MacGuffin set.",
+      "emoji": "💊",
+      "macguffin_ids": [
+        "red-pill",
+        "neos-nokia",
+        "deja-vu-cat"
+      ]
+    }
 ]

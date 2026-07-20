@@ -1630,5 +1630,429 @@
     "rarity": "rare",
     "source": "Inglourious Basterds (2009)",
     "flavor": "enormous, theatrical, and best used while making someone nervous."
-  }
+  },
+  {
+      "id": "maltese-falcon",
+      "name": "the maltese falcon",
+      "emoji": "🦅",
+      "rarity": "iconic",
+      "source": "The Maltese Falcon (1941)",
+      "flavor": "the stuff that dreams are made of. the original macguffin. every other card in this catalog owes it royalties."
+    },
+    {
+      "id": "monolith",
+      "name": "the monolith",
+      "emoji": "⬛",
+      "rarity": "iconic",
+      "source": "2001: A Space Odyssey (1968)",
+      "flavor": "tall, black, perfectly proportioned. touching it advances the species. shipping was a nightmare."
+    },
+    {
+      "id": "infinity-gauntlet",
+      "name": "the infinity gauntlet",
+      "emoji": "🧤",
+      "rarity": "iconic",
+      "source": "Avengers: Infinity War (2018)",
+      "flavor": "fits all six stones. snapping is permanent and not covered by the warranty."
+    },
+    {
+      "id": "heart-of-the-ocean",
+      "name": "the heart of the ocean",
+      "emoji": "💙",
+      "rarity": "iconic",
+      "source": "Titanic (1997)",
+      "flavor": "56 carats of blue diamond. an old lady dropped it into the sea rather than hand it over. honestly, valid."
+    },
+    {
+      "id": "red-pill",
+      "name": "the red pill",
+      "emoji": "🔴",
+      "rarity": "iconic",
+      "source": "The Matrix (1999)",
+      "flavor": "you take it, you stay in wonderland. no refunds, no going back, blue option not included."
+    },
+    {
+      "id": "leeloo-multipass",
+      "name": "leeloo's multipass",
+      "emoji": "🪪",
+      "rarity": "iconic",
+      "source": "The Fifth Element (1997)",
+      "flavor": "multipass. she knows it's a multipass. anywhere she wants to go, she goes."
+    },
+    {
+      "id": "origami-unicorn",
+      "name": "gaff's origami unicorn",
+      "emoji": "🦄",
+      "rarity": "rare",
+      "source": "Blade Runner (1982)",
+      "flavor": "left on the floor for you to find. it means he knows. what he knows is the hard part."
+    },
+    {
+      "id": "iocane-powder",
+      "name": "a vial of iocane powder",
+      "emoji": "⚗️",
+      "rarity": "rare",
+      "source": "The Princess Bride (1987)",
+      "flavor": "odorless, tasteless, dissolves instantly. never go in against a sicilian when death is on the line."
+    },
+    {
+      "id": "six-fingered-sword",
+      "name": "the six-fingered sword",
+      "emoji": "🤺",
+      "rarity": "rare",
+      "source": "The Princess Bride (1987)",
+      "flavor": "hello. my name is inigo montoya. you know the rest. say it with feeling."
+    },
+    {
+      "id": "goonies-map",
+      "name": "one-eyed willy's treasure map",
+      "emoji": "🗺️",
+      "rarity": "rare",
+      "source": "The Goonies (1985)",
+      "flavor": "goonies never say die. the map is real, the traps are real, the rich stuff is down there."
+    },
+    {
+      "id": "john-wicks-pencil",
+      "name": "john wick's pencil",
+      "emoji": "✏️",
+      "rarity": "rare",
+      "source": "John Wick: Chapter 2 (2017)",
+      "flavor": "just a pencil. in the right hands, that is somehow enough for three men."
+    },
+    {
+      "id": "golden-snitch",
+      "name": "the golden snitch",
+      "emoji": "🏅",
+      "rarity": "rare",
+      "source": "Harry Potter and the Sorcerer's Stone (2001)",
+      "flavor": "i open at the close. worth 150 points and at least one concussion."
+    },
+    {
+      "id": "amber-cane",
+      "name": "john hammond's amber cane",
+      "emoji": "🦯",
+      "rarity": "rare",
+      "source": "Jurassic Park (1993)",
+      "flavor": "a mosquito in amber, mounted on a walking stick. spared no expense. should have spent more on the fences."
+    },
+    {
+      "id": "barbasol-can",
+      "name": "the barbasol can",
+      "emoji": "🧴",
+      "rarity": "rare",
+      "source": "Jurassic Park (1993)",
+      "flavor": "shaving cream on the outside, dinosaur embryos on the inside. last seen rolling downhill in a tropical storm."
+    },
+    {
+      "id": "black-flame-candle",
+      "name": "the black flame candle",
+      "emoji": "🕯️",
+      "rarity": "rare",
+      "source": "Hocus Pocus (1993)",
+      "flavor": "do not light it. especially not if you're a virgin. especially not on halloween."
+    },
+    {
+      "id": "deaths-head-moth",
+      "name": "a death's-head moth",
+      "emoji": "🦋",
+      "rarity": "rare",
+      "source": "The Silence of the Lambs (1991)",
+      "flavor": "somebody raised this from a cocoon with great care. that is the upsetting part."
+    },
+    {
+      "id": "boos-door",
+      "name": "boo's door",
+      "emoji": "🚪",
+      "rarity": "rare",
+      "source": "Monsters, Inc. (2001)",
+      "flavor": "shredded and rebuilt one splinter at a time. the last piece was worth the wait. kitty."
+    },
+    {
+      "id": "con-air-bunny",
+      "name": "the bunny",
+      "emoji": "🐇",
+      "rarity": "rare",
+      "source": "Con Air (1997)",
+      "flavor": "put the bunny back in the box. this is not a request."
+    },
+    {
+      "id": "declaration-of-independence",
+      "name": "the declaration of independence",
+      "emoji": "📜",
+      "rarity": "rare",
+      "source": "National Treasure (2004)",
+      "flavor": "he said he was going to steal it, out loud, in public. then he did. there is a map on the back."
+    },
+    {
+      "id": "scholars-rock",
+      "name": "the scholar's rock",
+      "emoji": "🪨",
+      "rarity": "rare",
+      "source": "Parasite (2019)",
+      "flavor": "supposed to bring wealth to the family. keeps following them around instead. very metaphorical, very heavy."
+    },
+    {
+      "id": "scorpion-jacket",
+      "name": "the scorpion jacket",
+      "emoji": "🦂",
+      "rarity": "rare",
+      "source": "Drive (2011)",
+      "flavor": "white satin, gold scorpion. worn by a man of few words and fewer brake lights."
+    },
+    {
+      "id": "dragon-scroll",
+      "name": "the dragon scroll",
+      "emoji": "🐉",
+      "rarity": "rare",
+      "source": "Kung Fu Panda (2008)",
+      "flavor": "the ultimate secret of limitless power. it's blank. that's the secret."
+    },
+    {
+      "id": "doof-guitar",
+      "name": "the doof warrior's flame guitar",
+      "emoji": "🎸",
+      "rarity": "rare",
+      "source": "Mad Max: Fury Road (2015)",
+      "flavor": "double-necked, flame-throwing, bungeed to a truck made of amps. war has a soundtrack."
+    },
+    {
+      "id": "red-ryder-bb-gun",
+      "name": "a red ryder bb gun",
+      "emoji": "🔫",
+      "rarity": "common",
+      "source": "A Christmas Story (1983)",
+      "flavor": "you'll shoot your eye out, kid. he very nearly did."
+    },
+    {
+      "id": "groundhog-alarm-clock",
+      "name": "the 6:00 am alarm clock",
+      "emoji": "⏰",
+      "rarity": "common",
+      "source": "Groundhog Day (1993)",
+      "flavor": "okay campers, rise and shine. it flips to 6:00 and plays i got you babe. every time. forever."
+    },
+    {
+      "id": "leons-plant",
+      "name": "leon's houseplant",
+      "emoji": "🪴",
+      "rarity": "common",
+      "source": "Leon: The Professional (1994)",
+      "flavor": "no roots, always happy. the best friend a hitman ever had."
+    },
+    {
+      "id": "travelling-gnome",
+      "name": "the travelling gnome",
+      "emoji": "🗿",
+      "rarity": "common",
+      "source": "Amelie (2001)",
+      "flavor": "sends postcards from around the world. the father took years to get the hint."
+    },
+    {
+      "id": "cannoli-box",
+      "name": "a box of cannoli",
+      "emoji": "🥮",
+      "rarity": "common",
+      "source": "The Godfather (1972)",
+      "flavor": "leave the gun. take the cannoli."
+    },
+    {
+      "id": "neos-nokia",
+      "name": "neo's nokia",
+      "emoji": "📱",
+      "rarity": "common",
+      "source": "The Matrix (1999)",
+      "flavor": "drops open with the most satisfying snap in cinema. answer it. they can tell you where the exit is."
+    },
+    {
+      "id": "t800-sunglasses",
+      "name": "the t-800's sunglasses",
+      "emoji": "🕶️",
+      "rarity": "common",
+      "source": "Terminator 2: Judgment Day (1991)",
+      "flavor": "acquired at a biker bar along with the boots and the motorcycle. he'll be back for them."
+    },
+    {
+      "id": "wax-on-rag",
+      "name": "a wax-on, wax-off rag",
+      "emoji": "🧽",
+      "rarity": "common",
+      "source": "The Karate Kid (1984)",
+      "flavor": "wax on, wax off. it was karate the whole time."
+    },
+    {
+      "id": "rocky-eggs",
+      "name": "a glass of five raw eggs",
+      "emoji": "🥚",
+      "rarity": "common",
+      "source": "Rocky (1976)",
+      "flavor": "breakfast of champions, technically. do not try this at four in the morning. or ever."
+    },
+    {
+      "id": "harlans-mug",
+      "name": "harlan's coffee mug",
+      "emoji": "☕",
+      "rarity": "common",
+      "source": "Knives Out (2019)",
+      "flavor": "my house, my rules, my coffee. read the mug again."
+    },
+    {
+      "id": "speak-and-spell",
+      "name": "a modified speak & spell",
+      "emoji": "🔤",
+      "rarity": "common",
+      "source": "E.T. the Extra-Terrestrial (1982)",
+      "flavor": "phone home. built from toys, an umbrella, and a saw blade. it worked."
+    },
+    {
+      "id": "bates-motel-key",
+      "name": "the bates motel room key",
+      "emoji": "🔑",
+      "rarity": "common",
+      "source": "Psycho (1960)",
+      "flavor": "room 1. mother changes the sheets. do not use the shower."
+    },
+    {
+      "id": "shrek-onion",
+      "name": "an onion",
+      "emoji": "🧅",
+      "rarity": "common",
+      "source": "Shrek (2001)",
+      "flavor": "ogres are like onions. it's about the layers. it is not about parfait."
+    },
+    {
+      "id": "gingy",
+      "name": "gingy",
+      "emoji": "🍪",
+      "rarity": "common",
+      "source": "Shrek (2001)",
+      "flavor": "not the gumdrop buttons. do you know the muffin man? he'll never talk."
+    },
+    {
+      "id": "bandit-hat",
+      "name": "a bandit hat",
+      "emoji": "🧦",
+      "rarity": "common",
+      "source": "Fantastic Mr. Fox (2009)",
+      "flavor": "it's a tube sock with eyeholes cut in it. it is also, officially, a bandit hat."
+    },
+    {
+      "id": "mendls-box",
+      "name": "a mendl's box",
+      "emoji": "🎀",
+      "rarity": "common",
+      "source": "The Grand Budapest Hotel (2014)",
+      "flavor": "courtesan au chocolat, tied with ribbon. this box has smuggled tools, secrets, and pastry."
+    },
+    {
+      "id": "pottery-wheel",
+      "name": "a pottery wheel",
+      "emoji": "🏺",
+      "rarity": "common",
+      "source": "Ghost (1990)",
+      "flavor": "unchained melody plays automatically. the pot never gets finished."
+    },
+    {
+      "id": "carried-watermelon",
+      "name": "a watermelon",
+      "emoji": "🍉",
+      "rarity": "common",
+      "source": "Dirty Dancing (1987)",
+      "flavor": "i carried a watermelon. this is that watermelon. nobody puts it in a corner."
+    },
+    {
+      "id": "stretchy-pants",
+      "name": "stretchy pants",
+      "emoji": "🩲",
+      "rarity": "common",
+      "source": "Nacho Libre (2006)",
+      "flavor": "for fun. worn beneath the robes, for when life needs a little fantasy."
+    },
+    {
+      "id": "dorothy-sensor-drum",
+      "name": "dorothy the sensor drum",
+      "emoji": "🌪️",
+      "rarity": "common",
+      "source": "Twister (1996)",
+      "flavor": "hundreds of little sensors, one very large tornado. release only in extreme weather."
+    },
+    {
+      "id": "ex-presidents-mask",
+      "name": "an ex-presidents mask",
+      "emoji": "🎭",
+      "rarity": "common",
+      "source": "Point Break (1991)",
+      "flavor": "reagan, mostly. 100% pure adrenaline, worn during withdrawals from the federal reserve."
+    },
+    {
+      "id": "thumper",
+      "name": "a thumper",
+      "emoji": "🥁",
+      "rarity": "common",
+      "source": "Dune (2021)",
+      "flavor": "plant it, start the beat, walk away quickly. something very large is listening."
+    },
+    {
+      "id": "soot-sprite",
+      "name": "a soot sprite",
+      "emoji": "⚫",
+      "rarity": "common",
+      "source": "Spirited Away (2001)",
+      "flavor": "small, round, and gainfully employed in a bathhouse boiler room. paid in star candy."
+    },
+    {
+      "id": "howler",
+      "name": "a howler",
+      "emoji": "✉️",
+      "rarity": "common",
+      "source": "Harry Potter and the Chamber of Secrets (2002)",
+      "flavor": "opens itself, screams in your mother's voice, then shreds itself. open it quickly. it's worse if you don't."
+    },
+    {
+      "id": "han-in-carbonite",
+      "name": "han solo in carbonite (miniature)",
+      "emoji": "🧊",
+      "rarity": "common",
+      "source": "Star Wars: The Empire Strikes Back (1980)",
+      "flavor": "perfect hibernation, desk-sized. he knows."
+    },
+    {
+      "id": "talkboy",
+      "name": "a talkboy",
+      "emoji": "🎙️",
+      "rarity": "common",
+      "source": "Home Alone 2: Lost in New York (1992)",
+      "flavor": "records, plays back slow, books hotel rooms. a stolen credit card helps."
+    },
+    {
+      "id": "rippling-water-glass",
+      "name": "a glass of water, rippling",
+      "emoji": "🥛",
+      "rarity": "common",
+      "source": "Jurassic Park (1993)",
+      "flavor": "concentric circles in the cup holder. that is never, ever good."
+    },
+    {
+      "id": "miracle-pill",
+      "name": "a miracle pill",
+      "emoji": "💊",
+      "rarity": "common",
+      "source": "The Princess Bride (1987)",
+      "flavor": "chocolate-coated so it goes down easier. your friend here is only mostly dead. give it fifteen minutes."
+    },
+    {
+      "id": "one-eyed-willys-doubloon",
+      "name": "one-eyed willy's doubloon",
+      "emoji": "🪙",
+      "rarity": "common",
+      "source": "The Goonies (1985)",
+      "flavor": "copper, pitted, and the holes line up with the rocks on the coastline. that's how you know it's real."
+    },
+    {
+      "id": "deja-vu-cat",
+      "name": "the deja vu cat",
+      "emoji": "🐈‍⬛",
+      "rarity": "common",
+      "source": "The Matrix (1999)",
+      "flavor": "a black cat walks by. then another that looks just like it. they changed something."
+    }
 ]

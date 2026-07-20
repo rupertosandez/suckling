@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.17.0] - 2026-07-19
+
+### Added
+
+- MacGuffin catalog expansion: 53 new cards (6 iconic, 17 rare, 30 common)
+  spanning classics (The Maltese Falcon, 2001, Titanic), 80s/90s staples
+  (Princess Bride, Goonies, Jurassic Park, Matrix), and deep cuts (Parasite's
+  scholar's rock, the Con Air bunny). Cards were inserted directly into
+  `web_macguffin_catalog` (live immediately, no restart needed) and appended to
+  the vendored `assets/macguffins.json` fallback, plus the portal's
+  `app/data/macguffins.json` copy.
+- Five new MacGuffin sets with matching achievements (active after restart,
+  since sets load from the vendored JSON): Jurassic (clever girl), Princess
+  Bride (as you wish), Kubrick (star child - reuses the three existing Shining
+  cards plus the new monolith), Goonies (never say die), Matrix (the one).
+  Achievement catalog re-exported to the site and portal (126 -> 131).
+
 ## [2.16.0] - 2026-07-19
 
 ### Added

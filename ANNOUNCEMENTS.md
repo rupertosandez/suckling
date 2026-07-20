@@ -104,4 +104,8 @@ Housekeeping behind the counter. Keep an eye on the MacGuffin pool though, you n
 
 ## [2.16.0]
 
-Behind the scenes: I now check in with the portal once a minute, so if I ever go down the admins hear about it right away instead of when your rental gets stuck.
+debug/troubleshooting tools
+
+## [2.17.0]
+
+The MacGuffin drop pool just got a lot deeper, and there are five new sets to complete, each with its own achievement. No spoilers. Happy hunting.
