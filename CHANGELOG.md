@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.18.1] - 2026-07-23
+
+### Fixed
+
+- Replaced the flag emoji on the hallyu (now 🦑) and tokyo drifter (now ⛩️)
+  badges. Windows ships no flag glyphs, so 🇰🇷/🇯🇵 rendered as the raw
+  regional-indicator letters "KR"/"JP" on the portal catalog and in Discord
+  role names for Windows users. The startup role sweep renames any existing
+  Discord roles on restart; catalog re-exported to the site and portal.
+
 ## [2.18.0] - 2026-07-22
 
 ### Added

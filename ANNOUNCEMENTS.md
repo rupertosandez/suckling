@@ -112,4 +112,7 @@ debug/troubleshooting tools
 
 ## [2.18.0]
 
-25 new achievement badges to hunt, from goofy actor titles to rental milestones. A few old badge names got funnier too, so your display title might read a little different. Check the catalog and pick your new title.
+25 new badges + clean-up pass across all badge titles to make them read consistently~
+## [2.18.1]
+
+Small cosmetic fix: two badges swapped their flag emoji for ones that show up properly on Windows.
