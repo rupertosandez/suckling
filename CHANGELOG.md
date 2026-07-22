@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.18.2] - 2026-07-23
+
+### Changed
+
+- Full-catalog naming pass: renamed 23 badges whose names were plain or
+  sentence-styled so every badge works as a member display title (ids frozen;
+  unlocks, progress, and role mappings unchanged). achievements.py: poster
+  child II -> the projectionist, connected universe -> conspiracy board,
+  clean account -> goody two-shoes, last minute save -> buzzer beater, range
+  -> omnivore, time traveler -> flux capacitor, cage -> national treasure,
+  matrix -> human battery, night -> creature of the night, evil -> evil
+  little guy, why so serious -> pencil magician, easy recommend -> hype
+  machine, not for me -> tough crowd, balanced taste -> even steven, taste
+  has spoken -> serial perfectionist, film critic -> professional yapper,
+  essayist -> long winded, prop collector -> storage unit, fresh start ->
+  spring cleaning, watchlist importer -> baggage handler. Set achievements in
+  assets/macguffin_sets.json (mirrored to the portal copy): dreamer -> golden
+  ticket (Wonka), archaeologist -> snake hater (Indy), survivor -> sequel
+  bait (Slashers). Existing Discord roles rename via the 2.18.0 startup
+  sweep; catalog re-exported to the site and portal.
+
 ## [2.18.1] - 2026-07-23
 
 ### Fixed

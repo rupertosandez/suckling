@@ -113,6 +113,11 @@ debug/troubleshooting tools
 ## [2.18.0]
 
 25 new badges + clean-up pass across all badge titles to make them read consistently~
+
 ## [2.18.1]
 
-Small cosmetic fix: two badges swapped their flag emoji for ones that show up properly on Windows.
+missed one >.<
+
+## [2.18.2]
+
+A bunch of badges got fresh names. Same badges, same progress, better titles. If you wear one under your name it may read a little different now, check the catalog if you want to switch.
