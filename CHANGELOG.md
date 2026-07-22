@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.18.0] - 2026-07-22
+
+### Added
+
+- 25 new achievement badges (131 -> 156): rental milestones (century club,
+  model citizen, repo man, graveyard shift), directors (Scorsese, Verhoeven,
+  Miyazaki, Michael Mann), actors (Kurt Russell, Sigourney Weaver, Willem
+  Dafoe, Michelle Yeoh, Steve Buscemi, Christopher Walken, Bill Murray),
+  franchises (Scream, Mission: Impossible, Jurassic, Mad Max, James Bond),
+  title/genre/country badges (dead-in-title, thriller, Japan), plus six
+  degrees and MacGuffin gifting tier-ups. All library-dependent targets were
+  verified against the live Plex library cache; Verhoeven and the two-film
+  franchises use threshold 2 to match what the library holds.
+- `achievements.rename_badge_roles`: startup sweep that renames existing
+  Discord badge roles to match the catalog immediately, instead of waiting for
+  each member's next lazy `sync_member_roles` call. Rename-only by design; it
+  never creates roles.
+
+### Changed
+
+- Renamed 10 badges so they read as display titles under a member's name
+  rather than quotes (names only; ids, unlocks, and role mappings unchanged):
+  still up? -> midnight gremlin, no trailers no mercy -> lil risk taker,
+  alright alright alright -> shirtless bongo player, not quite my tempo ->
+  chair dodger, i'll be back -> austrian oak, life finds a way -> big lizard,
+  you shall not pass -> bridge troll, she doesn't even go here -> doesn't even
+  go here, as you wish -> dread pirate, hold onto your butts -> butt holder.
+
 ## [2.17.0] - 2026-07-19
 
 ### Added

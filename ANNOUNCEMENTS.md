@@ -108,4 +108,8 @@ debug/troubleshooting tools
 
 ## [2.17.0]
 
-The MacGuffin drop pool just got a lot deeper, and there are five new sets to complete, each with its own achievement. No spoilers. Happy hunting.
+53 new guffins
+
+## [2.18.0]
+
+25 new achievement badges to hunt, from goofy actor titles to rental milestones. A few old badge names got funnier too, so your display title might read a little different. Check the catalog and pick your new title.

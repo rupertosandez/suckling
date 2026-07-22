@@ -118,6 +118,21 @@ def _title_word_count(word: str) -> Callable[[str], int]:
     return count
 
 
+# Bond films have no shared title substring, so the double-o badge matches
+# against the film titles themselves.
+_BOND_TITLES = (
+    "dr. no", "from russia with love", "goldfinger", "thunderball",
+    "you only live twice", "on her majesty's secret service",
+    "diamonds are forever", "live and let die",
+    "the man with the golden gun", "the spy who loved me", "moonraker",
+    "for your eyes only", "octopussy", "a view to a kill",
+    "the living daylights", "licence to kill", "goldeneye",
+    "tomorrow never dies", "the world is not enough", "die another day",
+    "casino royale", "quantum of solace", "skyfall", "spectre",
+    "no time to die", "never say never again",
+)
+
+
 def _title_contains_any_count(needles: tuple[str, ...]) -> Callable[[str], int]:
     normalized = tuple(_normalize_text(needle) for needle in needles)
 
@@ -450,13 +465,17 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("clean-account", "clean account", "returned 10 rentals with zero late fees.", "return 10 rentals with zero late fees.", "rentals", 10, _on_time_count, "🧾"),
     Achievement("late-fee-legend", "late fee legend", "racked up $10 in late fees.", "rack up $10 in late fees.", "rentals", 10, _late_fee_total, "💸"),
     Achievement("last-minute-save", "last minute save", "returned a rental on its due date.", "return a rental on its due date.", "rentals", 1, _due_day_return_count, "⏳"),
-    Achievement("still-up", "still up?", "returned a rental after midnight.", "return a rental after midnight.", "rentals", 1, _after_midnight_return_count, "🛏️"),
+    Achievement("still-up", "midnight gremlin", "returned a rental after midnight.", "return a rental after midnight.", "rentals", 1, _after_midnight_return_count, "🛏️"),
     Achievement("the-final-cut", "the final cut", "returned 25 rentals.", "return 25 rentals.", "rentals", 25, _returned_count, "✂️"),
     Achievement("certified-sicko", "certified sicko", "returned 50 rentals.", "return 50 rentals.", "rentals", 50, _returned_count, "🩸"),
+    Achievement("century-club", "century club", "returned 100 rentals.", "return 100 rentals.", "rentals", 100, _returned_count, "🏆"),
+    Achievement("model-citizen", "model citizen", "returned 25 rentals with zero late fees.", "return 25 rentals with zero late fees.", "rentals", 25, _on_time_count, "🎖️"),
+    Achievement("repo-man", "repo man", "racked up $25 in late fees.", "rack up $25 in late fees.", "rentals", 25, _late_fee_total, "💰"),
+    Achievement("graveyard-shift", "graveyard shift", "returned 5 rentals after midnight.", "return 5 rentals after midnight.", "rentals", 5, _after_midnight_return_count, "🌃"),
     Achievement("staff-pick-survivor", "staff pick survivor", "returned an admin-assigned rental.", "return a rental picked by an admin.", "rentals", 1, _admin_pick_count, "🎟️"),
     Achievement("management-material", "management material", "returned 5 admin-assigned rentals.", "return 5 rentals picked by an admin.", "rentals", 5, _admin_pick_count, "🧑‍💼"),
     Achievement("dice-goblin", "dice goblin", "returned 10 random rentals.", "return 10 random rentals.", "rentals", 10, _random_rental_count, "🎲"),
-    Achievement("no-trailers-no-mercy", "no trailers, no mercy", "returned a random rental without rerolling.", "return a random rental without rerolling.", "rentals", 1, _random_no_reroll_count, "🎲"),
+    Achievement("no-trailers-no-mercy", "lil risk taker", "returned a random rental without rerolling.", "return a random rental without rerolling.", "rentals", 1, _random_no_reroll_count, "🎲"),
     Achievement("criterion-creature", "criterion creature", "returned rentals from 5 different decades.", "return rentals from 5 different decades.", "rentals", 5, _decades_returned_count, "🎞️"),
     Achievement("time-traveler", "time traveler", "returned rentals from 7 different decades.", "return rentals from 7 different decades.", "rentals", 7, _decades_returned_count, "🗓️"),
     Achievement("range", "range", "returned rentals across 6 era buckets.", "return rentals from pre-1980, the 1980s, 1990s, 2000s, 2010s, and 2020s.", "rentals", 6, _range_count, "🌈"),
@@ -471,25 +490,34 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("eraserhead", "eraserhead", "returned 3 David Lynch rentals.", "return 3 David Lynch movies from rb9.", "rb9 library", 3, _metadata_count("directors", "David Lynch"), "🧠"),
     Achievement("vengeance", "vengeance", "returned 3 Park Chan-wook rentals.", "return 3 Park Chan-wook movies from rb9.", "rb9 library", 3, _metadata_count("directors", "Park Chan-wook"), "🔨"),
     Achievement("sicario", "sicario", "returned 4 Denis Villeneuve rentals.", "return 4 Denis Villeneuve movies from rb9.", "rb9 library", 4, _metadata_count("directors", "Denis Villeneuve"), "🎯"),
+    Achievement("wiseguy", "wiseguy", "returned 3 Martin Scorsese rentals.", "return 3 Martin Scorsese movies from rb9.", "rb9 library", 3, _metadata_count("directors", "Martin Scorsese"), "🚕"),
+    Achievement("starship-trooper", "starship trooper", "returned 2 Paul Verhoeven rentals.", "return 2 Paul Verhoeven movies from rb9.", "rb9 library", 2, _metadata_count("directors", "Paul Verhoeven"), "💵"),
+    Achievement("no-face", "no face", "returned 3 Hayao Miyazaki rentals.", "return 3 Hayao Miyazaki movies from rb9.", "rb9 library", 3, _metadata_count("directors", "Hayao Miyazaki"), "🍃"),
+    Achievement("heat-check", "heat check", "returned 3 Michael Mann rentals.", "return 3 Michael Mann movies from rb9.", "rb9 library", 3, _metadata_count("directors", "Michael Mann"), "☕"),
     Achievement("cage", "cage", "returned 5 Nicolas Cage rentals.", "return 5 Nicolas Cage movies from rb9.", "rb9 library", 5, _metadata_count("actors", "Nicolas Cage"), "🐝"),
     Achievement("whoa", "whoa", "returned 5 Keanu Reeves rentals.", "return 5 Keanu Reeves movies from rb9.", "rb9 library", 5, _metadata_count("actors", "Keanu Reeves"), "💊"),
     Achievement("on-a-boat", "on a boat", "returned a rental with Andy Samberg.", "return a movie with Andy Samberg in it.", "rb9 library", 1, _metadata_count("actors", "Andy Samberg"), "⛵"),
     Achievement("mclovin", "mclovin", "returned a rental with Christopher Mintz-Plasse.", "return a movie with Christopher Mintz-Plasse in it.", "rb9 library", 1, _metadata_count("actors", "Christopher Mintz-Plasse"), "🪪"),
-    Achievement("alright-alright-alright", "alright alright alright", "returned a rental with Matthew McConaughey.", "return a movie with Matthew McConaughey in it.", "rb9 library", 1, _metadata_count("actors", "Matthew McConaughey"), "🚗"),
+    Achievement("alright-alright-alright", "shirtless bongo player", "returned a rental with Matthew McConaughey.", "return a movie with Matthew McConaughey in it.", "rb9 library", 1, _metadata_count("actors", "Matthew McConaughey"), "🚗"),
     Achievement("good-soup", "good soup", "returned a rental with Adam Driver.", "return a movie with Adam Driver in it.", "rb9 library", 1, _metadata_count("actors", "Adam Driver"), "🥣"),
-    Achievement("not-quite-my-tempo", "not quite my tempo", "returned a rental with J.K. Simmons.", "return a movie with J.K. Simmons in it.", "rb9 library", 1, _metadata_count("actors", "J.K. Simmons"), "🥁"),
+    Achievement("not-quite-my-tempo", "chair dodger", "returned a rental with J.K. Simmons.", "return a movie with J.K. Simmons in it.", "rb9 library", 1, _metadata_count("actors", "J.K. Simmons"), "🥁"),
     Achievement("groovy", "groovy", "returned a rental with Bruce Campbell.", "return a movie with Bruce Campbell in it.", "rb9 library", 1, _metadata_count("actors", "Bruce Campbell"), "🪚"),
-    Achievement("ill-be-back", "i'll be back", "returned a rental with Arnold Schwarzenegger.", "return a movie with Arnold Schwarzenegger in it.", "rb9 library", 1, _metadata_count("actors", "Arnold Schwarzenegger"), "🤖"),
-    Achievement("life-finds-a-way", "life finds a way", "returned a rental with Jeff Goldblum.", "return a movie with Jeff Goldblum in it.", "rb9 library", 1, _metadata_count("actors", "Jeff Goldblum"), "🧬"),
-    Achievement("you-shall-not-pass", "you shall not pass", "returned a rental with Ian McKellen.", "return a movie with Ian McKellen in it.", "rb9 library", 1, _metadata_count("actors", "Ian McKellen"), "🧙"),
+    Achievement("ill-be-back", "austrian oak", "returned a rental with Arnold Schwarzenegger.", "return a movie with Arnold Schwarzenegger in it.", "rb9 library", 1, _metadata_count("actors", "Arnold Schwarzenegger"), "🤖"),
+    Achievement("life-finds-a-way", "big lizard", "returned a rental with Jeff Goldblum.", "return a movie with Jeff Goldblum in it.", "rb9 library", 1, _metadata_count("actors", "Jeff Goldblum"), "🧬"),
+    Achievement("you-shall-not-pass", "bridge troll", "returned a rental with Ian McKellen.", "return a movie with Ian McKellen in it.", "rb9 library", 1, _metadata_count("actors", "Ian McKellen"), "🧙"),
     Achievement("im-just-ken", "i'm just ken", "returned a rental with Ryan Gosling.", "return a movie with Ryan Gosling in it.", "rb9 library", 1, _metadata_count("actors", "Ryan Gosling"), "🕺"),
-    Achievement("she-doesnt-even-go-here", "she doesn't even go here", "returned a rental with Rachel McAdams.", "return a movie with Rachel McAdams in it.", "rb9 library", 1, _metadata_count("actors", "Rachel McAdams"), "💅"),
-    Achievement("as-you-wish", "as you wish", "returned a rental with Cary Elwes.", "return a movie with Cary Elwes in it.", "rb9 library", 1, _metadata_count("actors", "Cary Elwes"), "🗡️"),
+    Achievement("she-doesnt-even-go-here", "doesn't even go here", "returned a rental with Rachel McAdams.", "return a movie with Rachel McAdams in it.", "rb9 library", 1, _metadata_count("actors", "Rachel McAdams"), "💅"),
+    Achievement("as-you-wish", "dread pirate", "returned a rental with Cary Elwes.", "return a movie with Cary Elwes in it.", "rb9 library", 1, _metadata_count("actors", "Cary Elwes"), "🗡️"),
     Achievement("kaiju", "kaiju", "returned 3 Godzilla or Kong rentals.", "return 3 Godzilla or Kong movies from rb9.", "rb9 library", 3, _title_contains_any_count(("godzilla", "kong")), "🦖"),
     Achievement("precious", "precious", "returned 3 Lord of the Rings rentals.", "return the Lord of the Rings trilogy from rb9.", "rb9 library", 3, _title_contains_any_count(("the lord of the rings",)), "💍"),
     Achievement("matrix", "matrix", "returned 3 Matrix rentals.", "return 3 Matrix movies from rb9.", "rb9 library", 3, _title_contains_any_count(("matrix",)), "🕶️"),
     Achievement("baba", "baba", "returned 3 John Wick rentals.", "return 3 John Wick movies from rb9.", "rb9 library", 3, _title_contains_any_count(("john wick",)), "✏️"),
     Achievement("xenomorph", "xenomorph", "returned 3 Alien or Predator rentals.", "return 3 Alien or Predator movies from rb9.", "rb9 library", 3, _title_contains_any_count(("alien", "predator", "prey")), "👽"),
+    Achievement("ghostface", "ghostface", "returned 3 Scream rentals.", "return 3 Scream movies from rb9.", "rb9 library", 3, _title_contains_any_count(("scream",)), "📞"),
+    Achievement("imf-agent", "IMF agent", "returned 3 Mission: Impossible rentals.", "return 3 Mission: Impossible movies from rb9.", "rb9 library", 3, _title_contains_any_count(("mission: impossible",)), "🧗"),
+    Achievement("raptor-wrangler", "raptor wrangler", "returned 3 Jurassic rentals.", "return 3 Jurassic movies from rb9.", "rb9 library", 3, _title_contains_any_count(("jurassic",)), "🦕"),
+    Achievement("war-boy", "war boy", "returned 2 Mad Max rentals.", "return 2 Mad Max movies from rb9.", "rb9 library", 2, _title_contains_any_count(("mad max",)), "⛽"),
+    Achievement("double-o", "double-o", "returned 2 James Bond rentals.", "return 2 James Bond movies from rb9.", "rb9 library", 2, _title_contains_any_count(_BOND_TITLES), "🍸"),
     Achievement("replicant", "replicant", "returned 5 science fiction rentals.", "return 5 science fiction movies from rb9.", "rb9 library", 5, _metadata_count("genres", "Science Fiction"), "🦉"),
     Achievement("finalgirl", "finalgirl", "returned 10 horror rentals.", "return 10 horror movies from rb9.", "rb9 library", 10, _metadata_count("genres", "Horror"), "🔪"),
     Achievement("night", "night", "returned 5 rentals with night in the title.", "return 5 rb9 movies with night in the title.", "rb9 library", 5, _title_word_count("night"), "🌙"),
@@ -498,14 +526,24 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("houseguest", "houseguest", "returned 3 rentals with house in the title.", "return 3 rb9 movies with house in the title.", "rb9 library", 3, _title_word_count("house"), "🏚️"),
     Achievement("ghosted", "ghosted", "returned 3 rentals with ghost in the title.", "return 3 rb9 movies with ghost in the title.", "rb9 library", 3, _title_word_count("ghost"), "👻"),
     Achievement("bloodline", "bloodline", "returned 2 rentals with blood in the title.", "return both rb9 movies with blood in the title.", "rb9 library", 2, _title_word_count("blood"), "🩸"),
+    Achievement("dead-serious", "dead serious", "returned 5 rentals with dead in the title.", "return 5 rb9 movies with dead in the title.", "rb9 library", 5, _title_word_count("dead"), "☠️"),
     Achievement("blue-velvet", "blue velvet", "returned 3 rentals with blue in the title.", "return 3 rb9 movies with blue in the title.", "rb9 library", 3, _title_word_count("blue"), "💙"),
     Achievement("hallyu", "hallyu", "returned 5 South Korean rentals.", "return 5 rb9 movies from South Korea.", "rb9 library", 5, _metadata_count("countries", "Republic of Korea"), "🇰🇷"),
+    Achievement("tokyo-drifter", "tokyo drifter", "returned 5 Japanese rentals.", "return 5 rb9 movies from Japan.", "rb9 library", 5, _metadata_count("countries", "Japan"), "🇯🇵"),
+    Achievement("thrill-seeker", "thrill seeker", "returned 5 thriller rentals.", "return 5 thriller rb9 movies.", "rb9 library", 5, _metadata_count("genres", "Thriller"), "🪑"),
     Achievement("toonami", "toonami", "returned 5 animated rentals.", "return 5 animated rb9 movies.", "rb9 library", 5, _metadata_count("genres", "Animation"), "📺"),
     Achievement("doc-holiday", "doc holiday", "returned 3 documentary rentals.", "return 3 documentary rb9 movies.", "rb9 library", 3, _metadata_count("genres", "Documentary"), "🎥"),
     Achievement("multipass", "multipass", "returned a rental with Milla Jovovich.", "return a movie with Milla Jovovich in it.", "rb9 library", 1, _metadata_count("actors", "Milla Jovovich"), "🪪"),
-    Achievement("hold-onto-your-butts", "hold onto your butts", "returned a rental with Samuel L. Jackson.", "return a movie with Samuel L. Jackson in it.", "rb9 library", 1, _metadata_count("actors", "Samuel L. Jackson"), "🚬"),
+    Achievement("hold-onto-your-butts", "butt holder", "returned a rental with Samuel L. Jackson.", "return a movie with Samuel L. Jackson in it.", "rb9 library", 1, _metadata_count("actors", "Samuel L. Jackson"), "🚬"),
     Achievement("why-so-serious", "why so serious", "returned a rental with Heath Ledger.", "return a movie with Heath Ledger in it.", "rb9 library", 1, _metadata_count("actors", "Heath Ledger"), "🃏"),
     Achievement("wilson", "wilson", "returned a rental with Tom Hanks.", "return a movie with Tom Hanks in it.", "rb9 library", 1, _metadata_count("actors", "Tom Hanks"), "🏐"),
+    Achievement("eyepatch-guy", "eyepatch guy", "returned a rental with Kurt Russell.", "return a movie with Kurt Russell in it.", "rb9 library", 1, _metadata_count("actors", "Kurt Russell"), "🐍"),
+    Achievement("space-mom", "space mom", "returned a rental with Sigourney Weaver.", "return a movie with Sigourney Weaver in it.", "rb9 library", 1, _metadata_count("actors", "Sigourney Weaver"), "🚀"),
+    Achievement("lighthouse-keeper", "lighthouse keeper", "returned a rental with Willem Dafoe.", "return a movie with Willem Dafoe in it.", "rb9 library", 1, _metadata_count("actors", "Willem Dafoe"), "🧪"),
+    Achievement("verse-jumper", "verse jumper", "returned a rental with Michelle Yeoh.", "return a movie with Michelle Yeoh in it.", "rb9 library", 1, _metadata_count("actors", "Michelle Yeoh"), "🌀"),
+    Achievement("guy-who-doesnt-tip", "guy who doesn't tip", "returned a rental with Steve Buscemi.", "return a movie with Steve Buscemi in it.", "rb9 library", 1, _metadata_count("actors", "Steve Buscemi"), "🛹"),
+    Achievement("deer-hunter", "deer hunter", "returned a rental with Christopher Walken.", "return a movie with Christopher Walken in it.", "rb9 library", 1, _metadata_count("actors", "Christopher Walken"), "🔔"),
+    Achievement("guy-who-hates-mondays", "guy who hates mondays", "returned a rental with Bill Murray.", "return a movie with Bill Murray in it.", "rb9 library", 1, _metadata_count("actors", "Bill Murray"), "🏕️"),
     Achievement("two-thumbs-up", "two thumbs up", "recommended 10 returned rentals.", "recommend 10 rentals when returning them.", "reviews", 10, _recommended_count, "👍"),
     Achievement("easy-recommend", "easy recommend", "recommended 25 returned rentals.", "recommend 25 rentals when returning them.", "reviews", 25, _recommended_count, "❤️"),
     Achievement("not-for-me", "not for me", "marked 5 rentals as not recommended.", "mark 5 rentals as not recommended.", "reviews", 5, _not_recommended_count, "🚫"),
@@ -524,6 +562,7 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("iconic-behavior", "iconic behavior", "owned an iconic macguffin.", "own any iconic macguffin.", "macguffins", 1, _owns_iconic_macguffin, "👑"),
     Achievement("gift-shop", "the gift shop", "gifted a macguffin.", "gift a macguffin to another member.", "macguffins", 1, _event_count("macguffin_gift_sent"), "🎁"),
     Achievement("community-chest", "community chest", "gifted 3 macguffins.", "gift 3 macguffins.", "macguffins", 3, _event_count("macguffin_gift_sent"), "🤲"),
+    Achievement("secret-santa", "secret santa", "gifted 10 macguffins.", "gift 10 macguffins.", "macguffins", 10, _event_count("macguffin_gift_sent"), "🎅"),
     Achievement("pass-it-on", "pass it on", "received a gifted macguffin.", "receive a gifted macguffin.", "macguffins", 1, _event_count("macguffin_gift_received"), "🔁"),
     Achievement("mutant-mommy", "mutant mommy", "held the iconic the suckling macguffin.", "hold the iconic the suckling macguffin.", "macguffins", 1, _owns_suckling_macguffin, "🍼"),
     *MACGUFFIN_SET_ACHIEVEMENTS,
@@ -535,6 +574,7 @@ ACHIEVEMENTS: tuple[Achievement, ...] = (
     Achievement("speedrun-brain", "speedrun brain", "won a guess or trivia round in 10 seconds.", "win /guess or /play in 10 seconds.", "games", 1, _event_count("speedrun_win"), "⚡"),
     Achievement("six-degrees-menace", "six degrees menace", "won 5 six degrees rounds.", "win 5 /six rounds.", "games", 5, _six_wins, "🕸️"),
     Achievement("connected-universe", "connected universe", "won 10 six degrees rounds.", "win 10 /six rounds.", "games", 10, _six_wins, "🕸️"),
+    Achievement("human-imdb", "human IMDB", "won 25 six degrees rounds.", "win 25 /six rounds.", "games", 25, _six_wins, "🥓"),
     Achievement("watchlist-whisperer", "watchlist whisperer", "kept 25 films on your watchlist.", "add 25 films to your watchlist.", "discovery", 25, _watchlist_count, "📋"),
     Achievement("the-pile", "the pile", "kept 50 films on your watchlist.", "add 50 films to your watchlist.", "discovery", 50, _watchlist_count, "📋"),
     Achievement("fresh-start", "fresh start", "removed 10 films from your watchlist.", "remove 10 films from your watchlist.", "discovery", 10, _event_count("watchlist_remove"), "🧹"),
@@ -764,6 +804,31 @@ async def ensure_role(guild: discord.Guild, achievement: Achievement) -> discord
     except (discord.Forbidden, discord.HTTPException) as e:
         logger.log_exception("achievement_role_create", e)
         return None
+
+
+async def rename_badge_roles(guild: discord.Guild) -> int:
+    """Rename existing badge roles whose names drifted from the catalog.
+
+    Rename-only on purpose: sync_member_roles renames lazily one badge at a
+    time, so a catalog rename would otherwise trickle out over weeks. Never
+    creates roles - badges nobody displays yet should not exist as roles.
+    """
+    renamed = 0
+    for achievement in ACHIEVEMENTS:
+        role_id = await asyncio.to_thread(db.get_achievement_role_id, achievement.id)
+        if not role_id:
+            continue
+        role = guild.get_role(role_id)
+        if not role:
+            continue
+        name = visible_name(achievement)
+        if role.name != name:
+            try:
+                await role.edit(name=name, reason="Suckling achievement badge rename")
+                renamed += 1
+            except (discord.Forbidden, discord.HTTPException) as e:
+                logger.log_exception("achievement_role_rename_sweep", e)
+    return renamed
 
 
 async def sync_member_roles(member: discord.Member) -> tuple[bool, str]:

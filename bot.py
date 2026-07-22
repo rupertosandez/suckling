@@ -792,8 +792,22 @@ async def on_ready():
             logger.log_exception("plex_warm_cache", e)
             print(f"[plex] Warm cache failed: {e}")
 
+    # One sweep per connect so catalog badge renames land on existing Discord
+    # roles immediately instead of trickling out via per-member syncs. No-op
+    # when every role name already matches the catalog.
+    async def _sweep_badge_role_names():
+        try:
+            guild = bot.get_guild(config.GUILD_ID)
+            if guild:
+                renamed = await achievement_module.rename_badge_roles(guild)
+                if renamed:
+                    print(f"[achievements] Renamed {renamed} badge role(s) to match the catalog")
+        except Exception as e:
+            logger.log_exception("achievement_role_rename_startup", e)
+
     asyncio.create_task(_warm_plex_cache())
     asyncio.create_task(_post_update_announcement_once())
+    asyncio.create_task(_sweep_badge_role_names())
     print("[startup] sucklingbot started successfully")
 
 
