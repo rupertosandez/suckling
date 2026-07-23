@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.19.1] - 2026-07-23
+
+### Fixed
+
+- Guest book DMs: link with the returnby9.com domain (PORTAL_BASE_URL default
+  was still the Render hostname; the achievements badge-tab link inherits the
+  fix too) and wrap the URL in <> to suppress the unfurl - the guest book sits
+  behind login, so Discord's crawler was embedding the OAuth page's
+  Discord-branded preview card.
+
 ## [2.19.0] - 2026-07-23
 
 ### Added

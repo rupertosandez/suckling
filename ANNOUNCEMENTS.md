@@ -124,4 +124,8 @@ A bunch of badges got fresh names. Same badges, same progress, better titles. If
 
 ## [2.19.0]
 
-When someone signs your guest book on the portal, I now send you a DM with a link so you never miss it. Not your thing? Turn it off under Settings > Account on the portal.
+notif integrations
+
+## [2.19.1]
+
+Guest book DMs now link through returnby9.com and skip the big preview card.

@@ -584,8 +584,11 @@ async def _handle_guest_note_dm(bot: discord.Client | None, row: dict) -> str:
     try:
         user = bot.get_user(int(row["discord_id"])) or await bot.fetch_user(int(row["discord_id"]))
         await user.send(
+            # <> suppresses the link unfurl: the guest book sits behind
+            # login, so Discord's crawler lands on the OAuth page and
+            # embeds Discord's own branding instead of the portal's.
             "Someone left a note in your guest book on the RB9 portal.\n"
-            f"Read it here: {url}\n"
+            f"Read it here: <{url}>\n"
             "-# You can turn these messages off under Settings > Account on the portal."
         )
         return "done"
