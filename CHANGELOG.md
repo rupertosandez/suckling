@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.19.0] - 2026-07-23
+
+### Added
+
+- Guest book DM nudge (sucklingweb spec 29): when someone signs a member's
+  portal guest book, the bot DMs the wall owner a tease-style nudge (no author,
+  no note text) linking to their guest book tab. New drain in outbox.py over
+  the portal-owned `web_dm_outbox` slip table (kind-keyed for future DM
+  events), woken by the existing `portal_outbox` LISTEN. db.py gains
+  get/claim/complete helpers for the table (bot updates only status +
+  processed_at per the write contract). `discord.Forbidden` (member DMs
+  closed) stamps `skipped` silently - the portal bell is the fallback; slips
+  older than 48h are skipped so a downtime backlog never blasts stale nudges.
+  Members opt out via a portal settings toggle (enforced portal-side, so muted
+  members never generate slips).
+
 ## [2.18.2] - 2026-07-23
 
 ### Changed

@@ -121,3 +121,7 @@ missed one >.<
 ## [2.18.2]
 
 A bunch of badges got fresh names. Same badges, same progress, better titles. If you wear one under your name it may read a little different now, check the catalog if you want to switch.
+
+## [2.19.0]
+
+When someone signs your guest book on the portal, I now send you a DM with a link so you never miss it. Not your thing? Turn it off under Settings > Account on the portal.

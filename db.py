@@ -2412,6 +2412,38 @@ def complete_watchlist_request(request_id: int, status: str, result_message: str
         )
 
 
+def get_pending_dm_requests(limit: int = 10) -> list[dict]:
+    """sucklingweb spec 29: DM slips, the outbox's fourth table.
+    Web-owned (portal alembic migrates it); the bot UPDATEs only status
+    and processed_at - there is no result_message column, the DM itself
+    is the result."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM web_dm_outbox WHERE status = 'pending' "
+            "ORDER BY created_at ASC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def claim_dm_request(request_id: int) -> bool:
+    with _connect() as conn:
+        cursor = conn.execute(
+            "UPDATE web_dm_outbox SET status = 'processing', processed_at = ? "
+            "WHERE id = ? AND status = 'pending'",
+            (_utc_now_iso(), request_id),
+        )
+        return cursor.rowcount == 1
+
+
+def complete_dm_request(request_id: int, status: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE web_dm_outbox SET status = ?, processed_at = ? WHERE id = ?",
+            (status, _utc_now_iso(), request_id),
+        )
+
+
 def get_macguffin_catalog() -> list[dict]:
     """The card catalog from web_macguffin_catalog (portal-owned, admin
     dashboard CRUD) - the shared-DB source of truth since 2026-07-16.

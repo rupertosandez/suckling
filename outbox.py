@@ -552,6 +552,95 @@ async def _process_collection_pending() -> tuple[int, int]:
     return processed, skipped
 
 
+# ---------- DM slips (sucklingweb spec 29) ----------
+#
+# The outbox's fourth table. Kind-keyed so future DM-worthy events are
+# an insert away; guest_note is the only kind so far. Contract: the bot
+# UPDATEs only status and processed_at - no result_message column, the
+# DM itself is the result. Copy is the neutral sentence-case voice.
+
+# A weekend of downtime should not blast stale nudges on restart; the
+# portal bell already caught anything this old.
+DM_MAX_AGE_HOURS = 48
+
+_dm_table_missing_logged = False
+
+
+def _dm_too_old(row: dict) -> bool:
+    try:
+        created = datetime.fromisoformat(str(row["created_at"]))
+    except ValueError:
+        return True
+    return datetime.now(timezone.utc) - created > timedelta(hours=DM_MAX_AGE_HOURS)
+
+
+async def _handle_guest_note_dm(bot: discord.Client | None, row: dict) -> str:
+    """Tease-style by design (spec 29): no author, no note text - the
+    portal visit is the payoff, and deleted notes never live on in DM
+    history. Returns the slip's final status."""
+    if bot is None:
+        return "failed"
+    url = f"{config.PORTAL_BASE_URL}{row.get('url') or '/notifications'}"
+    try:
+        user = bot.get_user(int(row["discord_id"])) or await bot.fetch_user(int(row["discord_id"]))
+        await user.send(
+            "Someone left a note in your guest book on the RB9 portal.\n"
+            f"Read it here: {url}\n"
+            "-# You can turn these messages off under Settings > Account on the portal."
+        )
+        return "done"
+    except discord.Forbidden:
+        # DMs closed or not in the guild. The bell is the fallback;
+        # nothing is lost and nothing retries.
+        return "skipped"
+    except (discord.HTTPException, ValueError):
+        return "failed"
+
+
+_DM_HANDLERS = {
+    "guest_note": _handle_guest_note_dm,
+}
+
+
+async def _process_dm_pending(bot: discord.Client | None) -> tuple[int, int]:
+    global _dm_table_missing_logged
+    try:
+        rows = await db.run(db.get_pending_dm_requests)
+    except Exception as exc:
+        if not _dm_table_missing_logged:
+            print(f"[outbox] web_dm_outbox unavailable ({exc.__class__.__name__}) - waiting for the portal migration")
+            _dm_table_missing_logged = True
+        return 0, 0
+    _dm_table_missing_logged = False
+
+    processed = 0
+    skipped = 0
+    for row in rows:
+        request_id = int(row["id"])
+        if _dm_too_old(row):
+            await db.run(db.complete_dm_request, request_id, "skipped")
+            skipped += 1
+            continue
+        if not await db.run(db.claim_dm_request, request_id):
+            continue
+        handler = _DM_HANDLERS.get(str(row["kind"]))
+        if handler is None:
+            await db.run(db.complete_dm_request, request_id, "skipped")
+            skipped += 1
+            continue
+        try:
+            status = await handler(bot, row)
+        except Exception as exc:
+            print(f"[outbox] dm slip {request_id} ({row['kind']}) failed: {exc.__class__.__name__}: {exc}")
+            status = "failed"
+        await db.run(db.complete_dm_request, request_id, status)
+        if status == "done":
+            processed += 1
+        else:
+            skipped += 1
+    return processed, skipped
+
+
 async def process_pending(bot: discord.Client | None = None) -> None:
     """One worker tick (scheduler entry point). DB reads/writes run off
     the event loop via db.run (the P0 lesson); the handlers themselves are
@@ -612,6 +701,9 @@ async def process_pending(bot: discord.Client | None = None) -> None:
     mc_processed, mc_skipped = await _process_collection_pending()
     processed += mc_processed
     skipped += mc_skipped
+    dm_processed, dm_skipped = await _process_dm_pending(bot)
+    processed += dm_processed
+    skipped += dm_skipped
     if processed or skipped:
         print(f"[outbox] tick: {processed} processed, {skipped} skipped/expired")
 
